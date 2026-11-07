@@ -8,6 +8,7 @@ title). The browser checks (axe, keyboard, 375 px, reduced motion) live in the `
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from html.parser import HTMLParser
 
 import pytest
@@ -286,3 +287,44 @@ def test_t1_3_no_real_input_phrase_in_new_json(client):
     hit(client.post("/api/journals", json={"member_id": "cur-001"}), 404)
     for b in bodies:
         assert REAL_INPUT_PHRASE not in b
+
+
+def _run_safe_href(cases: list[str]) -> list[object]:
+    """Run the page's own safeHref in node over ``cases``."""
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    html = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    m = re.search(r"function safeHref\(u\) \{.*?\n\}", html, re.S)
+    assert m, "safeHref not found"
+    js = m.group(0) + f"\nconsole.log(JSON.stringify({json.dumps(cases)}.map(safeHref)));"
+    out = subprocess.run([node, "-e", js], capture_output=True, text=True, check=True, timeout=30)
+    return json.loads(out.stdout)
+
+
+def test_safe_href_links_same_origin_api_paths_only() -> None:
+    """Evidence-thread links to /api/... are same-origin and get linked; everything else is refused."""
+    got = _run_safe_href([
+        "/api/fixtures/scale-photo",
+        "/api/journals/j1/observations/r1",
+        "#lab/run-1",
+        "https://medlineplus.gov/ency/article/002341.htm",
+        "//evil.example/api/x",
+        "/\\evil.example",
+        "/results",
+        "javascript:alert(1)",
+        "http://example.com/",
+        "/api/../etc",
+        "",
+    ])
+    assert got == [
+        "/api/fixtures/scale-photo",
+        "/api/journals/j1/observations/r1",
+        "#lab/run-1",
+        "https://medlineplus.gov/ency/article/002341.htm",
+        None, None, None, None, None, None, None,
+    ]
