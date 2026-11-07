@@ -262,3 +262,18 @@ def test_k1_huge_count_gives_no_failures(copy):
     _write_raw(copy, "metrics.json", json.dumps(mx).replace('"@N@"', "1" + "0" * 400))
     rows = _rows(lab_rows(copy))
     assert rows["base"].failures is None and rows["env_random_intent"].failures is None
+
+
+def test_k2_failures_formulas_at_non_zero_rates(copy):
+    """K2: every committed env rate is 0.0 and sft/dpo pass 1.0, so pin both formulas at non-zero rates."""
+    def env(d):
+        m = _arm(d, "env_random_intent")["metrics"]
+        m.update(episode_violation_rate=0.1, n_scenarios=50, seeds=[0, 1, 2])
+
+    _edit(copy, "metrics.json", env)
+    _edit(copy, "boundary_eval.json", lambda d: d["models"]["sft"].update(n=141, boundary_pass_rate=0.95))
+    rows = _rows(lab_rows(copy))
+    assert rows["env_random_intent"].split.n == 150
+    assert rows["env_random_intent"].failures == 15  # round(0.1 * 50 * 3)
+    assert rows["sft"].failures == 141 - round(0.95 * 141) == 7
+
