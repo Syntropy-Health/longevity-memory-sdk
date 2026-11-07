@@ -1,5 +1,59 @@
 # daypart — dev doc
 
+## FHDIC P2 · Passport, next step and learning lab (HAC-38)
+
+**Overview.** P2 builds the read side of A&D HAC-33 on top of the P1 journal: the Health Clone
+Passport, one suggested next step, and the learning-lab provenance table. Everything stays
+synthetic, and nothing interprets a value. A reference range sits beside a value only when a public
+source states it. A step that fails a safety check becomes the clinician handoff.
+
+```mermaid
+flowchart LR
+  J[(journal: saved check-ins<br/>+ simulated series)] --> PV[passport/view.py]
+  EV[(evidence/sources_v1.json<br/>5 public sources, 7 stated ranges)] --> PV
+  PV --> OC[20 observation cards<br/>value as recorded, ≤14 days or withheld]
+  PV --> PC[pattern cards = LHM flags]
+  PV --> TH[5-step evidence thread per card]
+  J --> NS[checkin/next_step.py<br/>next-step-v1, §4.7 rules in order]
+  NS --> G{membrane.post + dsl.check}
+  G -->|pass| STEP[step: choose → act:goal_set]
+  G -->|fail| HO[clinician handoff<br/>Ask a professional]
+  R[(docs/daypart/results/*.json)] --> LAB[demo/lab.py<br/>§4.8 formulas]
+  LAB --> ROWS[base · sft · dpo · 3 env baselines · grpo proposed]
+```
+
+**What changed.**
+- `evidence/registry.py` + `sources_v1.json` (P2.1): 5 public NIH/WHO sources, each labelled
+  `reviewed: board sign-off 2026-11-07` (AM-1). 7 concepts carry a `reference_range` copied from a
+  sentence on the source page, and the loader refuses any range that doesn't match its sentence.
+  Every other concept is `null`.
+- `passport/view.py` (P2.2): one card per registry concept. The value is shown as recorded, and a
+  card older than 14 days is withheld with no number and no range. Each card has the 5-step thread
+  (empty steps link a why-empty note), an explanation only when it is sourced and safe, and data-gap
+  labels that pass the narration guard. Routes `GET /api/journals/{id}/passport?day=` and
+  `GET /api/inventory`.
+- `checkin/next_step.py` (P2.3): the §4.7 rules over the check-in saved last and over adherence by
+  UTC day. Text and reason go through `membrane.post()` + `dsl.check()`, and a failure gives the
+  clinician handoff. Routes GET/POST `/api/journals/{id}/next-step` (409 `no_saved_checkin`,
+  422 `unknown_step`).
+- `demo/lab.py` (P2.4): `lab_rows()` builds each field from its §4.8 formula. sft/dpo adapters are
+  cross-checked (a mismatch shows no number), grpo is "proposed, not built", and a missing,
+  malformed or non-finite field is `null`. Route `GET /api/lab`.
+
+**User-facing impact.** API only; the screens come in P3. No value is ever marked high or low.
+
+**Key decisions** (addendum G22–G25). Ranges are cited only from pages that could be fetched and
+read; AHA/CDC block automated fetches, so they are not cited (G22). Data-gap labels are safe
+display strings, and `/api/inventory` keeps the registry ids (G23). Saves are ordered numerically,
+so a same-day tie is broken by save order, not by event-id string order (G24). The lab uses its own
+tolerant readers (no `MetricsDoc` validation) so that it always renders (G25).
+
+**Run it**, from `engine/`: `uv run daypart-demo serve`, then GET the routes above.
+Tests: `env -u MUSE_API_KEY -u META_MODEL_API_KEY uv run pytest -q`.
+
+**Links.** Iteration receipts: P2.1 24831e4, P2.2 7ec2509, P2.3 2110440, P2.4 91f8875
+(`workstreams/daypart/qgr/`).
+
 ## FHDIC P1 · Data core for the Clinical Human Clone (HAC-38)
 
 **Overview.** P1 builds the backend for the check-in → review loop of A&D HAC-33

@@ -1,3 +1,3 @@
 # Workstream dev docs
 
-- [daypart](daypart.md) — Daypart Engine; latest: FHDIC P1 data core for the Clinical Human Clone (HAC-38)
+- [daypart](daypart.md) — Daypart Engine; latest: FHDIC P2 passport, next step and learning lab (HAC-38)
