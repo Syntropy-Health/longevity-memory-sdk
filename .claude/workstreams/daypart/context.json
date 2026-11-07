@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "workstream": "daypart",
-  "updated_at": "2026-11-07T02:54:45.084483+00:00",
+  "updated_at": "2026-11-07T21:01:49.841338+00:00",
   "linear": {
     "initiative_url": "",
     "initiative_id": ""
@@ -77,6 +77,18 @@
       "summary": "evidence registry sources_v1 + 7 sourced reference ranges (AM-1, G22)",
       "pr": "",
       "updated_at": "2026-11-07T02:54:45.084451+00:00"
+    },
+    "P2.2": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "7ec2509",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-2101-bfef6f9.md",
+      "summary": "Health Clone Passport view + /api/journals/{id}/passport, /api/inventory (G23)",
+      "pr": "",
+      "updated_at": "2026-11-07T21:01:49.841316+00:00"
     }
   }
 }

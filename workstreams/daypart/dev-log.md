@@ -1,1 +1,2 @@
 - P2.1 — evidence registry + 7 sourced reference ranges (commit 24831e4)
+- P2.2 — Health Clone Passport view: observation + pattern cards, 5-step thread, suppression, sourced ranges, guard-safe inventory; routes passport + inventory (commit 7ec2509)
