@@ -871,3 +871,37 @@ def test_u2_cards_round_scores_but_keep_saved_observations_as_recorded():
     assert _card_value("observation", "simulated", "6.666666", "h").strip() == "6.67 h"
     assert _card_value("observation", "observed", "36.555", "Cel").strip() == "36.555 Cel"  # as recorded
     assert _card_value("observation", "observed", "0", "1").strip() == "0"  # no dimensionless "1"
+
+
+_SUBMIT = _BASE + _API + _CHECKIN + ["CI_ERRORS", "PII_REASONS", "setCiError", "resetCheckin", "updateCount", "setBusy", "showHandoff"]
+_HANDOFF_TEXT = "Please contact someone you trust or a local crisis service now."
+
+
+def _handoff_run() -> dict:
+    return _run_page(
+        _SUBMIT,
+        """
+        ["ci-msg", "ci-count", "ci-intro", "real-data-warning", "session-msg", "nav-review"].forEach(function (i) { mk(i); });
+        var form = mk("ci-form", "form"); var ta = el("textarea"); ta.id = "ci-text"; form.append(ta); var sb = el("button"); sb.id = "ci-submit"; form.append(sb);
+        ta.value = "something the person wrote";
+        location.hash = "#checkin";
+        RESP.push([200, { status: "handoff", text: %s }]);
+        await submitCheckin({ text: ta.value });
+        var box = $("ci-msg"), n = box.querySelector(".notice");
+        return { kind: n && n.className, hash: location.hash, calls: CALLS.length,
+          handoff: (box.querySelector(".handoff-text") || { textContent: null }).textContent,
+          links: box.querySelectorAll("a").length, buttons: box.querySelectorAll("button").map(function (b) { return b.textContent; }),
+          focused: document.activeElement === n, role: n && n.getAttribute("role"),
+          formHidden: $("ci-form").hidden, introHidden: $("ci-intro").hidden, warnHidden: $("real-data-warning").hidden,
+          textarea: ta.value, checkins: Object.keys(S.checkins).length };
+        """ % repr(_HANDOFF_TEXT).replace("'", '"'),
+    )
+
+
+def test_t1_handoff_response_routes_to_show_handoff_without_review_or_next():
+    got = _handoff_run()
+    assert got["kind"] == "notice notice--handoff", got
+    assert got["role"] == "alert" and got["focused"]
+    assert got["hash"] == "#checkin" and got["checkins"] == 0 and got["calls"] == 1  # never routes to #review
+    assert got["links"] == 0  # no #review / #next (or any) link
+    assert got["buttons"] == ["Write a different check-in"]  # no extra button
