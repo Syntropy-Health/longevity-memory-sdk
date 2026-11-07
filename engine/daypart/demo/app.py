@@ -1,4 +1,7 @@
-"""FastAPI playground (HAC-20). Offline, no secrets, synthetic members only (I1)."""
+"""Clinical Human Clone API: the check-in journey (HAC-38) and the research playground (HAC-20).
+
+Offline, no secrets, synthetic members only (I1).
+"""
 
 from __future__ import annotations
 
@@ -130,8 +133,11 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     pg = Playground(cohort_seed)
     results_url = results_url or os.environ.get("DAYPART_RESULTS_URL") or None
     app = FastAPI(
-        title="Daypart playground",
-        description="Synthetic SimMembers only. Not a consumer UI. Not medical advice.",
+        title="Clinical Human Clone API",
+        description=(
+            "Clinical Human Clone and Health Clone Passport demo. Synthetic data only: synthetic inputs "
+            "and simulated results, no real health data. Not for clinical use. Not medical advice."
+        ),
         version="0.1.0",
     )
     app.state.playground = pg
