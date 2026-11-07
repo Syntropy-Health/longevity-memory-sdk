@@ -907,7 +907,7 @@ async function showReview(id) {
         link("#checkin", "Go to check-in"))]));
     return;
   }
-  if (ci.status === "saved") { msg.append(savedNotice(ci.result)); return; }
+  if (ci.status === "saved") { msg.append(ci.alreadySaved && !ci.result ? alreadySavedNotice(false) : savedNotice(ci.result)); return; }
   var ures = await loadUnits();
   if (rvCurrent !== id) return; /* the route moved on while the units loaded */
   if (!(ures.ok && ures.data && ures.data.units && typeof ures.data.units === "object")) {
@@ -1084,6 +1084,11 @@ function savedNotice(result) {
   body.push(btnLink("#passport", "Open your Health Clone Passport", true));
   return notice("ok", "Saved " + plural(written, "value", "values") + " to your clone", body, { role: "status" });
 }
+/* 409 already_saved: a neutral notice with no count (this session never saw the save's result). */
+function alreadySavedNotice(fromPost) {
+  return notice("info", "Already saved", [para("This check-in was saved before. ", link("#passport", "Open your Health Clone Passport"))],
+    fromPost ? { role: "alert", focus: true } : {});
+}
 async function submitReview(ev) {
   ev.preventDefault();
   if (rvBusy || !rvCurrent || !S.checkins[rvCurrent]) return;
@@ -1101,9 +1106,9 @@ async function submitReview(ev) {
       return;
     }
     if (res.status === 409 && code(res) === "already_saved") {
-      S.checkins[id].status = "saved"; persist();
+      S.checkins[id].status = "saved"; S.checkins[id].alreadySaved = true; persist();
       $("rv-form").hidden = true;
-      var a = notice("info", "Already saved", [para("This check-in was saved before. ", link("#passport", "Open your Health Clone Passport"))], { role: "alert", focus: true });
+      var a = alreadySavedNotice(true);
       msg.append(a); a.focus();
       return;
     }

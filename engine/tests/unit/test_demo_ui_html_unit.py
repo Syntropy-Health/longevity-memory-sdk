@@ -427,6 +427,7 @@ document.body = new El("body"); document.activeElement = document.body;
 function mk(id, tag) { var e = new El(tag || "div"); e.id = id; document.body.append(e); return e; }
 function Option(text, value) { var o = new El("option"); o.textContent = text; o.value = value; return o; }
 var location = { hash: "" };
+var S = { journal: "j1", today: null, checkins: {}, lastCheckin: null };
 var RESP = [], CALLS = [];
 var fetch = async function (path, init) {
   CALLS.push([init.method, path, init.body === undefined ? null : JSON.parse(init.body)]);
@@ -624,3 +625,27 @@ def test_c1_review_fetches_the_allowed_units(html):
     js = _script(html)
     rv = _section(js, "/* ---------- #review", "/* ---------- #passport")
     assert '"/api/units"' in rv and "unitChoices(p, units)" in rv
+
+
+_REVIEW = ["persist", "correction", "decisionsRv", "pid", "rvCurrent", "unitsPending", "loadUnits", "showReview", "savedNotice", "alreadySavedNotice", "submitReview", "sessionEnded"]
+
+
+def test_c3_already_saved_revisit_shows_no_count():
+    got = _run_page(
+        _BASE + _API + _REVIEW,
+        """
+        S.checkins = { c1: { proposals: [], status: "pending_review", result: null } };
+        ["rv-intro", "rv-msg", "rv-list", "session-msg"].forEach(function (i) { mk(i); });
+        mk("rv-form", "form"); mk("rv-submit", "button");
+        rvCurrent = "c1";
+        RESP.push([409, { error: "already_saved" }]);
+        await submitReview({ preventDefault: function () {} });
+        var first = $("rv-msg").textContent;
+        await showReview("c1");  // revisit
+        var again = $("rv-msg").querySelector(".notice-title").textContent;
+        return [first, again, $("rv-msg").textContent];
+        """,
+    )
+    assert "Already saved" in got[0]
+    assert got[1] == "Already saved"
+    assert not re.search(r"Saved \d", got[2]), got[2]
