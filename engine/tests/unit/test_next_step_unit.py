@@ -351,3 +351,14 @@ def test_select_intent_later_entry_wins_a_date():
     assert select_intent(None, days, today=D0).intent == "check_in_question"
     days = _days(1, 0, 0) + (AdherenceDay(D0, 1.0),)
     assert select_intent(None, days, today=D0).intent == "check_in_question"
+
+
+def test_t1_a_save_after_choose_gets_fresh_event_ids(client):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"}).status_code == 200
+    _save(client, jid, "slept 7 hours")  # must not reuse the goal_set id
+    j = client.app.state.journals.get(jid)
+    ids = [e.event_id for e in j.all_events()]
+    assert len(ids) == len(set(ids)) == j.event_count == 3
