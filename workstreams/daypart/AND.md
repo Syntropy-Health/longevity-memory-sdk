@@ -354,7 +354,7 @@ HealthClonePassport
 Card
   card_id, concept_id, title
   kind: "observation" | "pattern"          # pattern = an existing LHM Flag (I6 unchanged)
-  origin: "observed" | "simulated"         # observed = confirmed in this journal; simulated = cohort series
+  origin: "observed" | "simulated"         # observed = saved in this journal; simulated = anything else (cohort series, or no data yet: "No record yet") (G23)
   status: "ready" | "withheld"
   value, unit                              # null unless ready (I6)
   data_age_days: int | None
