@@ -1170,12 +1170,10 @@ function renderPassport(pp, inv) {
   pp.cards.forEach(function (c) { (byConcept[c.concept_id] = byConcept[c.concept_id] || []).push(c); });
   var verticals = pp.inventory && Array.isArray(pp.inventory.verticals) ? pp.inventory.verticals : [];
   verticals.forEach(function (v) {
-    var n = 0, ready = 0;
-    (v.concepts || []).forEach(function (cr) { (byConcept[cr.concept_id] || []).forEach(function (c) { n++; if (c.status === "ready") ready++; }); });
-    var li = el("li" , ready ? null : "gap");
-    li.append(el("span", null, v.label));
-    li.append(ready ? el("span", "tag tag--ready", "✓ " + plural(ready, "ready card", "ready cards") + " of " + n)
-      : el("span", "tag tag--withheld", "○ No ready card yet"));
+    var mine = [];
+    (v.concepts || []).forEach(function (cr) { mine = mine.concat(byConcept[cr.concept_id] || []); });
+    var t = invTag(mine), li = el("li", t.covered ? null : "gap");
+    li.append(el("span", null, v.label), el("span", "tag " + (t.covered ? "tag--ready" : "tag--withheld"), t.text));
     list.append(li);
   });
   var gaps = pp.inventory && Array.isArray(pp.inventory.gaps) ? pp.inventory.gaps : [];
@@ -1184,6 +1182,11 @@ function renderPassport(pp, inv) {
     li.append(el("span", null, g), el("span", "tag tag--withheld", "○ Gap: no data yet"));
     list.append(li);
   });
+}
+/* §3.3 inventory: a vertical with a ready card is covered, "✓ N card(s)" (N = its cards); else "○ Gap: no data yet". */
+function invTag(cards) {
+  var covered = cards.some(function (c) { return c.status === "ready"; });
+  return { covered: covered, text: covered ? "✓ " + plural(cards.length, "card", "cards") : "○ Gap: no data yet" };
 }
 function card(c, i) {
   var ready = c.status === "ready";

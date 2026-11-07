@@ -817,3 +817,17 @@ def test_d5_checkin_load_notice_sits_directly_under_h1(html):
     sec = _by_id(_tree(html), "screen-checkin" if 'id="screen-checkin"' in html else "checkin")
     kids = [c for c in sec.children if isinstance(c, _Node)]
     assert kids[0].tag == "h1" and kids[1].attrs.get("id") == "ci-load-msg"
+
+
+def test_d6_inventory_copy_matches_spec():
+    got = _run_js(
+        ["plural", "invTag"],
+        "[invTag([{status:'ready'}]), invTag([{status:'ready'},{status:'withheld'},{status:'withheld'}]),"
+        " invTag([{status:'withheld'}]), invTag([])]",
+    )
+    assert got == [
+        {"covered": True, "text": "✓ 1 card"},
+        {"covered": True, "text": "✓ 3 cards"},
+        {"covered": False, "text": "○ Gap: no data yet"},
+        {"covered": False, "text": "○ Gap: no data yet"},
+    ]
