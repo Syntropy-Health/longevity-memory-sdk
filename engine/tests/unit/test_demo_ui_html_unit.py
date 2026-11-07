@@ -651,7 +651,7 @@ def test_c3_already_saved_revisit_shows_no_count():
     assert not re.search(r"Saved \d", got[2]), got[2]
 
 
-_THREAD = ["STEP_NAMES", "thread"]
+_THREAD = ["STEP_NAMES", "viewText", "thread"]
 _STEPS_TAIL = """{ label: "Memory core-v1+u1", ontology_version: "core-v1+u1", readiness: "ready", link: "#passport/inventory" },
   { label: "none", status: "suppressed", links: [], note: "no source" },
   { label: "none", rule_version: "boundary-v1", run_id: null, link: "" }"""
@@ -682,3 +682,14 @@ def test_c4_thread_links_same_origin_api_steps():
     bad = _thread_links('{ label: "Demo file", ref: "x", link: "/api/%2e%2e/results" }',
                         '{ label: "Saved observation", event_id: "e1", record_id: "r1", link: "javascript:alert(1)" }')
     assert bad[0]["links"] == [] and bad[1]["links"] == []
+
+
+def test_c5_simulated_source_is_never_called_a_check_in():
+    sim = _thread_links('{ label: "Simulated cohort", ref: "simulated-cohort/seed-0", link: "#research" }',
+                        '{ label: "simulated series", event_id: null, record_id: null, link: "#research" }')
+    for step in sim:
+        assert "check-in" not in step["text"], step
+        assert step["links"] == [["#research", "view in research view"]]
+    own = _thread_links('{ label: "Your text", ref: "ci-1", link: "#review/ci-1" }',
+                        '{ label: "Saved observation", event_id: "e1", record_id: "r1", link: "/api/journals/j1/observations/r1" }')
+    assert own[0]["links"] == [["#review/ci-1", "view check-in ci-1"]]

@@ -1241,6 +1241,7 @@ function rangeCell(r) {
   dd.append(link(r.source_url, "Range source: " + (host || "not recorded"), "ref-src"));
   return dd;
 }
+function viewText(u) { return u === "#research" ? "view in research view" : u.indexOf("/api/fixtures/") === 0 ? "view demo file" : "view"; }
 function thread(steps) {
   var d = el("details", "thread");
   d.append(el("summary", null, "Evidence thread (5 steps)"));
@@ -1256,13 +1257,14 @@ function thread(steps) {
     } else if (i === 0) {
       b.append(String(s.label));
       if (safeHref(s.link) !== null) {
-        var fixture = s.link.indexOf("/api/fixtures/") === 0;
-        if (fixture && s.ref) b.append(" · " + s.ref);
-        b.append(" · ", link(s.link, fixture ? "view demo file" : s.ref ? "view check-in " + s.ref : "view"));
+        /* only a #review/ link is a check-in; the simulated cohort (#research) is never called one */
+        var checkin = s.link.indexOf("#review/") === 0;
+        if (!checkin && s.ref) b.append(" · " + s.ref);
+        b.append(" · ", link(s.link, checkin ? "view check-in" + (s.ref ? " " + s.ref : "") : viewText(s.link)));
       } else if (s.ref) b.append(" · " + s.ref);
     } else if (i === 1) {
       b.append(String(s.label) + (s.event_id ? " · event " + s.event_id : "") + (s.record_id ? " · record " + s.record_id : ""));
-      if (safeHref(s.link) !== null) b.append(" · ", link(s.link, "view"));
+      if (safeHref(s.link) !== null) b.append(" · ", link(s.link, viewText(s.link)));
     } else if (i === 2) {
       b.append(el("code", null, s.ontology_version), " · " + (s.readiness === "ready" ? "ready" : "not ready") + " · ");
       var inv = link(s.link, "inventory");
