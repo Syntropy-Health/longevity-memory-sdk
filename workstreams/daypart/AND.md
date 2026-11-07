@@ -217,8 +217,8 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | `POST /api/checkins/{id}/review` | `{"decisions":[{"proposal_id","action":"confirm\|correct\|discard\|save_unmapped","value"?,"unit"?,"date"?}]}` | `200 {"status":"saved","written":[event_id],"discarded":[proposal_id]}` | 404; 409 `already_saved`; 422 `unresolved_flags` (per proposal) / `missing_decision` / `invalid_correction` |
 | `GET /api/journals/{id}/observations/{record_id}` | — | `200 ObservationRecord` (mapped or unmapped) | 404 unknown journal or record |
 | `GET /api/journals/{id}/passport` | `?day=` (whole days from the cohort start, 0 to the journal's today; default today) | `200 HealthClonePassport` | 404 `unknown_journal`; 422 `invalid_day` (with `max_day`) for any other `day` (G23) |
-| `GET /api/journals/{id}/next-step` | — | `200 NextStep` | 404; 409 `no_saved_checkin` |
-| `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` | 404, 422 |
+| `GET /api/journals/{id}/next-step` | — | `200 NextStep` | 404 `unknown_journal`; 409 `no_saved_checkin` |
+| `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` ("choose" again on the same step returns the same id, no new event) | 404 `unknown_journal`; 422 `invalid_request` (malformed body) / `unknown_step` (no saved check-in, or not the current step) (G24) |
 | `GET /api/lab` | — | `200 LabTable` | — |
 | `GET /api/inventory` | — | `200 {"verticals":[{vertical,label,concepts:[{concept_id,code,display}]}],"gaps":[…],"gap_labels":[…],"loinc_version","reviewer_status"}` (`gaps` = registry ids; `gap_labels` = what the passport shows, G23) | — |
 
@@ -433,6 +433,14 @@ and `dsl.check()`. On any violation the step is replaced by the `clinician_hando
 labelled "Ask a professional", with `replaced=true`.
 
 "choose" appends `ActionEvent act:goal_set`. "defer" and "ask_professional" write nothing.
+
+Build detail (G24): `NextStep` also carries `label` ("Suggested next step", or "Ask a professional"
+when replaced). `step_id = "ns-<checkin_id>"` of the last saved check-in, so a new save makes a new
+step and a choice on an older step is 422 `unknown_step`. "Missed" and "adhered" read the
+adherence record by UTC day up to today: the simulated `dp:adherence.protocol` series, overridden by
+a value saved in the journal for that day; 0 is missed, 1 is adhered, and a day with no value is
+neither (it breaks a streak). The streak counts consecutive adhered days ending today. The reason is
+checked by the membrane with the text. "choose" is written once per step, at 12:00 UTC today.
 
 ### 4.8 Learning lab rows (R8 provenance; AD6)
 
