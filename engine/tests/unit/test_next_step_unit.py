@@ -154,7 +154,7 @@ def test_a_gap_day_breaks_the_streak():
 def test_a_saved_adherence_value_overrides_the_simulated_day(client):
     jid = _journal(client)
     j = client.app.state.journals.get(jid)
-    _save(client, jid, "adherence 0")
+    _save(client, jid, "adherence 0%")
     days = asyncio.run(next_step.adherence_days(j))
     assert days[-1].date == j.today and days[-1].value == 0.0
 

@@ -121,6 +121,7 @@ class Journal:
     cohort_seed: int = 0  # the simulated cohort the journal's series come from (passport source step)
     provenance: dict[str, ObservationRecord] = field(default_factory=dict)
     checkins: OrderedDict[str, CheckIn] = field(default_factory=OrderedDict)
+    goal_events: dict[str, str] = field(default_factory=dict)  # next-step step_id -> its act:goal_set event id
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     event_count: int = 0
     record_count: int = 0

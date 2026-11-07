@@ -15,7 +15,7 @@ from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.formparsers import MultiPartException
 
-from daypart.checkin import fixtures, service
+from daypart.checkin import fixtures, next_step, service
 from daypart.checkin.journal import Journal, JournalError, JournalStore
 from daypart.demo.playground import (
     MAX_HORIZON,
@@ -56,7 +56,7 @@ def _gate_view(gates: tuple[real_input.Gate, ...]) -> list[dict]:
 BODY_ENVELOPE_BYTES = 16 * 1024
 MAX_BODY_BYTES = fixtures.MAX_UPLOAD_BYTES + BODY_ENVELOPE_BYTES
 # Member-facing strings: each passes the layer-0 narration guard (fail closed). Numbers never do.
-_SAFE_KEYS = frozenset({"display", "snippet", "text", "hint", "message", "warning", "label"})
+_SAFE_KEYS = frozenset({"display", "snippet", "text", "hint", "message", "warning", "label", "reason"})
 
 
 class _BodyTooLarge(Exception):
@@ -356,6 +356,41 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
         async with j.lock:
             pp = await passport_view.health_clone_passport(j, passport_view.journal_as_of(j, offset))
         return JSONResponse(status_code=200, content=_safe(pp.model_dump(mode="json")))
+
+    @app.get("/api/journals/{journal_id}/next-step")
+    async def get_next_step(journal_id: str) -> Response:
+        try:
+            j = _journal(journal_id)
+        except JournalError as e:
+            return _error(e.status, e.body)
+        async with j.lock:
+            try:
+                step = await next_step.suggest(j)
+            except next_step.NoSavedCheckin as e:
+                return _error(e.status, dict(e.body))
+        return JSONResponse(status_code=200, content=_safe(step.model_dump(mode="json")))
+
+    @app.post("/api/journals/{journal_id}/next-step")
+    async def post_next_step(journal_id: str, request: Request) -> Response:
+        # A&D body: {"step_id", "choice": "choose|defer|ask_professional"}. Only "choose" writes (J1).
+        try:
+            j = _journal(journal_id)
+        except JournalError as e:
+            return _error(e.status, e.body)
+        try:
+            body = await _json_object(request)
+        except _BodyTooLarge:
+            return _error(413, {"error": "too_large"})
+        try:
+            choice = next_step.ChoiceIn.model_validate(body)
+        except ValueError:  # pydantic.ValidationError, or a body that is not a JSON object
+            return _error(422, {"error": "invalid_request"})
+        async with j.lock:
+            try:
+                out = await next_step.record_choice(j, choice.step_id, choice.choice)
+            except next_step.UnknownStep as e:
+                return _error(e.status, dict(e.body))
+        return JSONResponse(status_code=200, content=_safe(out))
 
     @app.get("/api/inventory")
     def inventory() -> dict:
