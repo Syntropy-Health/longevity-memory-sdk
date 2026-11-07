@@ -216,11 +216,11 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | `POST /api/checkins` | `{"journal_id", "text"?: ≤500 chars, "fixture_id"?}`, or multipart `file` + `journal_id` | `201 {"checkin_id","status":"pending_review","proposals":[Proposal]}` | 404 journal; 413 `too_large`; 415 `unsupported_type`; 422 `not_a_demo_fixture` / `looks_like_personal_data` (reasons listed) / `empty_checkin` / `nothing_extracted`; 500 `extractor_output_invalid` (G21) |
 | `POST /api/checkins/{id}/review` | `{"decisions":[{"proposal_id","action":"confirm\|correct\|discard\|save_unmapped","value"?,"unit"?,"date"?}]}` | `200 {"status":"saved","written":[event_id],"discarded":[proposal_id]}` | 404; 409 `already_saved`; 422 `unresolved_flags` (per proposal) / `missing_decision` / `invalid_correction` |
 | `GET /api/journals/{id}/observations/{record_id}` | — | `200 ObservationRecord` (mapped or unmapped) | 404 unknown journal or record |
-| `GET /api/journals/{id}/passport` | `?day=` | `200 HealthClonePassport` | 404 |
+| `GET /api/journals/{id}/passport` | `?day=` (whole days from the cohort start, 0 to the journal's today; default today) | `200 HealthClonePassport` | 404 `unknown_journal`; 422 `invalid_day` (with `max_day`) for any other `day` (G23) |
 | `GET /api/journals/{id}/next-step` | — | `200 NextStep` | 404; 409 `no_saved_checkin` |
 | `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` | 404, 422 |
 | `GET /api/lab` | — | `200 LabTable` | — |
-| `GET /api/inventory` | — | `200 {"verticals":[…],"gaps":[…],"loinc_version","reviewer_status"}` | — |
+| `GET /api/inventory` | — | `200 {"verticals":[{vertical,label,concepts:[{concept_id,code,display}]}],"gaps":[…],"gap_labels":[…],"loinc_version","reviewer_status"}` (`gaps` = registry ids; `gap_labels` = what the passport shows, G23) | — |
 
 Every member-facing string in a response passes `demo.safety.safe_text` (layer 0, fail closed), as
 it does today.
