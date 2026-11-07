@@ -84,6 +84,10 @@ main{padding-block:var(--s5) var(--s7)}
 .notice p,.notice ul{margin:0 0 var(--s2)} .notice ul{padding-left:var(--s5)}
 .notice--info{border-color:var(--blue)} .notice--info .ico,.notice--info .notice-title{color:var(--blue)}
 .notice--ok{border-color:var(--teal)} .notice--ok .ico,.notice--ok .notice-title{color:var(--teal)}
+/* HAC-48: crisis hand-off. Ink, not amber (not a system fault) and not teal (not a success). */
+.notice--handoff{border-color:var(--ink)} .notice--handoff .ico,.notice--handoff .notice-title{color:var(--ink)}
+.notice--handoff .handoff-text{font-size:var(--fs-md);font-weight:600}
+.notice:focus{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off)}
 
 /* ============ 7. Buttons ============ */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);min-height:var(--tap);padding:0 var(--s4);border-radius:var(--r1);font:600 var(--fs-md)/1.2 var(--font);cursor:pointer;text-decoration:none;border:var(--bw-strong) solid var(--blue)}
@@ -160,6 +164,8 @@ textarea{min-height:7rem;resize:vertical}
 .explain{border-top:var(--bw) solid var(--mineral);padding-top:var(--s3);margin-top:auto}
 .explain--suppressed .ex-title::before{content:"◌ "}
 .limits{margin:0 0 var(--s3);padding-left:var(--s5);font-size:var(--fs-sm)}
+/* HAC-48 (AM-1): reference range = reference text in the meta grid. No colour, bar, marker or glyph. */
+.ref-pop,.ref-src{display:block}
 
 /* disclosure */
 details.thread{margin-top:var(--s3);border-top:var(--bw) solid var(--blue);padding-top:var(--s2)}
@@ -222,7 +228,6 @@ tr.proposed td{border-top-style:dashed}
 /* ============ 16. Build additions (HAC-38 P3 task 11; tokens only) ============ */
 [hidden]{display:none!important}
 .notice>div>:last-child{margin-bottom:0}
-.range{font-size:var(--fs-sm);margin:0 0 var(--s3)}
 .value-label{margin:0;font-size:var(--fs-sm);color:var(--blue);font-weight:600}
 tr[aria-current="true"] td{background:var(--mineral)}
 table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
@@ -261,7 +266,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 <!-- ================= 1. CHECK IN ================= -->
 <section id="checkin" data-screen="checkin" aria-labelledby="h-checkin" hidden>
   <h1 id="h-checkin" tabindex="-1">What matters today?</h1>
-  <p class="screen-intro">Tell the clone about your day in a sentence, or use one of the demo files. Nothing is saved until you review it.</p>
+  <p class="screen-intro" id="ci-intro">Tell the clone about your day in a sentence, or use one of the demo files. Nothing is saved until you review it.</p>
 
   <div class="notice" id="real-data-warning">
     <span class="ico" aria-hidden="true">⚠</span>
@@ -558,17 +563,19 @@ function link(href, text, cls) {
 }
 function nr(text) { return el("span", "nr", text || "not recorded"); }
 function clear(node) { node.replaceChildren(); return node; }
-/* A notice: kind "warn" (amber), "info" (blue), "ok" (teal). body: strings or nodes. */
+/* A notice: kind "warn" (amber), "info" (blue), "ok" (teal), "handoff" (ink). body: strings or nodes. */
 function notice(kind, title, body, opts) {
   opts = opts || {};
-  var n = el("div", "notice" + (kind === "info" ? " notice--info" : kind === "ok" ? " notice--ok" : ""));
+  var round = kind === "info" || kind === "handoff";
+  var n = el("div", "notice" + ({ info: " notice--info", ok: " notice--ok", handoff: " notice--handoff" }[kind] || ""));
   if (opts.role) n.setAttribute("role", opts.role);
   if (opts.id) n.id = opts.id;
   if (opts.focus) n.setAttribute("tabindex", "-1");
-  var ico = el("span", kind === "info" ? "ico ico-i" : "ico", kind === "info" ? "i" : kind === "ok" ? "✓" : (opts.glyph || "⚠"));
+  var ico = el("span", round ? "ico ico-i" : "ico", kind === "info" ? "i" : kind === "handoff" ? "!" : kind === "ok" ? "✓" : (opts.glyph || "⚠"));
   ico.setAttribute("aria-hidden", "true");
-  var box = el("div");
-  box.append(el("p", "notice-title", title));
+  var box = el("div"), t = el("p", "notice-title", title);
+  if (opts.titleId) { t.id = opts.titleId; n.setAttribute("aria-labelledby", opts.titleId); }
+  box.append(t);
   (body || []).forEach(function (b) {
     if (b === null || b === undefined) return;
     box.append(typeof b === "string" ? el("p", null, b) : b);
@@ -706,7 +713,7 @@ var CI_ERRORS = {
   unsupported_type: ["warn", "That file type is not supported", "Use a PNG or JPEG image, or a CSV or JSON file from the demo set. Nothing was saved."],
   nothing_extracted: ["info", "We could not find anything to record", "Try something like “slept 7 hours” or “walked 5000 steps”."],
   empty_checkin: ["info", "Write a sentence or pick a demo input", null],
-  text_too_long: ["warn", "That check-in is too long", "Keep it to 500 characters or fewer. Nothing was saved."],
+  text_too_long: ["warn", "That is too long, so nothing was saved", "Keep your check-in to 500 characters."],
   one_source_only: ["info", "Use one input at a time", "Send a sentence or one demo file, not both."]
 };
 var PII_REASONS = {
@@ -750,7 +757,7 @@ function setCiError(node) {
 }
 function resetCheckin() {
   setCiError(null);
-  $("ci-form").hidden = false;
+  $("ci-intro").hidden = false; $("real-data-warning").hidden = false; $("ci-form").hidden = false;
   $("ci-text").value = "";
   updateCount();
 }
@@ -794,15 +801,19 @@ async function submitCheckin(input) {
     setBusy(false);
   }
 }
+/* Crisis hand-off (HAC-48 §3.1.1): the API text verbatim is the body; the UI adds no number, link or copy of its own. */
 function showHandoff(text) {
-  $("ci-form").hidden = true;
-  var again = el("button", "btn btn--secondary", "Start again");
+  setCiError(null);
+  $("ci-text").value = ""; updateCount();
+  $("ci-intro").hidden = true; $("real-data-warning").hidden = true; $("ci-form").hidden = true;
+  var again = el("button", "btn btn--secondary", "Write a different check-in");
   again.type = "button";
   again.addEventListener("click", function () { resetCheckin(); $("ci-text").focus(); });
-  var n = notice("info", "A person can help with this", [
-    text, "Nothing was saved.", again
-  ], { role: "alert" });
+  var n = notice("handoff", "Please talk to a person about this", [
+    el("p", "handoff-text", text), "This demo cannot help with this. Nothing from your check-in was saved.", again
+  ], { role: "alert", focus: true, titleId: "handoff-title" });
   clear($("ci-msg")).append(n);
+  n.focus();
 }
 
 /* ---------- #review ---------- */
