@@ -74,8 +74,10 @@ Reviewer.
 
 6. **Evidence registry.** Files: `daypart/evidence/registry.py`, `daypart/evidence/sources_v1.json`.
    Failing test: `tests/unit/test_evidence_unit.py` (T6.3 data side, the no-range-in-`supports` rule).
-   Done when: every source has `vetting="agent draft, not clinically reviewed"`, a public https URL
-   and no digit+unit in `supports`, and at least one concept has no source (it exercises suppression).
+   Done when (as amended by AM-1, addendum G19/G22): every source has
+   `vetting="reviewed: board sign-off 2026-11-07"` and a public https URL; every number in `supports` or a
+   `reference_range` traces to the source's own stated sentence; and at least one concept has no source
+   (it exercises suppression).
 7. **Passport view.** Files: `daypart/passport/view.py`, routes `/api/journals/{id}/passport` and
    `/api/inventory`.
    Failing test: `tests/unit/test_passport_view_unit.py` (T6.1–T6.6, T5.4).
