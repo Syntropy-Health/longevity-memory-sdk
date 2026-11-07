@@ -347,8 +347,9 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 <!-- ================= 5. LAB ================= -->
 <section id="lab" data-screen="lab" aria-labelledby="h-lab" hidden>
   <h1 id="h-lab" tabindex="-1">Learning lab</h1>
-  <p class="screen-intro">Results from committed training and evaluation runs. Each number links to its run.</p>
   <div id="lab-msg"></div>
+  <div id="lab-body" hidden>
+  <p class="screen-intro">Results from committed training and evaluation runs. Each number links to its run.</p>
   <dl class="meta panel" id="lab-meta" style="padding:var(--s3) var(--s4)"></dl>
   <div class="table-wrap" tabindex="0" role="region" aria-labelledby="lab-cap">
   <table class="stack">
@@ -358,6 +359,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
   </table>
   </div>
   <p class="footnote">Simulated outcomes are not patient outcomes.</p>
+  </div>
 </section>
 
 <!-- ================= RESEARCH (the only place the playground words appear) ================= -->
@@ -410,8 +412,8 @@ var research = (function () {
   async function call(path, body) {
     var res = await api(body ? "POST" : "GET", path, body);
     if (!res.ok) {
-      var d = res.data && res.data.detail;
-      throw new Error(typeof d === "string" ? d : "The request failed (" + (res.status || "network") + ").");
+      throw new Error(res.status ? "The demo had a problem with this request (error " + Math.floor(res.status) + ")."
+        : "We could not reach the demo server. Check your connection and try again.");
     }
     return res.data;
   }
@@ -605,20 +607,37 @@ function fmtNum(v) { return typeof v === "number" && isFinite(v) ? String(v) : n
 function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
 
 /* ---------- API ---------- */
+var TIMEOUT_MS = 15000;
+/* status 0 = no response: a network failure, or nothing within TIMEOUT_MS (the request is aborted). */
 async function api(method, path, body) {
-  var init = { method: method, headers: {} };
+  var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, TIMEOUT_MS);
+  var init = { method: method, headers: {}, signal: ctl.signal };
   if (body !== undefined) { init.headers["content-type"] = "application/json"; init.body = JSON.stringify(body); }
-  var r;
-  try { r = await fetch(path, init); } catch (e) { return { status: 0, ok: false, data: null }; }
-  var data = null;
-  try { data = await r.json(); } catch (e) { data = null; }
-  return { status: r.status, ok: r.ok, data: data };
+  try {
+    var r;
+    try { r = await fetch(path, init); } catch (e) { return { status: 0, ok: false, data: null }; }
+    var data = null;
+    try { data = await r.json(); } catch (e) { if (ctl.signal.aborted) return { status: 0, ok: false, data: null }; data = null; }
+    return { status: r.status, ok: r.ok, data: data };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 function code(res) { return res.data && typeof res.data.error === "string" ? res.data.error : null; }
 function failed(res) { return res.status === 0 || res.status >= 500 || (res.data === null && !res.ok); }
-function genericError() {
-  return notice("warn", "Something went wrong, so nothing was saved. Try again.", [], { role: "alert" });
+/* HAC-48 §3.8: the one notice for any other server, network or timeout failure. It shows the status
+   number only: never the error body, a stack trace or an input value, and it makes no claim about saving.
+   opts.focus: a failed POST (focus moves to the notice); a failed GET leaves focus on the h1. */
+function serverError(res, retry, opts) {
+  var st = res && typeof res.status === "number" && res.status > 0 ? Math.floor(res.status) : 0;
+  var body = st ? "The demo had a problem on its side (error " + st + "). Try again in a moment."
+    : "We could not reach the demo server. Check your connection and try again.";
+  var again = el("button", "btn btn--secondary", "Try again");
+  again.type = "button";
+  again.addEventListener("click", retry);
+  return notice("warn", "Something went wrong", [body, again], { role: "alert", focus: !!(opts && opts.focus) });
 }
+function showError(box, n) { clear(box).append(n); if (n.hasAttribute("tabindex")) n.focus(); return n; }
 
 /* ---------- session (journal) ---------- */
 function persist() {
@@ -635,14 +654,16 @@ function restore() {
     }
   } catch (e) { /* ignore */ }
 }
-var journalPending = null;
+var journalPending = null, journalErr = null;
 async function createJournal() {
   var res = await api("GET", "/api/members");
+  journalErr = res;
   if (!res.ok || !Array.isArray(res.data)) return false;
   for (var i = 0; i < res.data.length && i < 10; i++) {
     var m = res.data[i] && res.data[i].member_id;
     if (typeof m !== "string") continue;
     var j = await api("POST", "/api/journals", { member_id: m });
+    journalErr = j;
     if (j.status === 201 && j.data && typeof j.data.journal_id === "string") {
       S.journal = j.data.journal_id; S.today = j.data.today || null;
       S.checkins = {}; S.lastCheckin = null; persist(); updateNav();
@@ -670,7 +691,7 @@ async function startAgain() {
   try { sessionStorage.removeItem(STORE); } catch (e) { /* ignore */ }
   resetCheckin();
   var ok = await ensureJournal();
-  if (!ok) $("session-msg").append(genericError());
+  if (!ok) { showError($("session-msg"), serverError(journalErr, startAgain, { focus: true })); return; }
   if (location.hash === "#checkin") route(); else location.hash = "#checkin";
 }
 function isGone(res) { return res.status === 404 && code(res) === "unknown_journal"; }
@@ -747,11 +768,14 @@ function togglePicker(btnId, boxId) {
   b.setAttribute("aria-expanded", String(open));
   box.hidden = !open;
 }
-function setCiError(node) {
+/* node: the notice; fault: true when the demo failed (not the person's input), so no aria-invalid and focus moves to the notice */
+function setCiError(node, fault) {
   var msg = clear($("ci-msg")), ta = $("ci-text");
-  if (!node) { ta.removeAttribute("aria-invalid"); ta.setAttribute("aria-describedby", "ci-count real-data-warning"); return; }
+  ta.removeAttribute("aria-invalid"); ta.setAttribute("aria-describedby", "ci-count real-data-warning");
+  if (!node) return;
   node.id = "ci-error";
   msg.append(node);
+  if (fault) { node.setAttribute("tabindex", "-1"); node.focus(); return; }
   ta.setAttribute("aria-invalid", "true");
   ta.setAttribute("aria-describedby", "ci-error ci-count real-data-warning");
 }
@@ -773,7 +797,8 @@ async function submitCheckin(input) {
   setBusy(true);
   setCiError(null);
   try {
-    if (!(await ensureJournal())) { setCiError(genericError()); return; }
+    var retry = function () { submitCheckin(input); };
+    if (!(await ensureJournal())) { setCiError(serverError(journalErr, retry), true); return; }
     var res = await api("POST", "/api/checkins", Object.assign({ journal_id: S.journal }, input));
     if (isGone(res)) { sessionEnded(); return; }
     if (res.status === 200 && res.data && res.data.status === "handoff") { showHandoff(String(res.data.text || "")); return; }
@@ -784,8 +809,13 @@ async function submitCheckin(input) {
       location.hash = "#review/" + res.data.checkin_id;
       return;
     }
-    if (failed(res)) { setCiError(genericError()); return; }
     var c = code(res);
+    if (res.status === 500 && c === "extractor_output_invalid") {
+      setCiError(notice("warn", "Something went wrong reading your check-in, so nothing was saved",
+        ["This is a fault in the demo, not in what you wrote. Try again, or use a demo input."], { role: "alert" }), true);
+      return;
+    }
+    if (failed(res)) { setCiError(serverError(res, retry), true); return; }
     if (c === "looks_like_personal_data") {
       var reasons = Array.isArray(res.data.reasons) ? res.data.reasons : [];
       var items = reasons.map(function (r) { return PII_REASONS[r] || "It contains something that looks like personal data."; });
@@ -796,7 +826,7 @@ async function submitCheckin(input) {
     }
     var spec = CI_ERRORS[c];
     if (spec) { setCiError(notice(spec[0], spec[1], spec[2] ? [spec[2]] : [], { role: "alert" })); return; }
-    setCiError(genericError());
+    setCiError(serverError(res, retry), true);
   } finally {
     setBusy(false);
   }
@@ -1036,7 +1066,8 @@ async function submitReview(ev) {
       return;
     }
     if (res.status === 422 && ["missing_decision", "unresolved_flags", "invalid_correction"].indexOf(code(res)) >= 0) { refused(res); return; }
-    msg.append(genericError());
+    /* the form and its input stay; Try again re-sends (409 already_saved if the first one landed) */
+    showError(msg, serverError(res, function () { $("rv-submit").click(); }, { focus: true }));
   } finally {
     rvBusy = false; btn.removeAttribute("aria-disabled");
   }
@@ -1049,11 +1080,13 @@ function reviewLabel(s) {
 }
 async function showPassport(rest) {
   var msg = clear($("pp-msg")), body = $("pp-body");
-  if (!(await ensureJournal())) { msg.append(genericError()); return; }
+  var retry = function () { showPassport(rest); };
+  if (!(await ensureJournal())) { body.hidden = true; msg.append(serverError(journalErr, retry)); return; }
   var both = await Promise.all([api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/passport"), api("GET", "/api/inventory")]);
   var res = both[0], inv = both[1];
   if (isGone(res)) { body.hidden = true; sessionEnded(); return; }
-  if (!res.ok || !res.data || !Array.isArray(res.data.cards)) { body.hidden = true; msg.append(genericError()); return; }
+  if (!res.ok || !res.data || !Array.isArray(res.data.cards)) { body.hidden = true; msg.append(serverError(res, retry)); return; }
+  if (failed(inv)) { body.hidden = true; msg.append(serverError(inv, retry)); return; }
   renderPassport(res.data, inv.ok && inv.data ? inv.data : null);
   body.hidden = false;
   if (rest === "inventory") { var h = $("h-inventory"); h.focus(); h.scrollIntoView(); }
@@ -1195,11 +1228,11 @@ function noSaved() {
 async function loadStep() {
   var msg = clear($("ns-msg")), panel = $("ns-panel");
   panel.hidden = true;
-  if (!(await ensureJournal())) { msg.append(genericError()); return; }
+  if (!(await ensureJournal())) { msg.append(serverError(journalErr, loadStep)); return; }
   var res = await api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/next-step");
   if (isGone(res)) { sessionEnded(); return; }
   if (res.status === 409 && code(res) === "no_saved_checkin") { msg.append(noSaved()); return; }
-  if (!res.ok || !res.data || typeof res.data.step_id !== "string") { msg.append(genericError()); return; }
+  if (!res.ok || !res.data || typeof res.data.step_id !== "string") { msg.append(serverError(res, loadStep)); return; }
   renderStep(res.data);
 }
 function renderStep(st) {
@@ -1243,7 +1276,7 @@ async function choose(stepId, choice) {
       return;
     }
     if (res.status === 409 && code(res) === "no_saved_checkin") { $("ns-panel").hidden = true; out.append(noSaved()); return; }
-    out.append(genericError());
+    showError(out, serverError(res, function () { choose(stepId, choice); }, { focus: true }));
   } finally {
     nsBusy = false;
   }
@@ -1262,9 +1295,12 @@ function parts(td, list) {
 }
 function rate(v) { return typeof v === "number" && isFinite(v) ? String(v) : null; }
 async function showLab(runId) {
-  var msg = clear($("lab-msg"));
+  var msg = clear($("lab-msg")), labBody = $("lab-body");
   var res = await api("GET", "/api/lab");
-  if (!res.ok || !res.data || !Array.isArray(res.data.rows)) { msg.append(genericError()); return; }
+  if (!res.ok || !res.data || !Array.isArray(res.data.rows)) {
+    labBody.hidden = true; msg.append(serverError(res, function () { showLab(runId); })); return;
+  }
+  labBody.hidden = false;
   var t = res.data, meta = clear($("lab-meta"));
   meta.append(el("dt", null, "Data-generation failures"));
   var dd = el("dd"); dd.append(typeof t.member_failure_count === "number" ? plural(t.member_failure_count, "member", "members") : nr()); meta.append(dd);
@@ -1348,7 +1384,7 @@ async function realInput() {
       n.append(ico, box);
       panel.append(n);
     } else {
-      panel.append(genericError());
+      showError(panel, serverError(res, function () { b.setAttribute("aria-expanded", "false"); realInput(); }, { focus: true }));
     }
     b.setAttribute("aria-expanded", "true");
   } finally {
