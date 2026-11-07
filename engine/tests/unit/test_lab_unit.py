@@ -293,3 +293,20 @@ def test_k3_mismatch_row_keeps_only_run_id_prompt_set_and_data_sha(copy, name):
     assert r.seed is None and r.cohort_seed is None and r.failures is None and r.degenerate is None
     assert r.gate is None and r.file_digest is None
     assert all(v is None for v in r.metrics.values())
+
+
+@pytest.mark.parametrize("bad", [None, 7, ""])
+def test_b1_env_arm_without_a_name_is_left_out_not_invented(copy, bad):
+    """B1: a missing or non-string arm name never becomes a "None" row or run id (AD6: never invent)."""
+    def drop(d):
+        arm = _arm(d, "env_random_intent")
+        if bad is None:
+            arm.pop("name")
+        else:
+            arm["name"] = bad
+
+    _edit(copy, "metrics.json", drop)
+    table = lab_rows(copy)
+    names = [r.row for r in table.rows]
+    assert names == ["base", "sft", "dpo", "env_always_none", "env_always_barrier_problem_solving", "grpo"]
+    assert not any("None" in (r.run_id or "") for r in table.rows)

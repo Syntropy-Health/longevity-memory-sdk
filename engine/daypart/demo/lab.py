@@ -158,8 +158,7 @@ def _model_row(name: str, be: Mapping[str, Any], be_raw: bytes | None, tr: Mappi
                   metrics=metrics, gate=dict(gate) if isinstance(gate, Mapping) else None, **common)
 
 
-def _env_row(arm: Mapping[str, Any], mx: Mapping[str, Any]) -> LabRow:
-    name = str(arm.get("name"))
+def _env_row(arm: Mapping[str, Any], mx: Mapping[str, Any], name: str) -> LabRow:
     m = arm.get("metrics") if isinstance(arm.get("metrics"), Mapping) else {}
     version, digest = _str(mx.get("runs_version")), _str(mx.get("runs_digest"))
     raw_seeds = _get(m, "seeds")
@@ -200,7 +199,9 @@ def lab_rows(results_dir: str | os.PathLike[str] | None = None) -> LabTable:
     pl, _ = _read(d, "pipeline.json")
     arms = [a for a in mx.get("arms", []) if isinstance(a, Mapping)] if isinstance(mx.get("arms"), list) else []
     rows = [_model_row(name, be, be_raw, tr, pl) for name in MODEL_ROWS]
-    rows += [_env_row(a, mx) for a in arms if a.get("kind") == "env_baseline" and a.get("status") == "ok"]
+    # An arm with no string name is left out: a row name or run id is never invented (AD6, G25).
+    rows += [_env_row(a, mx, name) for a in arms
+             if a.get("kind") == "env_baseline" and a.get("status") == "ok" and (name := _str(a.get("name")))]
     rows.append(_grpo_row(arms))
     i1 = next((a for a in arms if a.get("name") == "i1_gate"), None)
     passed = _get(i1, "metrics", "passed")
