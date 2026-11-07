@@ -433,7 +433,10 @@ to a person, whatever the value). Missed adherence in 2 of the last 3 days →
 The text comes from `POLICY_TEXT[intent]`, and the reason from a fixed template naming the
 observation (concept, not value) that triggered it. The selected step must pass `membrane.post()`
 and `dsl.check()`. On any violation the step is replaced by the `clinician_handoff` text,
-labelled "Ask a professional", with `replaced=true`.
+labelled "Ask a professional", with `replaced=true`. The library is read at call time; a test may patch
+`daypart.eval.policies.POLICY_TEXT` (in place or rebound) or rebind `daypart.checkin.next_step.POLICY_TEXT`. The
+replacement text is the `clinician_handoff` entry captured at import (`HANDOFF_TEXT`), so a replaced step never
+reads patched text (G24).
 
 "choose" appends `ActionEvent act:goal_set`. "defer" and "ask_professional" write nothing.
 
