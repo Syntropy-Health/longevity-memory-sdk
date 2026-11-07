@@ -527,7 +527,7 @@ var research = (function () {
 <script>
 "use strict";
 /* Clinical Human Clone journey UI (HAC-38 P3). Every node is built with createElement and
-   textContent; API strings never reach innerHTML. Links from the API pass safeHref (https: or '#'). */
+   textContent; API strings never reach innerHTML. Links from the API pass safeHref (https:, '#' or a same-origin /api/ path). */
 
 var S = { journal: null, today: null, checkins: {}, lastCheckin: null };
 var STORE = "chc.session.v1";
@@ -544,10 +544,12 @@ function attrs(e, map) { Object.keys(map).forEach(function (k) { e.setAttribute(
 function safeHref(u) {
   if (typeof u !== "string" || u === "") return null;
   if (u.charAt(0) === "#") return u;
+  /* same-origin API paths (evidence-thread fixture and observation links); no "//", "\\" or ".." */
+  if (/^\/api\/[A-Za-z0-9._~%\/-]*$/.test(u) && u.indexOf("..") < 0 && u.indexOf("//") < 0) return u;
   try { var p = new URL(u); if (p.protocol === "https:") return p.href; } catch (e) { /* not a URL */ }
   return null;
 }
-/* An <a> for an allowed href, else plain text (relative API paths and anything else are not linked). */
+/* An <a> for an allowed href, else plain text. */
 function link(href, text, cls) {
   if (safeHref(href) === null) return el("span", cls || null, text);
   var a = el("a", cls || null, text);
@@ -798,7 +800,7 @@ function showHandoff(text) {
   again.type = "button";
   again.addEventListener("click", function () { resetCheckin(); $("ci-text").focus(); });
   var n = notice("info", "A person can help with this", [
-    text, "If you are in danger, contact local emergency services.", "Nothing was saved.", again
+    text, "Nothing was saved.", again
   ], { role: "alert" });
   clear($("ci-msg")).append(n);
 }
