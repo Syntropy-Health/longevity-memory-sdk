@@ -195,16 +195,23 @@ def test_t7_2_also_holds_when_the_eval_library_is_patched(client, monkeypatch):
     assert step["replaced"] is True and step["text"] == HANDOFF_TEXT
 
 
-def test_dsl_hits_are_reported_when_layer0_passes(client, monkeypatch):
-    patched = dict(POLICY_TEXT)
-    for k in patched:
-        patched[k] = "You should increase your dose tomorrow."
-    monkeypatch.setattr(next_step, "POLICY_TEXT", patched)
+@pytest.mark.parametrize(
+    ("draft", "layer0", "hits"),
+    [
+        ("Stop taking your medication.", "pass", {"dosing.imperative"}),  # layer 0 passes, the DSL fails
+        (DOSING, "fail", {"dosing.unit_quantity", "lhm.imperative_dose"}),  # layer 0 fails; hits still shown
+    ],
+)
+def test_t4_dsl_rule_hits_are_reported(client, monkeypatch, draft, layer0, hits):
+    from daypart.membrane.post import post
+
+    assert post(draft).trace["layer0"]["outcome"] == layer0
+    monkeypatch.setattr(next_step, "POLICY_TEXT", {k: draft for k in POLICY_TEXT})
     jid = _journal(client)
     _save(client, jid, "walked 8000 steps")
     step = client.get(f"/api/journals/{jid}/next-step").json()
-    assert step["replaced"] is True
-    assert step["membrane"]["decision"] == "escalate"
+    assert step["replaced"] is True and step["membrane"]["decision"] == "escalate"
+    assert hits <= set(step["membrane"]["rule_hits"])
 
 
 # --- T7.3: choices -------------------------------------------------------------------------------
