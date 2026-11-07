@@ -332,3 +332,22 @@ def test_c1_last_saved_is_by_save_order_not_creation_order(client):
     assert step["intent"] == "clinician_handoff"
     r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
     assert r.status_code == 200 and r.json()["recorded"]
+
+
+def test_c2_a_later_save_wins_its_day_past_the_e9_e10_boundary(client):
+    jid = _journal(client, "syn-004")  # simulated streak ending today
+    for _ in range(8):
+        _save(client, jid, "slept 7 hours")
+    _save(client, jid, "adherence 0%")  # -e9
+    _save(client, jid, "adherence 100%")  # -e10, the latest entry for today
+    j = client.app.state.journals.get(jid)
+    days = asyncio.run(next_step.adherence_days(j))
+    assert days[-1].date == j.today and days[-1].value == 1.0
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == "celebrate_streak"
+
+
+def test_select_intent_later_entry_wins_a_date():
+    days = _days(1, 1, 1) + (AdherenceDay(D0, 0.0),)
+    assert select_intent(None, days, today=D0).intent == "check_in_question"
+    days = _days(1, 0, 0) + (AdherenceDay(D0, 1.0),)
+    assert select_intent(None, days, today=D0).intent == "check_in_question"

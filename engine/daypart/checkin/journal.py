@@ -150,6 +150,10 @@ class Journal:
     def event_id(self, n: int) -> str:
         return f"{self.journal_id[:8]}-e{n}"
 
+    def event_index(self, event_id: str) -> int:
+        """The ``n`` of an id made by :meth:`event_id` (save order), so ``-e10`` sorts after ``-e9``."""
+        return int(event_id.rsplit("-e", 1)[1])
+
     def record_id(self, n: int) -> str:
         return f"obs-{n}"
 

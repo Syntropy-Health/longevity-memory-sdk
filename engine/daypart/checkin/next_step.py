@@ -178,9 +178,12 @@ async def adherence_days(journal: Journal) -> tuple[AdherenceDay, ...]:
             if p.value is not None and p.observed_at <= as_of:
                 days.append(AdherenceDay(p.observed_at.astimezone(dt.timezone.utc).date(), float(p.value)))
     days.sort(key=lambda d: d.date)
-    for e in journal.events.events(member_id, as_of=as_of):
-        if isinstance(e, SignalEvent) and e.code == ADHERENCE_CODE:
-            days.append(AdherenceDay(e.occurred_at.astimezone(dt.timezone.utc).date(), float(e.value)))
+    # Saved values in save order: EventLog.events() sorts same-time ties by event id as a string
+    # ("-e10" < "-e9"), so order by the journal's numeric event index instead.
+    saved = [e for e in journal.events.events(member_id, as_of=as_of)
+             if isinstance(e, SignalEvent) and e.code == ADHERENCE_CODE]
+    saved.sort(key=lambda e: (e.occurred_at, journal.event_index(e.event_id)))
+    days.extend(AdherenceDay(e.occurred_at.astimezone(dt.timezone.utc).date(), float(e.value)) for e in saved)
     return tuple(days)
 
 
