@@ -264,7 +264,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 <div id="session-msg"></div>
 
 <!-- ================= 1. CHECK IN ================= -->
-<section id="checkin" data-screen="checkin" aria-labelledby="h-checkin" hidden>
+<section id="screen-checkin" data-screen="checkin" aria-labelledby="h-checkin" hidden>
   <h1 id="h-checkin" tabindex="-1">What matters today?</h1>
   <div id="ci-load-msg"></div>
   <div id="ci-body">
@@ -311,7 +311,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 </section>
 
 <!-- ================= 2. REVIEW ================= -->
-<section id="review" data-screen="review" aria-labelledby="h-review" hidden>
+<section id="screen-review" data-screen="review" aria-labelledby="h-review" hidden>
   <h1 id="h-review" tabindex="-1">Review before saving</h1>
   <p class="screen-intro" id="rv-intro"></p>
   <div id="rv-msg"></div>
@@ -325,7 +325,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 </section>
 
 <!-- ================= 3. PASSPORT ================= -->
-<section id="passport" data-screen="passport" aria-labelledby="h-passport" hidden>
+<section id="screen-passport" data-screen="passport" aria-labelledby="h-passport" hidden>
   <h1 id="h-passport" tabindex="-1">Health Clone Passport</h1>
   <div id="pp-msg"></div>
   <div id="pp-body" hidden>
@@ -341,7 +341,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 </section>
 
 <!-- ================= 4. NEXT STEP ================= -->
-<section id="next" data-screen="next" aria-labelledby="h-next" hidden>
+<section id="screen-next" data-screen="next" aria-labelledby="h-next" hidden>
   <h1 id="h-next" tabindex="-1">Suggested next step</h1>
   <div id="ns-msg"></div>
   <div class="panel" id="ns-panel" hidden></div>
@@ -349,7 +349,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 </section>
 
 <!-- ================= 5. LAB ================= -->
-<section id="lab" data-screen="lab" aria-labelledby="h-lab" hidden>
+<section id="screen-lab" data-screen="lab" aria-labelledby="h-lab" hidden>
   <h1 id="h-lab" tabindex="-1">Learning lab</h1>
   <div id="lab-msg"></div>
   <div id="lab-body" hidden>
@@ -367,7 +367,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 </section>
 
 <!-- ================= RESEARCH (the only place the playground words appear) ================= -->
-<section id="research" data-screen="research" aria-labelledby="h-research" hidden>
+<section id="screen-research" data-screen="research" aria-labelledby="h-research" hidden>
   <p class="research-label">◇ Research view (optional)</p>
   <h1 id="h-research" tabindex="-1">Research view (optional)</h1>
   <p class="muted">The original episode playground for researchers (formerly the Daypart playground). Not part of the journey. <a href="/results">Benchmark results</a> · <a href="/docs">API</a></p>
@@ -722,7 +722,9 @@ function parseHash() {
 }
 function route() {
   var r = parseHash();
-  SCREENS.forEach(function (s) { $(s).hidden = s !== r.base; });
+  /* section ids are "screen-<route>", never the hash itself, so a direct load does not fragment-scroll
+     to the section and drop the h1 focus (QG P3.1 U1) */
+  SCREENS.forEach(function (s) { $("screen-" + s).hidden = s !== r.base; });
   document.querySelectorAll(".steps a").forEach(function (a) {
     var b = (a.getAttribute("href") || "").slice(1).split("/")[0];
     if (b === r.base) a.setAttribute("aria-current", "step"); else a.removeAttribute("aria-current");

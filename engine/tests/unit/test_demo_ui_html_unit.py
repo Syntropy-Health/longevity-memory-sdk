@@ -99,9 +99,9 @@ def _by_id(root: _Node, ident: str) -> _Node:
 
 
 def _without_research(html: str) -> str:
-    """The page source with the ``<section id="research">`` element (and everything in it) cut out."""
-    m = re.search(r'<section\b[^>]*\bid="research"[^>]*>', html)
-    assert m, "no <section id=\"research\">"
+    """The page source with the ``<section id="screen-research">`` element (and everything in it) cut out."""
+    m = re.search(r'<section\b[^>]*\bid="screen-research"[^>]*>', html)
+    assert m, "no <section id=\"screen-research\">"
     depth, i = 1, m.end()
     tag = re.compile(r"<(/?)section\b[^>]*>")
     while depth:
@@ -124,7 +124,7 @@ def test_t1_1_names_and_no_research_words_outside_research(html):
     assert "pattern passport" not in outside.lower()
     assert not re.search(r"\bIntent\b", outside)
     assert not re.search(r"\bDraft\b", outside)
-    research = _by_id(_tree(html), "research").text()
+    research = _by_id(_tree(html), "screen-research").text()
     assert "Research view (optional)" in research
     assert re.search(r"\bIntent\b", research) and re.search(r"\bDraft\b", research)
 
@@ -137,7 +137,7 @@ def test_one_main_one_h1_per_screen(html):
     mains = [n for n in root.iter() if n.tag == "main"]
     assert len(mains) == 1
     for s in SCREENS:
-        sec = _by_id(root, s)
+        sec = _by_id(root, "screen-" + s)
         assert sec.tag == "section" and _is_inside(sec, mains[0])
         h1s = [n for n in sec.iter() if n.tag == "h1"]
         assert len(h1s) == 1 and h1s[0].attrs.get("tabindex") == "-1", s
@@ -186,7 +186,7 @@ def test_footer_disclaimer_research_link_and_loinc_notice(html):
 
 def test_t2_1_checkin_heading_labelled_textarea_and_warning(html):
     root = _tree(html)
-    sec = _by_id(root, "checkin")
+    sec = _by_id(root, "screen-checkin")
     h1 = next(n for n in sec.iter() if n.tag == "h1")
     assert h1.text().strip() == "What matters today?"
     areas = [n for n in sec.iter() if n.tag == "textarea"]
@@ -197,7 +197,7 @@ def test_t2_1_checkin_heading_labelled_textarea_and_warning(html):
 
 
 def test_t3_3_voice_and_video_disabled_not_available(html):
-    sec = _by_id(_tree(html), "checkin")
+    sec = _by_id(_tree(html), "screen-checkin")
     buttons = [n for n in sec.iter() if n.tag == "button" and "disabled" in n.attrs]
     for word in ("Voice", "Video"):
         hits = [b for b in buttons if word in b.text()]
@@ -206,7 +206,7 @@ def test_t3_3_voice_and_video_disabled_not_available(html):
 
 
 def test_t8_4_lab_footnote(html):
-    sec = _by_id(_tree(html), "lab")
+    sec = _by_id(_tree(html), "screen-lab")
     assert "Simulated outcomes are not patient outcomes." in sec.text()
 
 
@@ -536,7 +536,7 @@ def test_rev2_generic_server_and_network_errors(html):
 def test_rev2_get_failure_notice_sits_directly_under_h1(html):
     root = _tree(html)
     for s in ("passport", "next", "lab"):
-        sec = _by_id(root, s)
+        sec = _by_id(root, "screen-" + s)
         kids = [c for c in sec.children if isinstance(c, _Node)]
         assert kids[0].tag == "h1", s
         assert kids[1].tag == "div" and (kids[1].attrs.get("id") or "").endswith("-msg"), s
@@ -814,7 +814,7 @@ def test_d5_checkin_fixture_list_failure_shows_the_generic_notice(resp):
 
 
 def test_d5_checkin_load_notice_sits_directly_under_h1(html):
-    sec = _by_id(_tree(html), "screen-checkin" if 'id="screen-checkin"' in html else "checkin")
+    sec = _by_id(_tree(html), "screen-checkin")
     kids = [c for c in sec.children if isinstance(c, _Node)]
     assert kids[0].tag == "h1" and kids[1].attrs.get("id") == "ci-load-msg"
 
@@ -831,3 +831,17 @@ def test_d6_inventory_copy_matches_spec():
         {"covered": False, "text": "○ Gap: no data yet"},
         {"covered": False, "text": "○ Gap: no data yet"},
     ]
+
+
+def test_u1_no_element_id_equals_a_route_hash(html):
+    """A section id equal to the route hash (#checkin) makes the browser fragment-scroll on a direct load,
+    which drops the h1 focus to BODY. Screens are ``screen-<route>``; route() still focuses the h1."""
+    root = _tree(html)
+    ids = {n.attrs.get("id") for n in root.iter()}
+    assert not ids & set(SCREENS), ids & set(SCREENS)
+    for s in SCREENS:
+        assert _by_id(root, "screen-" + s).tag == "section"
+    js = _script(html)
+    rt = _section(js, "function route()", "\n}\n")
+    assert '$("screen-" + s).hidden' in rt and '$("h-" + r.base).focus()' in rt
+    assert _by_id(root, "inventory").tag == "ul"  # the #passport/inventory scroll target is kept
