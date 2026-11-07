@@ -389,3 +389,28 @@ def test_t3_an_unsafe_reason_replaces_the_step(client, monkeypatch):
     assert step["replaced"] is True and step["membrane"]["decision"] == "escalate"
     assert step["text"] == HANDOFF_TEXT and step["reason"] == next_step.REPLACED_REASON
     assert DOSING not in repr(step)
+
+
+@pytest.mark.parametrize("library", [{}, {k: 123 for k in POLICY_TEXT}, {k: ["x"] for k in POLICY_TEXT}])
+def test_t5_a_missing_or_non_string_step_text_fails_closed(client, monkeypatch, library):
+    monkeypatch.setattr(next_step, "POLICY_TEXT", library)
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    r = client.get(f"/api/journals/{jid}/next-step")
+    assert r.status_code == 200, r.text
+    step = r.json()
+    assert step["replaced"] is True and step["text"] == HANDOFF_TEXT
+    assert step["membrane"]["decision"] == "escalate"
+
+
+def test_t5_a_dsl_error_fails_closed(client, monkeypatch):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+
+    def boom(*_a, **_k):
+        raise RuntimeError("rule pack unavailable")
+
+    monkeypatch.setattr(dsl, "check", boom)
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["replaced"] is True and step["text"] == HANDOFF_TEXT
+    assert step["membrane"] == {"decision": "escalate", "rule_hits": []}
