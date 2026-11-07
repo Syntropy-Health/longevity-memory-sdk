@@ -530,7 +530,7 @@ async def health_clone_passport(journal: Journal, as_of: dt.datetime) -> HealthC
                 concept_id=c.concept_id,
                 title=_title(journal, c.code, c.display),
                 kind="observation",
-                origin="simulated" if (simulated or (rec is None and c.code in SERIES_NODES.values())) else "observed",
+                origin="observed" if rec is not None else "simulated",  # observed = saved in this journal
                 ready=ready,
                 value=value,
                 unit=unit,
