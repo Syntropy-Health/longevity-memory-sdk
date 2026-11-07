@@ -1302,15 +1302,18 @@ function noSaved(fromPost) {
   return notice("info", "Check in first", ["A next step comes from your last saved check-in, and you have not saved one yet.",
     btnLink("#checkin", "Go to check-in", true)], fromPost ? { role: "alert", focus: true } : {});
 }
-/* GET the step into the panel. On failure the panel is hidden and the notice takes its place. Returns true on success. */
-async function loadStep() {
+/* GET the step into the panel. On failure the panel is hidden and the notice takes its place. Returns true on success.
+   fromPost: the GET re-fetches after a POST (422 unknown_step), so a failure notice is an alert and takes focus (§3.4.1, §3.8). */
+async function loadStep(fromPost) {
+  fromPost = fromPost === true;
   var msg = clear($("ns-msg")), panel = $("ns-panel");
-  function fail(n) { panel.hidden = true; clear(panel); msg.append(n); return false; }
-  if (!(await ensureJournal())) return fail(serverError(journalErr, loadStep));
+  var retry = function () { loadStep(fromPost); };
+  function fail(n) { panel.hidden = true; clear(panel); showError(msg, n); return false; }
+  if (!(await ensureJournal())) return fail(serverError(journalErr, retry, { focus: fromPost }));
   var res = await api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/next-step");
   if (isGone(res)) { panel.hidden = true; sessionEnded(); return false; }
-  if (res.status === 409 && code(res) === "no_saved_checkin") return fail(noSaved(false));
-  if (!res.ok || !res.data || typeof res.data.step_id !== "string") return fail(serverError(res, loadStep));
+  if (res.status === 409 && code(res) === "no_saved_checkin") return fail(noSaved(fromPost));
+  if (!res.ok || !res.data || typeof res.data.step_id !== "string") return fail(serverError(res, retry, { focus: fromPost }));
   renderStep(res.data);
   return true;
 }
@@ -1359,7 +1362,7 @@ async function choose(stepId, choice) {
     }
     if (res.status === 422 && code(res) === "unknown_step") {
       /* §3.4.2: nothing was recorded. Re-GET the step; never re-send the choice. */
-      if (await loadStep()) {
+      if (await loadStep(true)) {
         showError(msg, notice("info", "This suggestion has changed",
           ["A newer check-in was saved, so here is the new suggestion. Your choice was not recorded. Choose again below."],
           { role: "alert", focus: true }));

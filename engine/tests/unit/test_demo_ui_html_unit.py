@@ -741,3 +741,37 @@ def test_d1_no_reviewed_source_copy_only_when_there_is_no_source():
     )
     assert "No reviewed source applies" not in sourced["explain"]
     assert "Not enough evidence" in sourced["explain"]
+
+
+_NEXT = ["journalPending", "createJournal", "ensureJournal", "sessionEnded", "nsBusy", "noSaved", "loadStep",
+         "renderStep", "nsPanelBusy", "choose"]
+
+
+def _stale_then(second: str) -> object:
+    return _run_page(
+        _BASE + _API + _NEXT,
+        f"""
+        ["ns-msg", "ns-panel", "ns-result", "session-msg"].forEach(function (i) {{ mk(i); }});
+        RESP.push([422, {{ error: "unknown_step" }}], {second});
+        await choose("ns-1", "choose");
+        var n = $("ns-msg").querySelector(".notice");
+        return {{ calls: CALLS.map(function (c) {{ return c[0]; }}), title: n && n.querySelector(".notice-title").textContent,
+          role: n && n.getAttribute("role"), tabindex: n && n.getAttribute("tabindex"), focused: document.activeElement === n,
+          panelHidden: $("ns-panel").hidden }};
+        """,
+    )
+
+
+def test_d4_stale_step_refetch_409_is_a_post_alert_with_focus():
+    got = _stale_then('[409, { error: "no_saved_checkin" }]')
+    assert got["calls"] == ["POST", "GET"]  # never re-sends the choice
+    assert got["title"] == "Check in first"
+    assert got["role"] == "alert" and got["tabindex"] == "-1" and got["focused"] and got["panelHidden"]
+
+
+@pytest.mark.parametrize("second", ['[503, null]', '"network"'])
+def test_d4_stale_step_refetch_failure_takes_focus(second):
+    got = _stale_then(second)
+    assert got["calls"] == ["POST", "GET"]
+    assert got["title"] == "Something went wrong"
+    assert got["role"] == "alert" and got["tabindex"] == "-1" and got["focused"]
