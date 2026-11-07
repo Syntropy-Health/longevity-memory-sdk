@@ -466,6 +466,19 @@ Data-generation failures are shown once in the lab header: `pipeline.data.member
 I1 status comes from the `i1_gate` arm (`passed`). Footer copy: "Simulated outcomes are not
 patient outcomes."
 
+Build detail (G25): `lab_rows(results_dir=None) -> LabTable {rows, member_failure_count, i1_passed,
+footer}`, default the committed `docs/daypart/results`. Rows in order: base, sft, dpo, then each
+`env_baseline` arm with `status="ok"` (file order), then grpo. A `LabRow` is `{row, kind, status,
+run_id, file_digest, split: {prompt_set_version, n, training_rows, data_sha256, n_scenarios,
+horizon}, seed, cohort_seed, seeds, failures, degenerate, metrics, gate, reason}`. `metrics` is
+`{boundary_pass_rate, rubric_pass_rate}` (model rows) or `{mean_adherence, episode_violation_rate}`
+(env rows); `gate` is the r3 (sft) or r4 (dpo) block as recorded. An env row's `split.n` is the
+episode count `n_scenarios × len(seeds)` and its run id uses `metrics.runs_version` (`eval-v1`).
+The adapter cross-check compares basenames; a missing adapter on either side is a mismatch, and a
+mismatched row keeps only its run id, prompt set and data sha. A field that is missing, malformed
+or not a number (a boolean is not a number) is `null`; a file that is missing or not a JSON object
+reads as empty.
+
 ### 4.9 Governance checklist (`governance/real_input.yaml`)
 
 12 items, from R9: `lawful_basis, consent, access_control, encryption, retention_deletion, audit,
