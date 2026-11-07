@@ -578,3 +578,24 @@ def test_rev2_review_label_once_in_passport_meta(html):
     assert got == ["Reviewed (board sign-off, 7 Nov 2026)", "something else", None]
     js = _script(html)
     assert js.count('"Review"') == 1
+
+
+# --- QG P3.1 fixes ------------------------------------------------------------------------------------
+
+
+def test_c2_correct_sends_unit_and_date_only_when_changed():
+    """The server clears unit_assumed / ambiguous_date when unit / date is sent, so a prefilled
+    value the person left alone must not be sent (extract_text.py ``"unit" in fields``)."""
+    got = _run_js(
+        ["correction"],
+        "[correction({unit:'kg',date:'2026-11-07',value:70}, '70', 'kg', '2026-11-07'),"
+        " correction({unit:'kg',date:'2026-11-07',value:70}, '71', '[lb_av]', '2026-11-06'),"
+        " correction({unit:null,date:null,value:null}, '', '', ''),"
+        " correction({unit:'kg',date:null,value:70}, '70', '', '2026-11-05')]",
+    )
+    assert got == [
+        {"value": 70},
+        {"value": 71, "unit": "[lb_av]", "date": "2026-11-06"},
+        {},
+        {"value": 70, "date": "2026-11-05"},
+    ]
