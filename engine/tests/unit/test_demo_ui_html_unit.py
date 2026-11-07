@@ -905,3 +905,14 @@ def test_t1_handoff_response_routes_to_show_handoff_without_review_or_next():
     assert got["hash"] == "#checkin" and got["checkins"] == 0 and got["calls"] == 1  # never routes to #review
     assert got["links"] == 0  # no #review / #next (or any) link
     assert got["buttons"] == ["Write a different check-in"]  # no extra button
+
+
+def test_t2_handoff_body_is_the_api_text_verbatim_and_the_form_is_gone(html):
+    got = _handoff_run()
+    assert got["handoff"] == _HANDOFF_TEXT  # verbatim, nothing added or replaced
+    assert got["formHidden"] and got["introHidden"] and got["warnHidden"]
+    assert got["textarea"] == ""
+    # the UI adds no number, link or href of its own (substring bans: no word boundaries to slip past)
+    hand = _section(_script(html), "function showHandoff", "\n}\n")
+    for banned in ("988", "911", "href", "link(", "btnLink(", "tel:", "http", "lifeline"):
+        assert banned not in hand, banned
