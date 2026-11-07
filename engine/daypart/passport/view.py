@@ -54,6 +54,14 @@ VERTICAL_LABELS: Mapping[str, str] = {
     "behaviour_function": "Behaviour and function",
     "symptoms_wellbeing": "Symptoms and wellbeing",
 }
+# Registry gap ids → labels that pass the narration guard ("preventive" is a banned term, D11).
+GAP_LABELS: Mapping[str, str] = {
+    "labs": "Lab results",
+    "conditions": "Conditions",
+    "medications": "Medications",
+    "care history": "Care history",
+    "preventive care": "Screenings and check-ups",
+}
 _SOURCE_LABELS = {"text": "Your text check-in", "file_fixture": "Demo fixture file", "image_fixture": "Demo fixture image"}
 _SIMULATED_SOURCE = "Simulated cohort series"
 _NO_SOURCE = "No record yet"
@@ -223,7 +231,13 @@ class Inventory(pydantic.BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     verticals: tuple[VerticalView, ...]
-    gaps: tuple[str, ...]
+    gaps: tuple[str, ...]  # guard-safe labels (GAP_LABELS); /api/inventory also lists the registry ids
+
+    @model_validator(mode="after")
+    def _check(self) -> Inventory:
+        for text in (*self.gaps, *(v.label for v in self.verticals)):
+            _narration_safe("inventory label", text)
+        return self
 
 
 class HealthClonePassport(pydantic.BaseModel):
@@ -290,14 +304,26 @@ def inventory(registry: ConceptRegistry | None = None) -> Inventory:
             )
             for v, label in VERTICAL_LABELS.items()
         ),
-        gaps=reg.gaps,
+        gaps=tuple(_gap_label(g) for g in reg.gaps),
     )
 
 
+def _gap_label(gap: str) -> str:
+    label = GAP_LABELS.get(gap, gap)
+    return label if safe_text(label) == label else "Not yet covered"
+
+
 def inventory_view() -> dict[str, Any]:
-    """``GET /api/inventory``: the verticals, the gaps, the LOINC version and the review label."""
+    """``GET /api/inventory``: the verticals, the gap ids and their labels, the LOINC version and the review label."""
     reg = load_registry()
-    return {**inventory(reg).model_dump(mode="json"), "loinc_version": reg.loinc_version, "reviewer_status": REVIEWER_STATUS}
+    inv = inventory(reg).model_dump(mode="json")
+    return {
+        "verticals": inv["verticals"],
+        "gaps": list(reg.gaps),  # the registry ids (T5.4)
+        "gap_labels": inv["gaps"],  # what the passport shows for each
+        "loinc_version": reg.loinc_version,
+        "reviewer_status": REVIEWER_STATUS,
+    }
 
 
 def _age(as_of: dt.datetime, at: dt.datetime) -> int:
@@ -616,6 +642,7 @@ def _pattern_card(
 
 __all__ = [
     "DISPLAY_NAME",
+    "GAP_LABELS",
     "NOT_ENOUGH_EVIDENCE",
     "READY_WINDOW_DAYS",
     "STEP_NAMES",

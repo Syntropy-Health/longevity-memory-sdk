@@ -344,8 +344,6 @@ def test_t6_5_every_string_is_narration_and_membrane_safe(saved):
     for key, text in _strings(pp):
         if key in ("link", "source_url", "ref", "record_id", "event_id", "run_id") or text.startswith("#"):
             continue
-        if key == "gaps":  # category ids ("preventive care"); the UI renders each through a safe label (P3)
-            continue
         assert_narration_safe(text)
         v = dsl.check(text)
         assert v.passed, (key, text, v.violations)
@@ -377,7 +375,11 @@ def test_t5_4_inventory_lists_verticals_and_gaps(client, saved):
     assert [v["vertical"] for v in inv["verticals"]] == ["vitals_body", "behaviour_function", "symptoms_wellbeing"]
     for v in inv["verticals"]:
         assert v["label"] and len(v["concepts"]) >= 4
-    assert pp["inventory"] == {"verticals": inv["verticals"], "gaps": inv["gaps"]}
+    # /api/inventory keeps the registry gap ids (T5.4); the passport shows each as a guard-safe label (T6.5).
+    assert pp["inventory"] == {"verticals": inv["verticals"], "gaps": inv["gap_labels"]}
+    assert len(inv["gap_labels"]) == len(inv["gaps"]) and "Screenings and check-ups" in inv["gap_labels"]
+    for label in inv["gap_labels"]:
+        assert_narration_safe(label)
 
 
 # --- HTTP ---------------------------------------------------------------------------------------
