@@ -349,7 +349,7 @@ HealthClonePassport
   journal_id, member_id, as_of, ontology_version ("core-v1+u1"), loinc_version, guard_versions
   mode: "demo"
   cards: tuple[Card, ...]
-  inventory: {verticals, gaps}
+  inventory: {verticals, gaps}                # here gaps = guard-safe display labels; /api/inventory carries the registry ids (G23)
 
 Card
   card_id, concept_id, title
