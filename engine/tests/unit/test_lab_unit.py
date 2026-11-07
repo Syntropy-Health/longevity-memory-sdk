@@ -277,3 +277,19 @@ def test_k2_failures_formulas_at_non_zero_rates(copy):
     assert rows["env_random_intent"].failures == 15  # round(0.1 * 50 * 3)
     assert rows["sft"].failures == 141 - round(0.95 * 141) == 7
 
+
+@pytest.mark.parametrize("name", ["sft", "dpo"])
+def test_k3_mismatch_row_keeps_only_run_id_prompt_set_and_data_sha(copy, name):
+    """K3 (G25): a mismatched row keeps only its run id, prompt set and data sha."""
+    be, pl = _load(copy, "boundary_eval.json"), _load(copy, "pipeline.json")
+    _edit(copy, "training.json", lambda d: d[name].update(adapter="/vol/adapters/daypart-other-000000000000"))
+    r = _rows(lab_rows(copy))[name]
+    assert r.status == PROVENANCE_MISMATCH
+    assert r.run_id == f"{pl['tag']}/{PurePosixPath(be['meta']['adapters'][name]).name}"
+    assert r.split is not None
+    assert r.split.prompt_set_version == be["prompt_set_version"]
+    assert r.split.data_sha256 == pl["data"][f"{name}_sha256"]
+    assert r.split.n is None and r.split.training_rows is None
+    assert r.seed is None and r.cohort_seed is None and r.failures is None and r.degenerate is None
+    assert r.gate is None and r.file_digest is None
+    assert all(v is None for v in r.metrics.values())
