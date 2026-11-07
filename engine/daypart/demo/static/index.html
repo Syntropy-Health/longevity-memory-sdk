@@ -266,6 +266,8 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 <!-- ================= 1. CHECK IN ================= -->
 <section id="checkin" data-screen="checkin" aria-labelledby="h-checkin" hidden>
   <h1 id="h-checkin" tabindex="-1">What matters today?</h1>
+  <div id="ci-load-msg"></div>
+  <div id="ci-body">
   <p class="screen-intro" id="ci-intro">Tell the clone about your day in a sentence, or use one of the demo files. Nothing is saved until you review it.</p>
 
   <div class="notice" id="real-data-warning">
@@ -305,6 +307,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
     </div>
     <p class="hint" id="na-note" style="margin-top:var(--s2)">Voice and video are not part of this demo.</p>
   </form>
+  </div>
 </section>
 
 <!-- ================= 2. REVIEW ================= -->
@@ -750,13 +753,19 @@ var PII_REASONS = {
   date_of_birth: "It contains something like a date of birth."
 };
 var ciBusy = false, fixturesLoaded = false;
-function showCheckin() {
-  ensureJournal();
-  if (!fixturesLoaded) loadFixtures();
+/* Screen load: the journal and the demo-file list. A failure (5xx, network, timeout, or no journal) is the
+   §3.8 GET notice under the h1 in place of the screen body; Try again re-runs the load. */
+async function showCheckin() {
+  var box = clear($("ci-load-msg")), body = $("ci-body");
+  function fail(res) { body.hidden = true; box.append(serverError(res, showCheckin)); }
+  if (!(await ensureJournal())) { fail(journalErr); return; }
+  if (!fixturesLoaded) { var res = await loadFixtures(); if (res) { fail(res); return; } }
+  body.hidden = false;
 }
+/* Fills the demo-file pickers. Returns null on success, else the failed GET result. */
 async function loadFixtures() {
   var res = await api("GET", "/api/fixtures");
-  if (!res.ok || !Array.isArray(res.data)) return;
+  if (!res.ok || !Array.isArray(res.data)) return res;
   fixturesLoaded = true;
   var files = clear($("ci-files").querySelector("ul")), images = clear($("ci-images").querySelector("ul"));
   res.data.forEach(function (f) {
@@ -767,6 +776,7 @@ async function loadFixtures() {
     var li = el("li"); li.append(b);
     (f.kind === "image_fixture" ? images : files).append(li);
   });
+  return null;
 }
 function togglePicker(btnId, boxId) {
   var b = $(btnId), box = $(boxId), open = b.getAttribute("aria-expanded") !== "true";

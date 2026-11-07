@@ -775,3 +775,45 @@ def test_d4_stale_step_refetch_failure_takes_focus(second):
     assert got["calls"] == ["POST", "GET"]
     assert got["title"] == "Something went wrong"
     assert got["role"] == "alert" and got["tabindex"] == "-1" and got["focused"]
+
+
+_CHECKIN = ["persist", "updateNav", "journalPending", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
+            "loadFixtures", "submitCheckin"]
+_CI_DOM = """
+mk("ci-load-msg"); var body = mk("ci-body"); ["ci-files", "ci-images"].forEach(function (i) { var b = mk(i); b.append(el("ul")); });
+mk("nav-review", "a");
+function state() { var n = $("ci-load-msg").querySelector(".notice");
+  return { title: n && n.querySelector(".notice-title").textContent, role: n && n.getAttribute("role"),
+           bodyHidden: $("ci-body").hidden, text: $("ci-load-msg").textContent }; }
+"""
+
+
+def test_d5_checkin_journal_failure_shows_the_generic_notice_and_try_again_reloads():
+    got = _run_page(
+        _BASE + _API + _CHECKIN,
+        _CI_DOM + """
+        S.journal = null;
+        RESP.push([503, null]);
+        await showCheckin();
+        var failed = state();
+        RESP.push([200, [{ member_id: "syn-001" }]], [201, { journal_id: "j9", today: "2026-11-07" }], [200, []]);
+        $("ci-load-msg").querySelector("button").click();
+        await new Promise(function (r) { setTimeout(r, 50); });
+        return [failed, state(), S.journal];
+        """,
+    )
+    assert got[0]["title"] == "Something went wrong" and got[0]["role"] == "alert" and got[0]["bodyHidden"]
+    assert "(error 503)" in got[0]["text"]
+    assert got[1]["title"] is None and not got[1]["bodyHidden"] and got[2] == "j9"
+
+
+@pytest.mark.parametrize("resp", ['[500, null]', '"network"'])
+def test_d5_checkin_fixture_list_failure_shows_the_generic_notice(resp):
+    got = _run_page(_BASE + _API + _CHECKIN, _CI_DOM + f"RESP.push({resp}); await showCheckin(); return state();")
+    assert got["title"] == "Something went wrong" and got["role"] == "alert" and got["bodyHidden"]
+
+
+def test_d5_checkin_load_notice_sits_directly_under_h1(html):
+    sec = _by_id(_tree(html), "screen-checkin" if 'id="screen-checkin"' in html else "checkin")
+    kids = [c for c in sec.children if isinstance(c, _Node)]
+    assert kids[0].tag == "h1" and kids[1].attrs.get("id") == "ci-load-msg"
