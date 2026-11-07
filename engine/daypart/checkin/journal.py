@@ -121,6 +121,7 @@ class Journal:
     cohort_seed: int = 0  # the simulated cohort the journal's series come from (passport source step)
     provenance: dict[str, ObservationRecord] = field(default_factory=dict)
     checkins: OrderedDict[str, CheckIn] = field(default_factory=OrderedDict)
+    last_saved_checkin_id: str | None = None  # set by review() on save (checkins keep creation order)
     goal_events: dict[str, str] = field(default_factory=dict)  # next-step step_id -> its act:goal_set event id
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     event_count: int = 0
@@ -130,7 +131,7 @@ class Journal:
     def all_events(self) -> tuple[Any, ...]:
         """Every event in this journal's log (a journal holds one member's events only)."""
         events = self.events.events(self.member.member_id)
-        if len(events) != len(self.events):  # pragma: no cover - J1: only review() writes, for this member
+        if len(events) != len(self.events):  # pragma: no cover - J1: only review() and record_choice() write, for this member
             raise RuntimeError("journal event log holds events for another member")
         return events
 

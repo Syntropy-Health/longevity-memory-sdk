@@ -142,8 +142,9 @@ def select_intent(symptom: str | None, days: Sequence[AdherenceDay], *, today: d
 
 
 def last_saved_checkin(journal: Journal) -> CheckIn | None:
-    saved = [c for c in journal.checkins.values() if c.status == "saved"]
-    return saved[-1] if saved else None
+    """The check-in saved most recently (by save order; ``checkins`` keeps creation order)."""
+    cid = journal.last_saved_checkin_id
+    return journal.checkins.get(cid) if cid is not None else None
 
 
 def _symptom_label(journal: Journal, checkin_id: str) -> str | None:

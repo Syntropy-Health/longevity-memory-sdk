@@ -304,3 +304,31 @@ def test_every_rule_text_and_reason_is_safe(symptom, days):
         assert s.strip()
         assert_narration_safe(s)
         assert dsl.check(s).passed
+
+
+# --- QG P2.3 regressions ---------------------------------------------------------------------------
+
+
+def _create(client, jid, text):
+    ck = client.post("/api/checkins", json={"journal_id": jid, "text": text})
+    assert ck.status_code == 201, ck.text
+    return ck.json()
+
+
+def _review(client, body, action="confirm"):
+    decisions = [{"proposal_id": p["proposal_id"], "action": action} for p in body["proposals"]]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+
+
+def test_c1_last_saved_is_by_save_order_not_creation_order(client):
+    jid = _journal(client)
+    a = _create(client, jid, "pain 4/10")
+    b = _create(client, jid, "walked 8000 steps")
+    _review(client, b)
+    _review(client, a)  # A is created first but saved last
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["step_id"] == f"ns-{a['checkin_id']}"
+    assert step["intent"] == "clinician_handoff"
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert r.status_code == 200 and r.json()["recorded"]
