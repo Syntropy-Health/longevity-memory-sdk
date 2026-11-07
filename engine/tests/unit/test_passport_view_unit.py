@@ -396,8 +396,11 @@ def test_passport_day_moves_as_of(client):
     pp = _passport(client, jid, day=27)
     assert pp["as_of"].startswith((TODAY - dt.timedelta(days=1)).isoformat())
     assert _card(pp, "observation:chc:sleep-duration")["status"] == "withheld"
-    assert client.get(f"/api/journals/{jid}/passport", params={"day": 29}).status_code == 422
-    assert client.get(f"/api/journals/{jid}/passport", params={"day": -1}).status_code == 422
+    for bad in (29, -1, "x", "1.5", 10**30, "²", ""):
+        r = client.get(f"/api/journals/{jid}/passport", params={"day": bad})
+        assert (r.status_code, r.json()) == (422, {"error": "invalid_day", "max_day": 28}), bad
+    assert _passport(client, jid, day=28) == _passport(client, jid)
+    assert _passport(client, jid, day=0)["as_of"] == f"{START_DATE.date().isoformat()}T12:00:00Z"
 
 
 def test_view_function_matches_the_route(client, saved):

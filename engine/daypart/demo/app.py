@@ -340,16 +340,21 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             return _error(e.status, e.body)
 
     @app.get("/api/journals/{journal_id}/passport")
-    async def journal_passport(journal_id: str, day: Annotated[int | None, Query(ge=0)] = None) -> Response:
-        # ?day= is a day offset from the cohort start, at most the journal's today (G9); default today.
+    async def journal_passport(journal_id: str, day: str | None = None) -> Response:
+        # ?day= is a whole-day offset from the cohort start in [0, the journal's today] (G9); default
+        # today. Every bad value gets the same {"error": "invalid_day"} body (the journey error shape).
         try:
             j = _journal(journal_id)
         except JournalError as e:
             return _error(e.status, e.body)
-        if day is not None and day > passport_view.journal_day(j):
-            return _error(422, {"error": "invalid_day", "max_day": passport_view.journal_day(j)})
+        max_day = passport_view.journal_day(j)
+        offset = None
+        if day is not None:
+            offset = int(day) if day.isascii() and day.isdigit() and len(day) <= 4 else -1  # no sign, decimal point or non-ASCII digit
+            if not 0 <= offset <= max_day:
+                return _error(422, {"error": "invalid_day", "max_day": max_day})
         async with j.lock:
-            pp = await passport_view.health_clone_passport(j, passport_view.journal_as_of(j, day))
+            pp = await passport_view.health_clone_passport(j, passport_view.journal_as_of(j, offset))
         return JSONResponse(status_code=200, content=_safe(pp.model_dump(mode="json")))
 
     @app.get("/api/inventory")
