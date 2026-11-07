@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-  PVR[PVR rev 2<br/>HAC-30] --> AD[A&D rev 1<br/>HAC-33, board-approved HAC-36] --> P1[P1 data core<br/>HAC-38 · done] --> P2[P2 passport · next step · lab<br/>HAC-38 · done] --> P3[P3 UI + a11y CI] --> P4[P4 submission pack]
+  PVR[PVR rev 2<br/>HAC-30] --> AD[A&D rev 1<br/>HAC-33, board-approved HAC-36] --> P1[P1 data core<br/>HAC-38 · done] --> P2[P2 passport · next step · lab<br/>HAC-38 · phase gate, with CTO] --> P3[P3 UI + a11y CI] --> P4[P4 submission pack]
 ```
 
 | Decision | By | Where |
@@ -14,5 +14,5 @@ flowchart LR
 
 | Section | State |
 |---|---|
-| build | P1 and P2 done; P3 next |
+| build | P1 done; P2 at phase gate (with the CTO to land); P3 next |
 | decision | none open |

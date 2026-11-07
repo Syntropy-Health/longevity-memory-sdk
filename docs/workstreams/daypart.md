@@ -27,7 +27,7 @@ flowchart LR
   `reviewed: board sign-off 2026-11-07` (AM-1). 7 concepts carry a `reference_range` copied from a
   sentence on the source page, and the loader refuses any range that doesn't match its sentence.
   Every other concept is `null`.
-- `passport/view.py` (P2.2): one card per registry concept. The value is shown as recorded, and a
+- `passport/view.py` (P2.2): one observation card per registry concept, plus a pattern card for each existing LHM flag. The value is shown as recorded, and a
   card older than 14 days is withheld with no number and no range. Each card has the 5-step thread
   (empty steps link a why-empty note), an explanation only when it is sourced and safe, and data-gap
   labels that pass the narration guard. Routes `GET /api/journals/{id}/passport?day=` and
@@ -45,8 +45,18 @@ flowchart LR
 **Key decisions** (addendum G22–G25). Ranges are cited only from pages that could be fetched and
 read; AHA/CDC block automated fetches, so they are not cited (G22). Data-gap labels are safe
 display strings, and `/api/inventory` keeps the registry ids (G23). Saves are ordered numerically,
-so a same-day tie is broken by save order, not by event-id string order (G24). The lab uses its own
+so a same-time tie is broken by save order, not by event-id string order; for adherence, a later save wins its day (G24). The lab uses its own
 tolerant readers (no `MetricsDoc` validation) so that it always renders (G25).
+
+**Known issues / residual risk.**
+- P3 must HTML-escape strings that are not guarded at runtime: source URLs and `population` (G22), lab `row`,
+  `run_id` and `gate` (G25). Only `reason`, labels and text pass `safe_text`.
+- `/api/inventory` `gaps` are registry ids, and "preventive care" fails the narration guard. The UI must render `gap_labels`.
+- The passport and next-step calls are async (`await`). The sealed P2 string searches need the G23 exemptions.
+- The passport and the lab each compute the dpo run id; a lab provenance mismatch still links `#lab/<run_id>`, where the row says so.
+- A guard-failing registry string makes the passport return 500 (fail closed), not one withheld card.
+- Journals have no per-journal cap on check-ins (pre-P2, bounded by the 256-journal LRU and 60 min idle).
+- Rollback: revert the P2 range on `daypart/build`; P1 routes do not depend on P2 modules.
 
 **Run it**, from `engine/`: `uv run daypart-demo serve`, then GET the routes above.
 Tests: `env -u MUSE_API_KEY -u META_MODEL_API_KEY uv run pytest -q`.
