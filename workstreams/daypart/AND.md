@@ -199,7 +199,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | Journal | `checkin/journal.py` | Per-visitor clone: member profile ref, `EventLog`, `ProvenanceStore`, `MemoryLhm`, synthetic clock | service, passport view, next step | `memory.events`, `memory.lhm`, `simmember` |
 | Evidence registry | `evidence/registry.py` + `evidence/sources_v1.json` | `Source` entries, `sources()`, `by_id(evidence_id)`, `for_concept(code)` (a concept_id or a code); `load_evidence()` cross-checks every concept `reference_range` | passport view | registry |
 | Passport view | `passport/view.py` | `health_clone_passport(journal, as_of) -> HealthClonePassport` (observation cards + existing LHM flags + inventory) | app | `passport.render`, registry, evidence, journal |
-| Next step | `checkin/next_step.py` | `suggest(journal) -> NextStep` through `membrane.post`/`dsl.check`; `record_choice` | app | membrane, journal |
+| Next step | `checkin/next_step.py` | `await suggest(journal) -> NextStep` through `membrane.post`/`dsl.check`; `await record_choice` (G24) | app | membrane, journal, `eval.policies`, registry, `demo.safety` |
 | Lab rows | `demo/lab.py` | `lab_rows(results_dir) -> LabTable` from the committed JSON (§4.8) | app, submission pack | `dashboard_data` loaders |
 | App routes | `demo/app.py` (extended) | the endpoints below | UI | all of the above |
 | UI | `demo/static/index.html` (rebuilt) + `demo/static/axe.min.js` (test only, not served) | 5 screens + research view | judges | API |
@@ -218,7 +218,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | `GET /api/journals/{id}/observations/{record_id}` | — | `200 ObservationRecord` (mapped or unmapped) | 404 unknown journal or record |
 | `GET /api/journals/{id}/passport` | `?day=` (whole days from the cohort start, 0 to the journal's today; default today) | `200 HealthClonePassport` | 404 `unknown_journal`; 422 `invalid_day` (with `max_day`) for any other `day` (G23) |
 | `GET /api/journals/{id}/next-step` | — | `200 NextStep` | 404 `unknown_journal`; 409 `no_saved_checkin` |
-| `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` ("choose" again on the same step returns the same id, no new event) | 404 `unknown_journal`; 422 `invalid_request` (malformed body) / `unknown_step` (no saved check-in, or not the current step) (G24) |
+| `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` ("choose" again on the same step returns the same id, no new event) | 404 `unknown_journal`; 409 `no_saved_checkin` (T7.4); 422 `invalid_request` (malformed body) / `unknown_step` (not the current step) (G24) |
 | `GET /api/lab` | — | `200 LabTable` | — |
 | `GET /api/inventory` | — | `200 {"verticals":[{vertical,label,concepts:[{concept_id,code,display}]}],"gaps":[…],"gap_labels":[…],"loinc_version","reviewer_status"}` (`gaps` = registry ids; `gap_labels` = what the passport shows, G23) | — |
 
@@ -436,11 +436,15 @@ labelled "Ask a professional", with `replaced=true`.
 
 Build detail (G24): `NextStep` also carries `label` ("Suggested next step", or "Ask a professional"
 when replaced). `step_id = "ns-<checkin_id>"` of the last saved check-in, so a new save makes a new
-step and a choice on an older step is 422 `unknown_step`. "Missed" and "adhered" read the
+step and a choice on an older step is 422 `unknown_step`; a choice before any saved check-in is 409
+`no_saved_checkin`, as for GET (T7.4). "Missed" and "adhered" read the
 adherence record by UTC day up to today: the simulated `dp:adherence.protocol` series, overridden by
 a value saved in the journal for that day; 0 is missed, 1 is adhered, and a day with no value is
-neither (it breaks a streak). The streak counts consecutive adhered days ending today. The reason is
-checked by the membrane with the text. "choose" is written once per step, at 12:00 UTC today.
+neither (it breaks a streak). The streak counts consecutive adhered days ending today. Rule 1 counts a
+mapped observation saved by "confirm" or "correct" (a corrected pain report also goes to a person);
+an unmapped one does not. The reason is checked by the membrane with the text. The calls are
+`await suggest(journal)` and `await record_choice(journal, step_id, choice)`, because the adherence
+series is read through the async LHM adapter. "choose" is written once per step, at 12:00 UTC today.
 
 ### 4.8 Learning lab rows (R8 provenance; AD6)
 

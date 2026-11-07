@@ -230,7 +230,9 @@ class ChoiceIn(pydantic.BaseModel):
 async def record_choice(journal: Journal, step_id: str, choice: Choice) -> dict[str, Any]:
     """``{"recorded": event_id | None}``. Only "choose" writes, once per step (J1)."""
     checkin = last_saved_checkin(journal)
-    if checkin is None or step_id != f"ns-{checkin.checkin_id}":
+    if checkin is None:
+        raise NoSavedCheckin(journal.journal_id)  # T7.4: no step exists before a saved check-in
+    if step_id != f"ns-{checkin.checkin_id}":
         raise UnknownStep(step_id)
     if choice != "choose":
         return {"recorded": None}

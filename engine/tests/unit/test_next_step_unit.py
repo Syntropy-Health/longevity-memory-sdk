@@ -275,7 +275,7 @@ def test_t7_4_no_step_before_a_saved_checkin(client):
 def test_choice_before_a_saved_checkin_is_refused(client):
     jid = _journal(client)
     r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": "x", "choice": "choose"})
-    assert r.status_code == 422 and r.json() == {"error": "unknown_step"}
+    assert r.status_code == 409 and r.json() == {"error": "no_saved_checkin"}
     assert _actions(client, jid) == []
 
 

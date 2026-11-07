@@ -388,7 +388,7 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
         async with j.lock:
             try:
                 out = await next_step.record_choice(j, choice.step_id, choice.choice)
-            except next_step.UnknownStep as e:
+            except (next_step.NoSavedCheckin, next_step.UnknownStep) as e:
                 return _error(e.status, dict(e.body))
         return JSONResponse(status_code=200, content=_safe(out))
 
