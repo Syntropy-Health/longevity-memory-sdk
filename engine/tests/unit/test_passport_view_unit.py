@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from daypart.demo.app import create_app
 from daypart.evidence.registry import load_evidence
 from daypart.membrane import dsl
-from daypart.memory.registry import LOINC_VERSION, REVIEWER_STATUS, load_registry
+from daypart.memory.registry import LOINC_VERSION, REVIEWER_STATUS, load_registry, slice_ontology
 from daypart.passport.constants import WITHHELD_MESSAGE
 from daypart.passport.view import (
     NOT_ENOUGH_EVIDENCE,
@@ -145,8 +145,8 @@ def test_boundary_run_id_is_none_without_results(tmp_path):
 
 def test_t6_3_unsourced_concept_suppresses_explanation(saved):
     _, _, pp = saved
-    assert not load_evidence().for_concept("chc:pain")
-    pain = _card(pp, "observation:chc:pain")
+    assert not load_evidence().for_concept("chc:pain-severity")
+    pain = _card(pp, "observation:chc:pain-severity")
     assert pain["status"] == "ready"
     assert pain["explanation"] is None and pain["explanation_status"] == "suppressed"
     assert pain["explanation_text"] == NOT_ENOUGH_EVIDENCE == "Not enough evidence"
@@ -273,7 +273,7 @@ def test_sourced_range_sits_beside_a_ready_value(saved):
 
 def test_ready_unsourced_concept_has_no_range(saved):
     _, _, pp = saved
-    pain = _card(pp, "observation:chc:pain")
+    pain = _card(pp, "observation:chc:pain-severity")
     assert pain["reference_range"] is None and pain["reference_range_status"] == "none"
 
 
@@ -290,6 +290,13 @@ _BOUNDS = {t for c in load_registry().concepts() for b in c.plausible for t in (
 # The member's recorded value and the day count are not leak channels; range numbers are checked
 # against their source below.
 _EXEMPT = frozenset({"value", "data_age_days", "reference_range"})
+# UCUM "1" (dimensionless, adherence) is a unit, not a number.
+_UNITS = frozenset(u for c in load_registry().concepts() for u in (c.unit, *c.alt_units))
+# A concept's name may hold digits ("Steps in 24 hours", "PHQ-2"): a name, not a bound.
+_NAMES = frozenset(
+    [c.display for c in load_registry().concepts()]
+    + [n.label or n.display for n in slice_ontology().nodes.values()]
+)
 
 
 def _strings(obj, key=None):
@@ -304,7 +311,7 @@ def _strings(obj, key=None):
 
 
 def _no_bounds(obj, key=None):
-    if key in _EXEMPT:
+    if key in _EXEMPT or (key in ("title", "display") and obj in _NAMES) or (key == "unit" and obj in _UNITS):
         return
     if isinstance(obj, dict):
         for k, v in obj.items():
@@ -324,6 +331,8 @@ def test_t6_5_every_string_is_narration_and_membrane_safe(saved):
     _, _, pp = saved
     for key, text in _strings(pp):
         if key in ("link", "source_url", "ref", "record_id", "event_id", "run_id") or text.startswith("#"):
+            continue
+        if key == "gaps":  # category ids ("preventive care"); the UI renders each through a safe label (P3)
             continue
         assert_narration_safe(text)
         v = dsl.check(text)

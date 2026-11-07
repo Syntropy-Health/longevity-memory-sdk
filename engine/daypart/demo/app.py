@@ -26,6 +26,7 @@ from daypart.demo.playground import (
 )
 from daypart.demo.safety import safe_text
 from daypart.governance import real_input
+from daypart.passport import view as passport_view
 from daypart.simmember.dynamics import INTENTS
 
 log = logging.getLogger("daypart.demo")
@@ -337,6 +338,23 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             return _error(e.status, e.body)
         except service.CheckinError as e:
             return _error(e.status, e.body)
+
+    @app.get("/api/journals/{journal_id}/passport")
+    async def journal_passport(journal_id: str, day: Annotated[int | None, Query(ge=0)] = None) -> Response:
+        # ?day= is a day offset from the cohort start, at most the journal's today (G9); default today.
+        try:
+            j = _journal(journal_id)
+        except JournalError as e:
+            return _error(e.status, e.body)
+        if day is not None and day > passport_view.journal_day(j):
+            return _error(422, {"error": "invalid_day", "max_day": passport_view.journal_day(j)})
+        async with j.lock:
+            pp = await passport_view.health_clone_passport(j, passport_view.journal_as_of(j, day))
+        return JSONResponse(status_code=200, content=_safe(pp.model_dump(mode="json")))
+
+    @app.get("/api/inventory")
+    def inventory() -> dict:
+        return _safe(passport_view.inventory_view())
 
     return app
 

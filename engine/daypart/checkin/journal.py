@@ -118,6 +118,7 @@ class Journal:
     memory: MemoryLhm
     last_seen: float
     today: dt.date = DEFAULT_TODAY
+    cohort_seed: int = 0  # the simulated cohort the journal's series come from (passport source step)
     provenance: dict[str, ObservationRecord] = field(default_factory=dict)
     checkins: OrderedDict[str, CheckIn] = field(default_factory=OrderedDict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -213,6 +214,7 @@ class JournalStore:
             events=events,
             memory=MemoryLhm(self._adapter, ontology=ontology, events=events),
             last_seen=now,
+            cohort_seed=self._cohort.seed,
         )
         self._journals[journal.journal_id] = journal
         while len(self._journals) > self.max_journals:
