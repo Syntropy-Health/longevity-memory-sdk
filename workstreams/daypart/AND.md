@@ -389,6 +389,7 @@ EvidenceThread.steps (always exactly 5, in order):
   observation  → {event_id, record_id, concept_id, label, link}
                    saved in this journal: event_id + record_id set, link "/api/journals/<j>/observations/<record_id>"
                    simulated series:      event_id = record_id = null, label "simulated series", link "#research" (G23)
+                   neither:               event_id = record_id = null, label "none", link "#passport/why-empty/observation"
   memory       → {ontology_version, readiness: ready|not_ready, link: "#passport/inventory"}
   explanation  → {template_id, evidence_ids[], status: shown|suppressed, link: source URLs}
   evaluation   → {membrane_verdict, rule_version, run_id (boundary eval), link: "#lab/<run_id>"}
