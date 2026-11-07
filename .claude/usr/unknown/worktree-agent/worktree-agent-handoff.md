@@ -1,42 +1,27 @@
 ---
 type: session
-trigger: iteration-complete
-date: 2026-11-07
-issue: HAC-38
+trigger: iteration-complete P2.2
+date: 2026-11-07T21:05Z
 branch: daypart/hac-fhdic-build
 ---
 
-# Handoff — HAC-38 FHDIC build, after P2.1 (evidence registry)
+# Handoff: HAC-38 build, P2.2 closed
 
-## State
-- P2.1 (plan task 6) boundary 24831e4, QGR `…iteration-complete-20261107-0254-8430ac7.md`, pushed.
-  `evidence/registry.py`: `Source` (+ `stated_ranges`), `StatedRange` (statement = the page's own sentence; every
-  bound appears in it, low before high), `EvidenceRegistry` (slotted; `sources()`, `by_id`, `for_concept(code)`
-  accepts concept_id or code, raises on a code without a concept registry), `check_reference_ranges`,
-  `load_evidence()` (cached; refuses unsourced or dropped ranges). URL: public https name only (no IP, no
-  credentials, no port, no private suffix, no nip.io). Copy rule (no clinical/expert review, no "vetted") on
-  title, publisher, supports, population, statement.
-- `sources_v1.json`: MedlinePlus vital signs (pulse 60–100, BP 90/60–120/80 split by position, breathing 12–18,
-  temperature 36.5–37.3 Cel), NHLBI BMI (18.5–24.9), NHLBI sleep (7–9 h), NHLBI high BP and WHO activity (no
-  ranges). 7 concepts carry `reference_range`; the golden set is pinned in `test_evidence_unit.py`. AHA/CDC 403
-  automated fetches, so they are not cited. Addendum G22. A&D §4.6 + Components table updated.
-- Tests: unit 2425 passed; sealed P1 (HAC-39) 1500 passed, 3 skipped; pyright 0.
-- Earlier: P1.7 boundary a46f759, P1.6 6d3413a, P1 phase commit 896eff7. The CTO lands the branch head
-  (no squash; merge --no-ff). Reviewer HAC-40 still open. Records HAC-41/42.
+## Where we are
+- Issue HAC-38 (Paperclip). Plan: workstreams/daypart/plan/BUILD-PLAN-fhdic.md (locked) + ADDENDUM-fhdic.md (G13-G23).
+- P1 closed (phase commit 896eff7, plus P1.6 and P1.7). P2.1 (task 6, evidence registry) boundary 24831e4.
+- **P2.2 (task 7, passport view) boundary 7ec2509**, QGR iteration-complete-20261107-2101-bfef6f9.
+  - `engine/daypart/passport/view.py`: `await health_clone_passport(journal, as_of)`; `journal_as_of`, `journal_day`, `boundary_run_id`, `inventory`, `inventory_view`, `GAP_LABELS`.
+  - Routes: GET /api/journals/{id}/passport?day= (422 invalid_day for any bad day), GET /api/inventory (gaps ids + gap_labels).
+  - Added `MemoryLhm.adapter`, `Journal.cohort_seed`.
+  - G23 records the shape, origin rule, gap labels, day errors and unit pairing.
+- Tests: engine 2457 passed; repo root 352 passed, 3 skipped; sealed P1 (origin/daypart/hac39-sealed, via detached worktree /tmp/hac44/sealedwt) 1503 passed; pyright 0.
 
 ## Next
-P2 task 7 passport view (`passport/view.py`, `/api/journals/{id}/passport`, `/api/inventory`; T6.1–T6.6, T5.4).
-- Read ranges ONLY through `load_evidence()` (A&D §4.6); render range beside the value with population + source
-  link, or "no reference range"; never high/low. ESCAPE the url and population when rendering (QG P2.1 B8).
-- Explanation suppression (§4.5): `for_concept(cid)` non-empty + template passes safe_text and dsl.check + ready.
-Then 8 next step, 9 lab rows. Carried from P1.5: saved order / last_saved on the journal (V12), one Journal method
-per J1 writer (V13), event_id→record_id index (V15). Observation cards read the as-recorded value/unit (G15).
+- P2 task 8: next step (`daypart/checkin/next_step.py`, GET/POST /api/journals/{id}/next-step, T7.1-T7.4), then task 9 lab rows (`demo/lab.py`, reuse `passport.view.boundary_run_id` for the dpo run id), then /phase-complete P2.
+- Open QG near-misses to consider: passport imports demo.safety / dashboard_data (layering), boundary_run_id read per request, value_label could be Literal, pattern concept_id falls back to code.
+- Reviewer pass HAC-40 still open. The Test Author should read G23 for P2 sealed tests.
 
-## Working notes
-- Clone: `gh repo clone Syntropy-Health/h2s_meta` into the run scratch dir (the workspace has no checkout).
-- Tests: `cd engine && env -u MUSE_API_KEY -u META_MODEL_API_KEY PATH=$HOME/.local/bin:$PATH uv run pytest -q`.
-- Mutation proofs: set PYTHONDONTWRITEBYTECODE=1 and clear __pycache__; a same-size edit inside one second
-  reuses a stale .pyc and gives a false red/green.
-- Lint my files: `$HOME/.local/bin/uvx ruff check <files>` (CI runs no ruff; repo-wide ruff has old findings).
-- Plan file is signed (do not edit); decisions go in ADDENDUM-fhdic.md. No squash at phase-complete.
-- Briefs: write `hacp-brief-<slug>` on HAC-38 FIRST, then create the `publish:` issue.
+## Gotchas
+- Run suites with `env -u MUSE_API_KEY`; uv lives in ~/.local/bin.
+- Push only via /opt/airdlc-plugin/tools/git-push.
