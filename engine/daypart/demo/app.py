@@ -17,6 +17,7 @@ from starlette.formparsers import MultiPartException
 
 from daypart.checkin import fixtures, next_step, service
 from daypart.checkin.journal import Journal, JournalError, JournalStore
+from daypart.demo import lab
 from daypart.demo.playground import (
     MAX_HORIZON,
     EpisodeDone,
@@ -391,6 +392,11 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             except (next_step.NoSavedCheckin, next_step.UnknownStep) as e:
                 return _error(e.status, dict(e.body))
         return JSONResponse(status_code=200, content=_safe(out))
+
+    @app.get("/api/lab")
+    def lab_table() -> dict:
+        # A&D §4.8: read per request from the committed results, so a missing artefact never fails the app.
+        return _safe(lab.lab_rows().model_dump(mode="json"))
 
     @app.get("/api/inventory")
     def inventory() -> dict:
