@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
@@ -88,7 +89,14 @@ def _get(obj: Any, *path: str) -> Any:
 
 
 def _num(v: Any) -> float | None:
-    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+    """A finite number, else None: NaN, +-Infinity and values too large for a float are not numbers."""
+    if not isinstance(v, (int, float)) or isinstance(v, bool):
+        return None
+    try:
+        f = float(v)
+    except OverflowError:
+        return None
+    return f if math.isfinite(f) else None
 
 
 def _int(v: Any) -> int | None:
@@ -104,8 +112,19 @@ def _basename(v: Any) -> str | None:
     return PurePosixPath(s).name or None if s is not None else None
 
 
+def _round_product(rate: float, count: int) -> int | None:
+    """round(rate * count), or None when the product is not a finite number (a huge count)."""
+    try:
+        return round(rate * count)
+    except (OverflowError, ValueError):
+        return None
+
+
 def _failures(n: int | None, rate: float | None) -> int | None:
-    return n - round(rate * n) if n is not None and rate is not None else None
+    if n is None or rate is None:
+        return None
+    passed = _round_product(rate, n)
+    return n - passed if passed is not None else None
 
 
 # --- rows ----------------------------------------------------------------------------------------
@@ -156,7 +175,7 @@ def _env_row(arm: Mapping[str, Any], mx: Mapping[str, Any]) -> LabRow:
         run_id=f"{version}@{digest[:DIGEST_CHARS]}/{name}" if version and digest else None,
         split=Split(n=episodes, n_scenarios=n_sc, horizon=_int(_get(m, "horizon"))),
         seed=seeds,
-        failures=round(rate * episodes) if rate is not None and episodes is not None else None,
+        failures=_round_product(rate, episodes) if rate is not None and episodes is not None else None,
         metrics={"mean_adherence": _num(_get(m, "mean_adherence")), "episode_violation_rate": rate},
     )
 

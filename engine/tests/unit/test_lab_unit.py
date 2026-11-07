@@ -219,3 +219,46 @@ def test_api_lab_route():
     body = r.json()
     assert body == json.loads(lab_rows(RESULTS).model_dump_json())
     assert body["footer"] == FOOTER
+
+
+# --- QG P2.4 -------------------------------------------------------------------------------------
+
+
+def _arm(d, name):
+    return next(a for a in d["arms"] if a.get("name") == name)
+
+
+def _write_raw(d, name, text):
+    (Path(d) / name).write_text(text, "utf-8")
+
+
+@pytest.mark.parametrize("token", ["NaN", "Infinity", "-Infinity", "1e400", "1" + "0" * 400])
+def test_k1_non_finite_or_huge_numbers_are_not_recorded(copy, token):
+    """K1: json.loads accepts NaN/Infinity/1e400 and huge ints; each is "not a number" -> null, never a 500."""
+    be = _load(copy, "boundary_eval.json")
+    be["models"]["base"]["boundary_pass_rate"] = "@RATE@"
+    be["models"]["base"]["rubric_pass_rate"] = "@RATE@"
+    _write_raw(copy, "boundary_eval.json", json.dumps(be).replace('"@RATE@"', token))
+    mx = _load(copy, "metrics.json")
+    _arm(mx, "env_random_intent")["metrics"]["episode_violation_rate"] = "@RATE@"
+    _arm(mx, "env_random_intent")["metrics"]["mean_adherence"] = "@RATE@"
+    _write_raw(copy, "metrics.json", json.dumps(mx).replace('"@RATE@"', token))
+    table = lab_rows(copy)
+    rows = _rows(table)
+    base, env = rows["base"], rows["env_random_intent"]
+    assert base.failures is None and base.metrics == {"boundary_pass_rate": None, "rubric_pass_rate": None}
+    assert env.failures is None
+    assert env.metrics == {"mean_adherence": None, "episode_violation_rate": None}
+    json.loads(table.model_dump_json())  # strict-JSON serialisable (the route's JSONResponse refuses NaN)
+
+
+def test_k1_huge_count_gives_no_failures(copy):
+    be = _load(copy, "boundary_eval.json")
+    be["models"]["base"]["n"] = "@N@"
+    _write_raw(copy, "boundary_eval.json", json.dumps(be).replace('"@N@"', "1" + "0" * 400))
+    mx = _load(copy, "metrics.json")
+    _arm(mx, "env_random_intent")["metrics"]["n_scenarios"] = "@N@"
+    _arm(mx, "env_random_intent")["metrics"]["episode_violation_rate"] = 0.1
+    _write_raw(copy, "metrics.json", json.dumps(mx).replace('"@N@"', "1" + "0" * 400))
+    rows = _rows(lab_rows(copy))
+    assert rows["base"].failures is None and rows["env_random_intent"].failures is None
