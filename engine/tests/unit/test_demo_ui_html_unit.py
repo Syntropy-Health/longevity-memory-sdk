@@ -845,3 +845,29 @@ def test_u1_no_element_id_equals_a_route_hash(html):
     rt = _section(js, "function route()", "\n}\n")
     assert '$("screen-" + s).hidden' in rt and '$("h-" + r.base).focus()' in rt
     assert _by_id(root, "inventory").tag == "ul"  # the #passport/inventory scroll target is kept
+
+
+def test_u2_display_rounding_and_dimensionless_unit():
+    got = _run_js(["fmtUnit", "fmtNum", "fmtRound"],
+                  "[fmtRound(57.14285714285714), fmtRound(2.5), fmtRound(3), fmtRound(0.1 + 0.2), fmtRound(NaN),"
+                  " fmtUnit('1'), fmtUnit('{score}'), fmtUnit('/min'), fmtNum(36.555)]")
+    assert got == ["57.14", "2.5", "3", "0.3", None, "", "score", "/min", "36.555"]
+
+
+def _card_value(kind: str, origin: str, value: str, unit: str) -> str:
+    return _run_page(
+        _BASE + _CARD + ["fmtRound"],
+        f"""
+        var c = {{ title: "t", kind: "{kind}", origin: "{origin}", status: "ready", value: {value}, unit: "{unit}", source: "s",
+          method: "m", limits: ["l"], reference_range_status: "withheld", data_age_days: 0, explanation: null,
+          thread: {{ steps: [] }} }};
+        return card(c, 0).querySelector(".card-value").textContent;
+        """,
+    )
+
+
+def test_u2_cards_round_scores_but_keep_saved_observations_as_recorded():
+    assert _card_value("pattern", "observed", "57.14285714285714", "{score}").strip() == "57.14 score"
+    assert _card_value("observation", "simulated", "6.666666", "h").strip() == "6.67 h"
+    assert _card_value("observation", "observed", "36.555", "Cel").strip() == "36.555 Cel"  # as recorded
+    assert _card_value("observation", "observed", "0", "1").strip() == "0"  # no dimensionless "1"

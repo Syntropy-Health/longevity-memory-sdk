@@ -606,12 +606,16 @@ function fmtDate(iso) {
   var s = fmtDay(iso);
   return (s !== iso && S.today && iso.slice(0, 10) === S.today) ? "Today, " + s : s;
 }
+/* UCUM for display: "{score}" → "score"; the dimensionless unit "1" is not printed. */
 function fmtUnit(u) {
-  if (typeof u !== "string") return "";
+  if (typeof u !== "string" || u === "1") return "";
   var m = /^\{(.+)\}$/.exec(u);
   return m ? m[1] : u;
 }
+/* A number as recorded: no rounding (saved observations, proposals, form values, range bounds). */
 function fmtNum(v) { return typeof v === "number" && isFinite(v) ? String(v) : null; }
+/* A computed number for display only (pattern scores, simulated values): at most 2 decimals, trailing zeros trimmed. */
+function fmtRound(v) { return typeof v === "number" && isFinite(v) ? String(Number(v.toFixed(2))) : null; }
 function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
 
 /* ---------- API ---------- */
@@ -1202,7 +1206,9 @@ function card(c, i) {
   art.append(tags);
   if (ready && fmtNum(c.value) !== null) {
     if (c.value_label) art.append(el("p", "value-label", c.value_label));
-    var v = el("p", "card-value", fmtNum(c.value) + " "); v.append(el("span", "unit", fmtUnit(c.unit))); art.append(v);
+    /* a saved observation is shown as recorded; a pattern score or simulated value is rounded for display */
+    var shown = c.kind === "observation" && c.origin === "observed" ? fmtNum(c.value) : fmtRound(c.value);
+    var v = el("p", "card-value", shown + " "); v.append(el("span", "unit", fmtUnit(c.unit))); art.append(v);
   } else {
     art.append(el("p", "withheld-msg", c.message || "Not enough data yet."));
   }
