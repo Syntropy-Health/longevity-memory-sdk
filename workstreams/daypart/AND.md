@@ -218,7 +218,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | `GET /api/journals/{id}/observations/{record_id}` | — | `200 ObservationRecord` (mapped or unmapped) | 404 unknown journal or record |
 | `GET /api/journals/{id}/passport` | `?day=` (whole days from the cohort start, 0 to the journal's today; default today) | `200 HealthClonePassport` | 404 `unknown_journal`; 422 `invalid_day` (with `max_day`) for any other `day` (G23) |
 | `GET /api/journals/{id}/next-step` | — | `200 NextStep` | 404 `unknown_journal`; 409 `no_saved_checkin` |
-| `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` ("choose" again on the same step returns the same id, no new event) | 404 `unknown_journal`; 409 `no_saved_checkin` (T7.4); 422 `invalid_request` (malformed body) / `unknown_step` (not the current step) (G24) |
+| `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` ("choose" again on the same step returns the same id, no new event) | 404 `unknown_journal`; 409 `no_saved_checkin` (T7.4); 413 `too_large` (body over the cap); 422 `invalid_request` (malformed body) / `unknown_step` (not the current step) (G24) |
 | `GET /api/lab` | — | `200 LabTable` | — |
 | `GET /api/inventory` | — | `200 {"verticals":[{vertical,label,concepts:[{concept_id,code,display}]}],"gaps":[…],"gap_labels":[…],"loinc_version","reviewer_status"}` (`gaps` = registry ids; `gap_labels` = what the passport shows, G23) | — |
 
