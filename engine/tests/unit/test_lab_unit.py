@@ -320,3 +320,10 @@ def test_b2_missing_eval_side_adapter_is_a_mismatch(copy, name):
     assert r.status == PROVENANCE_MISMATCH and r.run_id is None
     assert _numbers(r.model_dump()) == []
     assert rows["dpo" if name == "sft" else "sft"].status == "ok"
+
+
+def test_b3_env_arm_not_ok_is_left_out(copy):
+    _edit(copy, "metrics.json", lambda d: _arm(d, "env_always_none").update(status="failed"))
+    assert [r.row for r in lab_rows(copy).rows] == [
+        "base", "sft", "dpo", "env_always_barrier_problem_solving", "env_random_intent", "grpo",
+    ]
