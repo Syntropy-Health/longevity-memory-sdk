@@ -459,3 +459,39 @@ def test_t7_an_unmapped_word_does_not_route_to_a_person(client):
     j = client.app.state.journals.get(jid)
     assert any(rec.status == "unmapped" for rec in j.provenance.values())
     assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == "celebrate_streak"
+
+
+# --- P2 phase gate: the journey end to end over HTTP -----------------------------------------------
+
+
+def test_t2_e2e_checkin_passport_next_step_choose(client):
+    """Check-in saved → passport card → next step → choose → the passport is unchanged (an action never
+    feeds a card) and the next step is stable; a new save gives a new step and retires the old one."""
+    jid = _journal(client)
+    assert client.get(f"/api/journals/{jid}/next-step").status_code == 409
+    pp0 = client.get(f"/api/journals/{jid}/passport").json()
+    assert not any(c["origin"] == "observed" for c in pp0["cards"] if c["card_id"].startswith("observation:"))
+
+    cid = _save(client, jid, "slept 6 hours")
+    pp1 = client.get(f"/api/journals/{jid}/passport").json()
+    sleep = next(c for c in pp1["cards"] if c["card_id"] == "observation:chc:sleep-duration")
+    assert (sleep["origin"], sleep["value"]) == ("observed", 6.0)
+    assert sleep["thread"]["steps"][0]["link"] == f"#review/{cid}"
+
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["step_id"] == f"ns-{cid}"
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert r.status_code == 200, r.text
+    eid = r.json()["recorded"]
+
+    pp2 = client.get(f"/api/journals/{jid}/passport").json()
+    assert pp2 == pp1
+    assert not any("act:" in c["card_id"] for c in pp2["cards"])
+    assert client.get(f"/api/journals/{jid}/next-step").json() == step
+    again = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert again.json()["recorded"] == eid
+
+    cid2 = _save(client, jid, "walked 8000 steps")
+    assert client.get(f"/api/journals/{jid}/next-step").json()["step_id"] == f"ns-{cid2}"
+    stale = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert stale.status_code == 422 and stale.json() == {"error": "unknown_step"}
