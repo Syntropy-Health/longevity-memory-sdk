@@ -200,7 +200,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | Evidence registry | `evidence/registry.py` + `evidence/sources_v1.json` | `Source` entries, `sources()`, `by_id(evidence_id)`, `for_concept(code)` (a concept_id or a code); `load_evidence()` cross-checks every concept `reference_range` | passport view | registry |
 | Passport view | `passport/view.py` | `health_clone_passport(journal, as_of) -> HealthClonePassport` (observation cards + existing LHM flags + inventory) | app | `passport.render`, registry, evidence, journal |
 | Next step | `checkin/next_step.py` | `await suggest(journal) -> NextStep` through `membrane.post`/`dsl.check`; `await record_choice` (G24) | app | membrane, journal, `eval.policies`, registry, `demo.safety` |
-| Lab rows | `demo/lab.py` | `lab_rows(results_dir) -> LabTable` from the committed JSON (§4.8) | app, submission pack | `dashboard_data` loaders |
+| Lab rows | `demo/lab.py` | `lab_rows(results_dir) -> LabTable` from the committed JSON (§4.8) | app, submission pack | `dashboard_data.results_dir` (path only); its own tolerant readers, no `MetricsDoc` validation (G25) |
 | App routes | `demo/app.py` (extended) | the endpoints below | UI | all of the above |
 | UI | `demo/static/index.html` (rebuilt) + `demo/static/axe.min.js` (test only, not served) | 5 screens + research view | judges | API |
 | UI CI | `tests/ui/test_journey_a11y.py`, job `demo-ui` in `engine.yml` | axe, keyboard, 375 px, reduced motion | CI | Playwright |
@@ -476,8 +476,11 @@ horizon}, seed (an int, or the arm's seeds list for an env row), cohort_seed, fa
 episode count `n_scenarios × len(seeds)` and its run id uses `metrics.runs_version` (`eval-v1`).
 The adapter cross-check compares basenames; a missing adapter on either side is a mismatch, and a
 mismatched row keeps only its run id, prompt set and data sha. A field that is missing, malformed
-or not a number (a boolean is not a number) is `null`; a file that is missing or not a JSON object
-reads as empty.
+or not a number (a boolean is not a number; nor is NaN, ±Infinity or a value too large for a float)
+is `null`, and a failure count whose product is not finite is `null`; a file that is missing or not a JSON object
+reads as empty. An env arm with no string `name` is left out (a row name is never invented). The default
+directory follows the dashboard's `$DAYPART_RESULTS_DIR` / `$DAYPART_METRICS` override when set. The "not
+recorded" text of T8.3 is rendered by the P3 `#lab` view from `null`; the API carries `null`.
 
 ### 4.9 Governance checklist (`governance/real_input.yaml`)
 
