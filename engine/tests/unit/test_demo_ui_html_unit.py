@@ -328,3 +328,157 @@ def test_safe_href_links_same_origin_api_paths_only() -> None:
         "https://medlineplus.gov/ency/article/002341.htm",
         None, None, None, None, None, None, None,
     ]
+
+
+# --- HAC-48 rev 2: the six states that replaced the interim treatment ---------------------------------
+
+
+def _script(html: str) -> str:
+    """The journey script (the last <script> block), research view excluded."""
+    blocks = re.findall(r"<script>(.*?)</script>", _without_research(html), re.S)
+    assert blocks, "no journey script"
+    return blocks[-1]
+
+
+def _section(src: str, start: str, end: str) -> str:
+    i = src.index(start)
+    return src[i : src.index(end, i)]
+
+
+def _style(html: str) -> str:
+    m = re.search(r"<style>(.*?)</style>", html, re.S)
+    assert m
+    return m.group(1)
+
+
+def _string_literals(js: str) -> list[str]:
+    return [a or b for a, b in re.findall(r'"((?:[^"\\\n]|\\.)*)"|\'((?:[^\'\\\n]|\\.)*)\'', js)]
+
+
+def _run_js(names: list[str], expr: str) -> object:
+    """Run the named top-level functions/vars of the page script in node and return ``expr`` (JSON)."""
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    parts = []
+    for n in names:
+        m = re.search(r"^(?:function " + re.escape(n) + r"\(.*?\n\}|var " + re.escape(n) + r" = .*?;)$", src, re.S | re.M)
+        assert m, f"{n} not found"
+        parts.append(m.group(0))
+    js = "var S = { today: null };\n" + "\n".join(parts) + f"\nconsole.log(JSON.stringify({expr}));"
+    out = subprocess.run([node, "-e", js], capture_output=True, text=True, check=True, timeout=30)
+    return json.loads(out.stdout)
+
+
+def test_rev2_css_brings_over_handoff_info_and_range_rules(html):
+    css = _style(html)
+    assert re.search(r"\.notice--handoff\{border-color:var\(--ink\)\}", css)
+    assert ".notice--handoff .handoff-text" in css
+    assert ".notice:focus{" in css
+    assert ".ref-pop,.ref-src{display:block}" in css
+    assert ".visually-hidden{" in css
+    assert ".spec{" not in css and "[data-screen]{display:none}" not in css
+
+
+def test_rev2_crisis_handoff_notice(html):
+    js = _script(html)
+    hand = _section(js, "function showHandoff", "\n}\n")
+    assert '"handoff"' in hand  # notice kind → .notice--handoff
+    assert "Please talk to a person about this" in hand
+    assert "This demo cannot help with this. Nothing from your check-in was saved." in hand
+    assert "Write a different check-in" in hand
+    assert '"alert"' in hand and "focus" in hand
+    assert "real-data-warning" in hand and ".hidden = true" in hand
+    assert "A person can help with this" not in js and '"Start again"' not in hand
+    # the UI adds no phone number, link or emergency copy of its own: the API text is the body
+    assert "tel:" not in html
+    assert not re.search(r"\b(911|999|112|988|000)\b", js)
+    assert "emergency" not in js.lower()
+    note = _section(js, "function notice(", "\n}\n")
+    assert "notice--handoff" in note and "aria-labelledby" in note
+
+
+def test_rev2_checkin_server_copy(html):
+    js = _script(html)
+    assert "Something went wrong reading your check-in, so nothing was saved" in js
+    assert "This is a fault in the demo, not in what you wrote. Try again, or use a demo input." in js
+    assert "That is too long, so nothing was saved" in js
+    assert "Keep your check-in to 500 characters." in js
+    assert "extractor_output_invalid" in js
+
+
+def test_rev2_next_no_saved_checkin_and_stale_step(html):
+    js = _script(html)
+    assert "Check in first" in js
+    assert "A next step comes from your last saved check-in, and you have not saved one yet." in js
+    assert "Go to check-in" in js
+    assert "No suggestion yet" not in js
+    assert "This suggestion has changed" in js
+    assert "A newer check-in was saved, so here is the new suggestion. Your choice was not recorded. Choose again below." in js
+    nxt = _section(js, "/* ---------- #next", "/* ---------- #lab")
+    assert '"aria-busy"' in nxt and '"aria-disabled"' in nxt
+
+
+def test_rev2_generic_server_and_network_errors(html):
+    js = _script(html)
+    assert "AbortController" in js and "15000" in js
+    assert "We could not reach the demo server. Check your connection and try again." in js
+    assert "The demo had a problem on its side (error " in js and "Try again in a moment." in js
+    assert '"Try again"' in js
+    assert "Something went wrong, so nothing was saved" not in js  # the network copy makes no saving claim
+    assert "genericError" not in js
+    # error notices never carry the server's body
+    assert "detail" not in js
+
+
+def test_rev2_get_failure_notice_sits_directly_under_h1(html):
+    root = _tree(html)
+    for s in ("passport", "next", "lab"):
+        sec = _by_id(root, s)
+        kids = [c for c in sec.children if isinstance(c, _Node)]
+        assert kids[0].tag == "h1", s
+        assert kids[1].tag == "div" and (kids[1].attrs.get("id") or "").endswith("-msg"), s
+
+
+def test_rev2_suppressed_explanation_copy_and_no_review_claims(html):
+    assert "No reviewed source applies, so no explanation is shown." in html
+    low = html.lower()
+    for word in ("vetted", "clinically", "approved", "validated"):
+        assert word not in low, word
+
+
+def test_rev2_reference_range_meta_row(html):
+    js = _script(html)
+    pp = _section(js, "/* ---------- #passport", "/* ---------- #next")
+    assert '"Reference range"' in pp
+    assert '"Range source: "' in pp
+    assert '"no reference range"' in pp
+    assert "ref-pop" in pp and "ref-src" in pp and "visually-hidden" in pp
+    assert '"aria-hidden"' in pp
+    assert "Where a public source states a reference range, the card shows it with the group it applies to and the source. It is reference text only, not a judgement of your value." in html
+    # AM-1: no words relating the value to the range, and no plausible bounds, in any passport string
+    banned = re.compile(r"\b(high|low|normal|abnormal|in range|out of range|within|above|below|plausible)\b", re.I)
+    for s in _string_literals(pp):
+        assert not banned.search(s), s
+    assert "plausible" not in pp
+
+
+def test_rev2_range_text_has_a_spoken_twin():
+    got = _run_js(["fmtUnit", "fmtNum", "rangeText"], "[rangeText({low:60,high:100,unit:'/min'}), rangeText({low:null,high:7,unit:'{h}'})]")
+    assert got[0] == {"visible": "60–100 /min", "spoken": "60 to 100 /min"}
+    assert got[1]["visible"] == got[1]["spoken"] and "7 h" in got[1]["visible"]
+
+
+def test_rev2_review_label_once_in_passport_meta(html):
+    got = _run_js(
+        ["MONTHS", "fmtDay", "reviewLabel"],
+        "[reviewLabel('reviewed: board sign-off 2026-11-07'), reviewLabel('something else'), reviewLabel(null)]",
+    )
+    assert got == ["Reviewed (board sign-off, 7 Nov 2026)", "something else", None]
+    js = _script(html)
+    assert js.count('"Review"') == 1
