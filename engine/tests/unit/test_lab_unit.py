@@ -348,3 +348,22 @@ def test_b6_missing_pipeline_tag_gives_no_model_run_ids(copy):
         assert rows[name].run_id is None
     assert rows["sft"].status == rows["dpo"].status == "ok"  # the tag is not part of the cross-check
     assert rows["sft"].failures is not None
+
+
+def test_t4_grpo_reason_from_an_artefact_is_guarded_on_the_route(copy, monkeypatch):
+    """The grpo reason comes from metrics.json; /api/lab passes it through safe_text (_SAFE_KEYS)."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from daypart.demo.app import create_app
+    from daypart.demo.safety import safe_text
+
+    raw = "this will diagnose you"
+    assert safe_text(raw) != raw
+    _edit(copy, "metrics.json", lambda d: _arm(d, "grpo").update(reason=raw))
+    monkeypatch.setenv("DAYPART_RESULTS_DIR", str(copy))
+    monkeypatch.delenv("DAYPART_REAL_INPUT", raising=False)
+    with TestClient(create_app(cohort_seed=0)) as c:
+        body = c.get("/api/lab").json()
+    grpo = next(r for r in body["rows"] if r["row"] == "grpo")
+    assert grpo["reason"] == safe_text(raw)
