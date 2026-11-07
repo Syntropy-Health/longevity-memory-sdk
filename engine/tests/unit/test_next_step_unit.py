@@ -151,12 +151,21 @@ def test_a_gap_day_breaks_the_streak():
     assert select_intent(None, days, today=D0).intent == "check_in_question"
 
 
-def test_a_saved_adherence_value_overrides_the_simulated_day(client):
-    jid = _journal(client)
+@pytest.mark.parametrize(
+    ("member_id", "before", "after"),
+    [("syn-004", "celebrate_streak", "check_in_question"), ("syn-003", "check_in_question", "barrier_problem_solving")],
+)
+def test_a_saved_adherence_value_overrides_the_simulated_day(client, member_id, before, after):
+    jid = _journal(client, member_id)
     j = client.app.state.journals.get(jid)
+    simulated = asyncio.run(next_step.adherence_days(j))
+    assert simulated[-1].date == j.today and simulated[-1].value == 1.0  # the member adhered today (simulated)
+    _save(client, jid, "walked 8000 steps")
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == before
     _save(client, jid, "adherence 0%")
     days = asyncio.run(next_step.adherence_days(j))
     assert days[-1].date == j.today and days[-1].value == 0.0
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == after
 
 
 # --- T7.2: a step the membrane blocks is replaced ------------------------------------------------
