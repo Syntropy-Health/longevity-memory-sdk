@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "workstream": "daypart",
-  "updated_at": "2026-11-07T21:30:23.737179+00:00",
+  "updated_at": "2026-11-07T21:55:06.117994+00:00",
   "linear": {
     "initiative_url": "",
     "initiative_id": ""
@@ -101,6 +101,18 @@
       "summary": "next step (next_step.py, GET/POST next-step, T7.1-T7.4)",
       "pr": "",
       "updated_at": "2026-11-07T21:30:23.737141+00:00"
+    },
+    "P2.4": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "91f8875",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-2154-901d46a.md",
+      "summary": "learning lab rows + /api/lab (T8.1-T8.3)",
+      "pr": "",
+      "updated_at": "2026-11-07T21:55:06.117959+00:00"
     }
   }
 }
