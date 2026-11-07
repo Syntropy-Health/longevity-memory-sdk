@@ -361,6 +361,11 @@ Card
   source: str; method: str; limits: tuple[str, ...]   # limits ≥1, always
   explanation: str | None                  # null ⇒ "Not enough evidence"
   explanation_status: "shown" | "suppressed"
+  explanation_text: str                    # the explanation, or "Not enough evidence" (G23)
+  value_label: "You recorded" | "Simulated record" | "Pattern score" | None   # null unless ready (G23)
+  message: str | None                      # WITHHELD_MESSAGE iff withheld (G23)
+  reference_range: {low, high, unit, population, source_evidence_id, source_url} | None   # AM-1; null unless ready and sourced
+  reference_range_status: "shown" | "none" | "withheld"   # "none" renders "no reference range" (G23)
   thread: EvidenceThread
 ```
 
