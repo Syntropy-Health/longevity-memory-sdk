@@ -339,3 +339,12 @@ def test_b4_malformed_boundary_eval_keeps_the_pipeline_run_id(copy):
     assert base.seed is None and base.failures is None and base.degenerate is None
     assert base.file_digest is None
     assert rows["sft"].status == rows["dpo"].status == PROVENANCE_MISMATCH
+
+
+def test_b6_missing_pipeline_tag_gives_no_model_run_ids(copy):
+    _edit(copy, "pipeline.json", lambda d: d.pop("tag"))
+    rows = _rows(lab_rows(copy))
+    for name in ("base", "sft", "dpo"):
+        assert rows[name].run_id is None
+    assert rows["sft"].status == rows["dpo"].status == "ok"  # the tag is not part of the cross-check
+    assert rows["sft"].failures is not None
