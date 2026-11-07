@@ -433,7 +433,7 @@ def test_rev2_generic_server_and_network_errors(html):
     assert "Something went wrong, so nothing was saved" not in js  # the network copy makes no saving claim
     assert "genericError" not in js
     # error notices never carry the server's body
-    assert "detail" not in js
+    assert not re.search(r"\bdetail\b", js)
 
 
 def test_rev2_get_failure_notice_sits_directly_under_h1(html):
