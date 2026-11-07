@@ -32,6 +32,8 @@ Verify the boundary: `git diff --stat f170784 -- syntropy tests pyproject.toml u
 | numpy, pydantic, PyYAML | core | BSD / MIT |
 | FastAPI, Streamlit, uvicorn | demo | MIT / Apache-2.0 / BSD |
 | transformers, TRL, PEFT, bitsandbytes, torch (Modal image only) | training | Apache-2.0 / MIT / BSD |
+| Playwright for Python (`ui` dependency group, CI job `demo-ui` only) | headless browser for the UI and accessibility suite | Apache-2.0 (Microsoft) |
+| axe-core 4.13.0 (vendored unmodified as `engine/tests/ui/vendor/axe.min.js`, licence alongside; test-only, never served) | accessibility checks in the UI suite (A&D AD9) | [MPL-2.0](https://www.mozilla.org/MPL/2.0/) (Deque Systems) |
 | LOINC® 2.83 (18 codes, `engine/daypart/memory/registry_a4.json`, verified in `loinc_verify_v1.csv`) | concept codes and display names for the A4 registry | [LOINC licence](https://loinc.org/license/) (Regenstrief Institute) |
 
 ### LOINC
