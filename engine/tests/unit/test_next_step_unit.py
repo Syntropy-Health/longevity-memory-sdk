@@ -414,3 +414,48 @@ def test_t5_a_dsl_error_fails_closed(client, monkeypatch):
     step = client.get(f"/api/journals/{jid}/next-step").json()
     assert step["replaced"] is True and step["text"] == HANDOFF_TEXT
     assert step["membrane"] == {"decision": "escalate", "rule_hits": []}
+
+
+@pytest.mark.parametrize(("member_id", "intent"), [("syn-004", "celebrate_streak"), ("syn-003", "check_in_question"),
+                                                   ("syn-001", "barrier_problem_solving")])
+def test_t11_each_adherence_rule_through_the_route(client, member_id, intent):
+    jid = _journal(client, member_id)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["intent"] == intent and step["text"] == POLICY_TEXT[intent]
+    assert step["label"] == next_step.STEP_LABEL == "Suggested next step"  # T6: not replaced
+    assert set(step) == {"step_id", "text", "reason", "intent", "label", "membrane", "options", "replaced"}
+
+
+def test_t8_a_corrected_symptom_still_routes_to_a_person(client):
+    jid = _journal(client)
+    body = _create(client, jid, "pain 4/10")
+    decisions = [{"proposal_id": body["proposals"][0]["proposal_id"], "action": "correct", "value": 5}]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["intent"] == "clinician_handoff"
+    assert "pain" in step["reason"].lower() and "4" not in step["reason"] and "5" not in step["reason"]
+
+
+def test_t7_a_discarded_symptom_does_not_route_to_a_person(client):
+    jid = _journal(client, "syn-004")
+    body = _create(client, jid, "pain 4/10, walked 8000 steps")
+    by_code = {p["concept_code"]: p["proposal_id"] for p in body["proposals"]}
+    decisions = [{"proposal_id": by_code["72514-3"], "action": "discard"},
+                 {"proposal_id": by_code["55423-8"], "action": "confirm"}]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == "celebrate_streak"
+
+
+def test_t7_an_unmapped_word_does_not_route_to_a_person(client):
+    jid = _journal(client, "syn-004")
+    body = _create(client, jid, "headache, walked 8000 steps")
+    decisions = [{"proposal_id": p["proposal_id"], "action": "save_unmapped" if p["concept_code"] is None else "confirm"}
+                 for p in body["proposals"]]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    j = client.app.state.journals.get(jid)
+    assert any(rec.status == "unmapped" for rec in j.provenance.values())
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == "celebrate_streak"
