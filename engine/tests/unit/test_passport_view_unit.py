@@ -487,3 +487,14 @@ def test_fixture_sourced_card_links_its_fixture(client):
         assert source["ref"] == "demo-bp-cuff" and source["link"] == "/api/fixtures/demo-bp-cuff"
         assert source["label"] == "Demo fixture image"
         assert client.get(source["link"]).status_code == 200
+
+
+def test_pattern_source_text_follows_its_thread(saved):
+    _, _, pp = saved
+    for c in (c for c in pp["cards"] if c["kind"] == "pattern"):
+        source_step = c["thread"]["steps"][0]
+        if source_step["label"] == "none":
+            assert c["source"] == "No record yet", c["card_id"]
+            assert not any("simulated cohort" in limit for limit in c["limits"]), c["card_id"]
+        else:
+            assert c["source"].startswith("Pattern score from simulated cohort data"), c["card_id"]

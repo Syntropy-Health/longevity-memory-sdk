@@ -616,7 +616,13 @@ def _pattern_card(
     ready = flag.status == "ready"
     source_step, _, _ = _source_step(rec, simulated and rec is None, seed)
     from_journal = rec is not None
-    source = "Pattern score from simulated cohort data" + (" and this journal" if from_journal else "")
+    if simulated:
+        source = "Pattern score from simulated cohort data" + (" and this journal" if from_journal else "")
+        limit = _PATTERN_LIMIT
+    elif from_journal:
+        source, limit = "Pattern score from this journal", _DEMO_LIMIT
+    else:  # nothing behind the score: say so, as the thread's source step does
+        source, limit = _NO_SOURCE, _DEMO_LIMIT
     return _card(
         card_id=f"pattern:{flag.code}",
         concept_id=concept_id,
@@ -630,7 +636,7 @@ def _pattern_card(
         age=_age(as_of, at) if at is not None else None,
         source=source,
         method=f"lhm-domain:{flag.lhm_domain}",
-        limits=(*flag.caveats, _PATTERN_LIMIT),
+        limits=(*flag.caveats, limit),
         shown_range=None,
         sources=evidence.for_concept(concept_id) if concept is not None else (),
         run_id=run_id,
