@@ -599,3 +599,28 @@ def test_c2_correct_sends_unit_and_date_only_when_changed():
         {},
         {"value": 70, "date": "2026-11-05"},
     ]
+
+
+def test_c1_correct_unit_select_offers_the_allowed_units():
+    units = "{'29463-7':['kg','[lb_av]','g'],'8867-4':['/min']}"
+    got = _run_js(
+        ["fmtUnit", "unitChoices"],
+        f"[unitChoices({{concept_code:'29463-7',unit:'[lb_av]'}}, {units}),"
+        f" unitChoices({{concept_code:'29463-7',unit:'mm[Hg]'}}, {units}),"
+        f" unitChoices({{concept_code:null,unit:'kg'}}, {units}),"
+        f" unitChoices({{concept_code:'8867-4',unit:'/min'}}, null)]",
+    )
+    # the proposal's unit first, selected, only when allowed
+    assert got[0] == [{"value": "[lb_av]", "label": "[lb_av]", "selected": True},
+                      {"value": "kg", "label": "kg"}, {"value": "g", "label": "g"}]
+    # a mismatched unit is shown as the current value but is not a selectable choice
+    head, rest = got[1][0], got[1][1:]
+    assert head["value"] == "" and head["selected"] and head["disabled"] and "mm[Hg]" in head["label"]
+    assert [o["value"] for o in rest] == ["kg", "[lb_av]", "g"] and not any(o.get("disabled") for o in rest)
+    assert got[2] is None and got[3] is None  # no concept or no unit list: no select of allowed units
+
+
+def test_c1_review_fetches_the_allowed_units(html):
+    js = _script(html)
+    rv = _section(js, "/* ---------- #review", "/* ---------- #passport")
+    assert '"/api/units"' in rv and "unitChoices(p, units)" in rv

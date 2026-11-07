@@ -884,7 +884,18 @@ function shiftDate(iso, days) {
   var d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
-function showReview(id) {
+/* GET /api/units once: {code: [canonical, ...alt units]} (QG P3.1 C1). Resolves to the GET result. */
+var unitsPending = null;
+function loadUnits() {
+  if (!unitsPending) {
+    unitsPending = api("GET", "/api/units").then(function (res) {
+      if (!(res.ok && res.data && res.data.units && typeof res.data.units === "object")) unitsPending = null;
+      return res;
+    });
+  }
+  return unitsPending;
+}
+async function showReview(id) {
   rvCurrent = id || null;
   var intro = $("rv-intro"), msg = clear($("rv-msg")), form = $("rv-form"), list = clear($("rv-list"));
   form.hidden = true;
@@ -897,13 +908,35 @@ function showReview(id) {
     return;
   }
   if (ci.status === "saved") { msg.append(savedNotice(ci.result)); return; }
-  var n = ci.proposals.length;
+  var ures = await loadUnits();
+  if (rvCurrent !== id) return; /* the route moved on while the units loaded */
+  if (!(ures.ok && ures.data && ures.data.units && typeof ures.data.units === "object")) {
+    msg.append(serverError(ures, function () { showReview(id); }));
+    return;
+  }
+  var units = ures.data.units, n = ci.proposals.length;
   intro.textContent = "We found " + plural(n, "value", "values") + ". Choose what to do with each one. Nothing is saved until you press “Save reviewed values”.";
-  ci.proposals.forEach(function (p) { list.append(proposalCard(p)); });
+  ci.proposals.forEach(function (p) { list.append(proposalCard(p, units)); });
   form.hidden = false;
   updateCountRv();
 }
-function proposalCard(p) {
+/* The Correct Unit <select> options: the concept's allowed units, canonical first (GET /api/units).
+   The proposal's unit leads, selected, only when it is allowed. A unit that is not allowed (unit_mismatch)
+   is shown as the current value in a disabled first option, so the person must pick an allowed one.
+   null: no concept or no unit list, so there is no allowed set to offer. */
+function unitChoices(p, units) {
+  var list = units && typeof p.concept_code === "string" && Array.isArray(units[p.concept_code]) ? units[p.concept_code] : null;
+  var allowed = list ? list.filter(function (u) { return typeof u === "string" && u; }) : [];
+  if (!allowed.length) return null;
+  var cur = typeof p.unit === "string" && p.unit ? p.unit : null;
+  function opt(u) { return { value: u, label: fmtUnit(u) }; }
+  if (cur && allowed.indexOf(cur) >= 0) {
+    return [{ value: cur, label: fmtUnit(cur), selected: true }].concat(allowed.filter(function (u) { return u !== cur; }).map(opt));
+  }
+  var head = cur ? "Choose a unit (now " + fmtUnit(cur) + ", which this measure does not allow)" : "Choose a unit";
+  return [{ value: "", label: head, selected: true, disabled: true }].concat(allowed.map(opt));
+}
+function proposalCard(p, units) {
   var base = pid(p), blocked = p.blocking === true, flags = Array.isArray(p.flags) ? p.flags : [];
   var art = el("article", "proposal" + (blocked ? " proposal--blocked" : ""));
   art.setAttribute("aria-labelledby", base + "-t");
@@ -958,8 +991,12 @@ function proposalCard(p) {
   if (fmtNum(p.value) !== null) iv.value = fmtNum(p.value);
   fv.append(lv, iv);
   var fu = el("div", "field"), lu = el("label", null, "Unit"), iu;
-  if (typeof p.unit === "string" && p.unit) {
-    iu = el("select"); var o = new Option(fmtUnit(p.unit), p.unit); iu.append(o);
+  var choices = unitChoices(p, units);
+  if (choices) {
+    iu = el("select");
+    choices.forEach(function (c) { var o = new Option(c.label, c.value); if (c.disabled) o.disabled = true; if (c.selected) o.selected = true; iu.append(o); });
+  } else if (typeof p.unit === "string" && p.unit) {
+    iu = el("select"); iu.append(new Option(fmtUnit(p.unit), p.unit));
   } else { iu = el("input"); iu.type = "text"; }
   iu.id = base + "-u"; lu.htmlFor = iu.id;
   fu.append(lu, iu);

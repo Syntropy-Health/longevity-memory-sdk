@@ -30,6 +30,7 @@ from daypart.demo.playground import (
 )
 from daypart.demo.safety import safe_text
 from daypart.governance import real_input
+from daypart.memory.registry import load_registry
 from daypart.passport import view as passport_view
 from daypart.simmember.dynamics import INTENTS
 
@@ -403,6 +404,12 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     def lab_table() -> dict:
         # A&D §4.8: read per request from the committed results, so a missing artefact never fails the app.
         return _safe(lab.lab_rows().model_dump(mode="json"))
+
+    @app.get("/api/units")
+    def units() -> dict:
+        # Read-only (QG P3.1 C1): each concept's allowed units, canonical first, then its alt units, so
+        # the review Correct select offers exactly what review() accepts (service._allowed_units).
+        return {"units": {c.code: [c.unit, *c.alt_units] for c in load_registry().concepts()}}
 
     @app.get("/api/inventory")
     def inventory() -> dict:
