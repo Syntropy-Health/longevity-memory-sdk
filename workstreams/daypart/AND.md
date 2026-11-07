@@ -391,7 +391,7 @@ EvidenceThread.steps (always exactly 5, in order):
                    simulated series:      event_id = record_id = null, label "simulated series", link "#research" (G23)
                    neither:               event_id = record_id = null, label "none", link "#passport/why-empty/observation"
   memory       → {ontology_version, readiness: ready|not_ready, link: "#passport/inventory"}
-  explanation  → {template_id, evidence_ids[], status: shown|suppressed, link: source URLs}
+  explanation  → {template_id, evidence_ids[], status: shown|suppressed, link: the first source URL, links: every source URL}
   evaluation   → {membrane_verdict, rule_version, run_id (boundary eval), link: "#lab/<run_id>"}
 ```
 
