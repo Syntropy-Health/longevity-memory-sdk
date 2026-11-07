@@ -327,3 +327,15 @@ def test_b3_env_arm_not_ok_is_left_out(copy):
     assert [r.row for r in lab_rows(copy).rows] == [
         "base", "sft", "dpo", "env_always_barrier_problem_solving", "env_random_intent", "grpo",
     ]
+
+
+def test_b4_malformed_boundary_eval_keeps_the_pipeline_run_id(copy):
+    tag = _load(copy, "pipeline.json")["tag"]
+    (copy / "boundary_eval.json").write_text("[1, 2]", "utf-8")  # valid JSON, not an object
+    rows = _rows(lab_rows(copy))
+    base = rows["base"]
+    assert base.run_id == f"{tag}/base"
+    assert base.split.n is None and base.split.prompt_set_version is None
+    assert base.seed is None and base.failures is None and base.degenerate is None
+    assert base.file_digest is None
+    assert rows["sft"].status == rows["dpo"].status == PROVENANCE_MISMATCH
