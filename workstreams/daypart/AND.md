@@ -386,7 +386,9 @@ Readiness has two paths, and this is a deliberate extension of I6 (D-A9):
 ```text
 EvidenceThread.steps (always exactly 5, in order):
   source       → {label, ref, link}   link: "#review/<checkin_id>" | "/api/fixtures/<id>" | "#research" (simulated cohort, seed)
-  observation  → {event_id | "simulated series", concept_id, link: "/api/journals/<j>/observations/<record_id>"}
+  observation  → {event_id, record_id, concept_id, label, link}
+                   saved in this journal: event_id + record_id set, link "/api/journals/<j>/observations/<record_id>"
+                   simulated series:      event_id = record_id = null, label "simulated series", link "#research" (G23)
   memory       → {ontology_version, readiness: ready|not_ready, link: "#passport/inventory"}
   explanation  → {template_id, evidence_ids[], status: shown|suppressed, link: source URLs}
   evaluation   → {membrane_verdict, rule_version, run_id (boundary eval), link: "#lab/<run_id>"}
