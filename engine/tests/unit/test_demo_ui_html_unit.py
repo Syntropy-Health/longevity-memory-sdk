@@ -713,3 +713,31 @@ def test_c6_lab_base_row_shows_the_file_digest_as_text():
     assert "file digest 0123456789ab" in got["text"]
     assert got["mono"] == ["mono"]
     assert "0123456789ab" not in got["links"]  # text only, never a link
+
+
+_CARD = ["card", "rangeText", "rangeHost", "rangeCell", "STEP_NAMES", "viewText", "thread"]
+
+
+def _card_explain(step3: str, extra: str = "") -> object:
+    return _run_page(
+        _BASE + _CARD,
+        f"""
+        var c = {{ title: "Pulse", origin: "observed", status: "ready", value: 72, unit: "/min", source: "Your text",
+          method: "m", limits: ["l"], reference_range_status: "none", data_age_days: 0, explanation: null {extra},
+          thread: {{ steps: [{{ label: "none" }}, {{ label: "none" }}, {{ label: "m", ontology_version: "v", link: "" }}, {step3},
+            {{ label: "none", rule_version: "r" }}] }} }};
+        var art = card(c, 0);
+        return {{ explain: art.querySelector(".explain").textContent, value: art.querySelector(".card-value").textContent }};
+        """,
+    )
+
+
+def test_d1_no_reviewed_source_copy_only_when_there_is_no_source():
+    none = _card_explain('{ label: "none", status: "suppressed", links: [] }')
+    assert "No reviewed source applies, so no explanation is shown." in none["explain"]
+    sourced = _card_explain(
+        '{ label: "MedlinePlus: Vital signs", status: "suppressed", links: ["https://medlineplus.gov/x"],'
+        ' note: "the explanation failed the safety check, so it is not shown" }'
+    )
+    assert "No reviewed source applies" not in sourced["explain"]
+    assert "Not enough evidence" in sourced["explain"]

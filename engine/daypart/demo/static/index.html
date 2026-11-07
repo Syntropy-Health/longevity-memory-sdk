@@ -1216,7 +1216,11 @@ function card(c, i) {
     ex.append(p);
   } else {
     ex.append(el("p", "ex-title label small", "Not enough evidence"));
-    if (ready) ex.append(el("p", "small muted", "No reviewed source applies, so no explanation is shown."));
+    /* the "no source" claim only when the Explanation step has no source; a sourced explanation that
+       failed the safety check shows the step's own note instead (view.py _explain) */
+    var xs = steps[3];
+    if (ready && (!xs || xs.label === "none")) ex.append(el("p", "small muted", "No reviewed source applies, so no explanation is shown."));
+    else if (ready && xs.note) { var xn = String(xs.note); ex.append(el("p", "small muted", xn.charAt(0).toUpperCase() + xn.slice(1) + ".")); }
   }
   art.append(ex);
   art.append(thread(steps));
