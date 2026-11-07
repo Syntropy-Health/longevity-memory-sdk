@@ -693,3 +693,23 @@ def test_c5_simulated_source_is_never_called_a_check_in():
     own = _thread_links('{ label: "Your text", ref: "ci-1", link: "#review/ci-1" }',
                         '{ label: "Saved observation", event_id: "e1", record_id: "r1", link: "/api/journals/j1/observations/r1" }')
     assert own[0]["links"] == [["#review/ci-1", "view check-in ci-1"]]
+
+
+_LAB = ["ROW_NAMES", "cell", "parts", "rate", "labRow"]
+
+
+def test_c6_lab_base_row_shows_the_file_digest_as_text():
+    got = _run_page(
+        _BASE + _LAB,
+        """
+        var tr = labRow({ row: "base", kind: "model", status: "ok", run_id: "tag/base", file_digest: "0123456789ab",
+          split: { prompt_set_version: "v1", n: 10 }, seed: 0, failures: 1, degenerate: 0, metrics: {} });
+        var id = tr.children[1];
+        var mono = id.querySelectorAll("code").filter(function (c) { return c.textContent === "0123456789ab"; });
+        return { text: id.textContent, mono: mono.map(function (c) { return c.className; }),
+                 links: id.querySelectorAll("a").map(function (a) { return a.textContent; }) };
+        """,
+    )
+    assert "file digest 0123456789ab" in got["text"]
+    assert got["mono"] == ["mono"]
+    assert "0123456789ab" not in got["links"]  # text only, never a link
