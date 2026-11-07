@@ -320,6 +320,15 @@ def test_safe_href_links_same_origin_api_paths_only() -> None:
         "http://example.com/",
         "/api/../etc",
         "",
+        "/api/%2e%2e/results",
+        "/api/%2E%2e/docs",
+        "/api/x/%2E./y",
+        "/api/x%2fy",
+        "/api/x%5Cy",
+        "/api//evil",
+        "data:text/html,x",
+        " javascript:alert(1)",
+        "/api/journals/j1/observations/r%201",
     ])
     assert got == [
         "/api/fixtures/scale-photo",
@@ -327,6 +336,8 @@ def test_safe_href_links_same_origin_api_paths_only() -> None:
         "#lab/run-1",
         "https://medlineplus.gov/ency/article/002341.htm",
         None, None, None, None, None, None, None,
+        None, None, None, None, None, None, None, None,
+        "/api/journals/j1/observations/r%201",
     ]
 
 
@@ -373,6 +384,90 @@ def _run_js(names: list[str], expr: str) -> object:
     js = "var S = { today: null };\n" + "\n".join(parts) + f"\nconsole.log(JSON.stringify({expr}));"
     out = subprocess.run([node, "-e", js], capture_output=True, text=True, check=True, timeout=30)
     return json.loads(out.stdout)
+
+
+# A tiny DOM for node: enough of Element/document for the page's own helpers. ``mk(id, tag)`` adds a
+# connected element; ``RESP`` is the queue fetch answers from ([status, json] or "network"); ``CALLS``
+# records each fetch as [method, path, body].
+_DOM_STUB = r"""
+var ALL = [];
+class El {
+  constructor(tag) { this.tagName = String(tag).toUpperCase(); this.childNodes = []; this.attrs = {}; this.className = "";
+    this.hidden = false; this.style = {}; this.dataset = {}; this.value = ""; this.listeners = {}; this.parentNode = null; this.id = ""; ALL.push(this); }
+  get textContent() { return this.childNodes.map(function (c) { return typeof c === "string" ? c : c.textContent; }).join(""); }
+  set textContent(v) { this.replaceChildren(String(v)); }
+  get children() { return this.childNodes.filter(function (c) { return typeof c !== "string"; }); }
+  append() { for (var i = 0; i < arguments.length; i++) { var n = arguments[i];
+    if (typeof n !== "string") { if (n.parentNode) n.parentNode.childNodes.splice(n.parentNode.childNodes.indexOf(n), 1); n.parentNode = this; }
+    this.childNodes.push(n); } }
+  prepend() { var old = this.childNodes; this.childNodes = []; this.append.apply(this, arguments); this.childNodes = this.childNodes.concat(old); }
+  replaceChildren() { this.childNodes.forEach(function (c) { if (typeof c !== "string") c.parentNode = null; }); this.childNodes = []; this.append.apply(this, arguments); }
+  setAttribute(k, v) { this.attrs[k] = String(v); }
+  getAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null; }
+  hasAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k); }
+  removeAttribute(k) { delete this.attrs[k]; }
+  addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); }
+  click() { (this.listeners.click || []).forEach(function (f) { f({ preventDefault: function () {} }); }); }
+  focus() { document.activeElement = this; }
+  scrollIntoView() {}
+  all() { var out = []; this.children.forEach(function (c) { out.push(c); out = out.concat(c.all()); }); return out; }
+  matches(sel) { var m = /^([a-z0-9]*)((?:\.[\w-]+)*)$/i.exec(sel); if (!m) throw new Error("selector " + sel);
+    if (m[1] && this.tagName !== m[1].toUpperCase()) return false; var cls = this.className.split(/\s+/);
+    return m[2].split(".").filter(Boolean).every(function (c) { return cls.indexOf(c) >= 0; }); }
+  querySelectorAll(sel) { return this.all().filter(function (e) { return e.matches(sel); }); }
+  querySelector(sel) { return this.querySelectorAll(sel)[0] || null; }
+}
+function connected(e) { while (e) { if (e === document.body) return true; e = e.parentNode; } return false; }
+var document = { body: null, activeElement: null, title: "",
+  createElement: function (t) { return new El(t); },
+  getElementById: function (id) { return ALL.find(function (e) { return e.id === id && connected(e); }) || null; },
+  querySelectorAll: function (s) { return document.body.querySelectorAll(s); },
+  querySelector: function (s) { return document.body.querySelector(s); } };
+document.body = new El("body"); document.activeElement = document.body;
+function mk(id, tag) { var e = new El(tag || "div"); e.id = id; document.body.append(e); return e; }
+function Option(text, value) { var o = new El("option"); o.textContent = text; o.value = value; return o; }
+var location = { hash: "" };
+var RESP = [], CALLS = [];
+var fetch = async function (path, init) {
+  CALLS.push([init.method, path, init.body === undefined ? null : JSON.parse(init.body)]);
+  var r = RESP.shift();
+  if (r === undefined || r === "network") throw new TypeError("network");
+  return { status: r[0], ok: r[0] >= 200 && r[0] < 300, json: async function () { return r[1]; } };
+};
+"""
+
+
+def _run_page(names: list[str], body: str) -> object:
+    """Run the named page functions/vars over :data:`_DOM_STUB`; ``body`` is async JS that returns a value."""
+    import json
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    parts = []
+    for n in names:
+        m = re.search(
+            r"^(?:(?:async )?function " + re.escape(n) + r"\(.*?\n\}|var " + re.escape(n) + r" = .*?;)$", src, re.S | re.M
+        )
+        assert m, f"{n} not found"
+        parts.append(m.group(0))
+    js = (
+        _DOM_STUB + "\n".join(parts)
+        + "\n(async function () {\n" + body + "\n})().then(function (v) { console.log(JSON.stringify(v)); },"
+        + " function (e) { console.error(e && e.stack || e); process.exit(1); });"
+    )
+    out = subprocess.run([node, "-e", js], capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+# The helpers every DOM-backed test needs.
+_BASE = ["$", "el", "attrs", "safeHref", "link", "nr", "clear", "notice", "bullets", "para", "btnLink",
+         "MONTHS", "fmtDay", "fmtDate", "fmtUnit", "fmtNum", "plural"]
+_API = ["TIMEOUT_MS", "api", "code", "failed", "serverError", "showError", "isGone"]
 
 
 def test_rev2_css_brings_over_handoff_info_and_range_rules(html):
