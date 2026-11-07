@@ -498,3 +498,13 @@ def test_pattern_source_text_follows_its_thread(saved):
             assert not any("simulated cohort" in limit for limit in c["limits"]), c["card_id"]
         else:
             assert c["source"].startswith("Pattern score from simulated cohort data"), c["card_id"]
+
+
+def test_pattern_card_links_the_latest_save_on_a_same_time_tie(client):
+    # QG P2.3 C2: saves on one day share 12:00 UTC; the later save (higher event index) is linked.
+    jid = _journal(client)
+    _save(client, jid, "adherence 0%")  # -e1
+    _save(client, jid, "adherence 100%")  # -e2
+    adh = _card(_passport(client, jid), "pattern:dp:adherence.protocol")
+    obs = adh["thread"]["steps"][1]
+    assert obs["event_id"].endswith("-e2")

@@ -608,7 +608,7 @@ def _pattern_card(
     concept = reg.by_code(flag.code)
     concept_id = concept.concept_id if concept is not None else flag.code
     own = [e for e in events if e.code == flag.code]
-    latest_event = max(own, key=lambda e: e.occurred_at) if own else None
+    latest_event = max(own, key=lambda e: (e.occurred_at, journal.event_index(e.event_id))) if own else None  # later save wins a tie
     rec = by_event.get(latest_event.event_id) if latest_event is not None else None
     simulated = flag.code in series.latest_sample
     samples = [t for t in (series.latest_sample.get(flag.code), latest_event.occurred_at if latest_event else None) if t]
