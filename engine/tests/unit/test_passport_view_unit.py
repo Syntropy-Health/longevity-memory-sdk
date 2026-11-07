@@ -405,3 +405,49 @@ def test_view_function_matches_the_route(client, saved):
     j = client.app.state.journals.get(jid)
     direct = asyncio.run(health_clone_passport(j, journal_as_of(j)))
     assert direct.model_dump(mode="json") == pp
+
+
+# --- QG P2.2: suppression on a failed safety check, missing lab run, fixture source -------------
+
+
+class _EvidenceWith:
+    """The real evidence registry, with one concept's sources replaced."""
+
+    def __init__(self, concept_id, sources):
+        self._real, self._cid, self._sources = load_evidence(), concept_id, tuple(sources)
+
+    def for_concept(self, code):
+        return self._sources if code == self._cid else self._real.for_concept(code)
+
+    def by_id(self, evidence_id):
+        return self._real.by_id(evidence_id)
+
+
+def test_explanation_failing_the_membrane_is_suppressed(client, monkeypatch):
+    from daypart.passport import view
+
+    real = load_evidence().by_id("ev:nhlbi-how-much-sleep")
+    dosing = real.model_copy(update={"supports": "Take 500 mg of melatonin every night before bed."})
+    monkeypatch.setattr(view, "load_evidence", lambda: _EvidenceWith("chc:sleep-duration", [dosing]))
+    jid = _journal(client)
+    _save(client, jid, "slept 6 hours")
+    card = _card(_passport(client, jid), "observation:chc:sleep-duration")
+    assert card["status"] == "ready"
+    assert card["explanation"] is None and card["explanation_status"] == "suppressed"
+    assert card["explanation_text"] == NOT_ENOUGH_EVIDENCE
+    _, _, _, expl, evaluation = card["thread"]["steps"]
+    assert expl["status"] == "suppressed" and expl["template_id"] == "why-tracked-v1"
+    assert expl["evidence_ids"] == [real.evidence_id] and expl["note"].startswith("the explanation failed")
+    assert evaluation["membrane_verdict"] == "blocked" and evaluation["label"] == "Membrane check: blocked"
+    assert "500 mg" not in str(card)
+
+
+def test_explanation_rewritten_by_safe_text_is_suppressed(client, monkeypatch):
+    from daypart.passport import view
+
+    monkeypatch.setattr(view, "safe_text", lambda text, *a, **k: "[withheld]" if text.startswith("Why") else text)
+    jid = _journal(client)
+    _save(client, jid, "slept 6 hours")
+    card = _card(_passport(client, jid), "observation:chc:sleep-duration")
+    assert card["explanation"] is None and card["explanation_status"] == "suppressed"
+    assert card["thread"]["steps"][4]["membrane_verdict"] == "pass"
