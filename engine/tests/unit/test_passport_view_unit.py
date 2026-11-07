@@ -256,6 +256,18 @@ def test_pending_and_discarded_values_never_reach_the_passport(client):
     assert _card(_passport(client, jid), "observation:chc:sleep-duration")["status"] == "withheld"
 
 
+def test_origin_is_observed_only_for_a_value_saved_in_this_journal(client):
+    jid = _journal(client)
+    pp = _passport(client, jid)
+    assert [c["card_id"] for c in pp["cards"] if c["origin"] == "observed"] == []
+    ck = client.post("/api/checkins", json={"journal_id": jid, "text": "slept 6 hours"}).json()
+    assert [c["card_id"] for c in _passport(client, jid)["cards"] if c["origin"] == "observed"] == []
+    client.post(f"/api/checkins/{ck['checkin_id']}/review",
+                json={"decisions": [{"proposal_id": "p-1", "action": "confirm"}]})
+    observed = [c["card_id"] for c in _passport(client, jid)["cards"] if c["origin"] == "observed"]
+    assert observed == ["observation:chc:sleep-duration"]
+
+
 # --- ranges (AM-1) ------------------------------------------------------------------------------
 
 
