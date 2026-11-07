@@ -508,3 +508,13 @@ def test_pattern_card_links_the_latest_save_on_a_same_time_tie(client):
     adh = _card(_passport(client, jid), "pattern:dp:adherence.protocol")
     obs = adh["thread"]["steps"][1]
     assert obs["event_id"].endswith("-e2")
+
+
+# --- P2 phase gate --------------------------------------------------------------------------------
+
+
+def test_c1_deeply_nested_results_give_no_run_id(tmp_path):
+    """C1: a pathologically nested artefact is "no run id", never a passport 500 (as lab._read)."""
+    (tmp_path / "pipeline.json").write_text("[" * 200_000 + "]" * 200_000, "utf-8")
+    (tmp_path / "boundary_eval.json").write_text("[" * 200_000 + "]" * 200_000, "utf-8")
+    assert boundary_run_id(tmp_path) is None

@@ -284,7 +284,7 @@ def boundary_run_id(results: str | os.PathLike[str] | None = None) -> str | None
     try:
         tag = json.loads((d / "pipeline.json").read_text("utf-8"))["tag"]
         dpo = json.loads((d / "boundary_eval.json").read_text("utf-8"))["meta"]["adapters"]["dpo"]
-    except (OSError, ValueError, KeyError, TypeError):
+    except (OSError, ValueError, KeyError, TypeError, RecursionError):  # RecursionError: as lab._read
         return None
     if not (isinstance(tag, str) and tag and isinstance(dpo, str) and PurePosixPath(dpo).name):
         return None
