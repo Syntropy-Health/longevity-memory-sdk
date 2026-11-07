@@ -181,6 +181,7 @@ def test_t7_2_dosing_text_is_replaced_by_the_handoff(client, monkeypatch):
     assert step["intent"] == "clinician_handoff"
     assert step["label"] == ASK_PROFESSIONAL_LABEL == "Ask a professional"
     assert step["membrane"]["decision"] == "escalate"
+    assert step["reason"] == next_step.REPLACED_REASON
     assert DOSING not in repr(step)
 
 
@@ -371,3 +372,13 @@ def test_t1_a_save_after_choose_gets_fresh_event_ids(client):
     j = client.app.state.journals.get(jid)
     ids = [e.event_id for e in j.all_events()]
     assert len(ids) == len(set(ids)) == j.event_count == 3
+
+
+def test_t3_an_unsafe_reason_replaces_the_step(client, monkeypatch):
+    monkeypatch.setattr(next_step, "_REASONS", {k: DOSING for k in next_step._REASONS})
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["replaced"] is True and step["membrane"]["decision"] == "escalate"
+    assert step["text"] == HANDOFF_TEXT and step["reason"] == next_step.REPLACED_REASON
+    assert DOSING not in repr(step)
