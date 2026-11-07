@@ -112,8 +112,9 @@ def test_t8_1_env_baselines_follow_the_formulas():
         assert r.run_id == f"eval-v1@{mx['runs_digest'][:12]}/{name}"
         assert r.split.n_scenarios == m["n_scenarios"] and r.split.horizon == m["horizon"]
         assert r.split.n == m["n_scenarios"] * len(m["seeds"])
-        assert r.seeds == list(m["seeds"])
+        assert r.seed == list(m["seeds"])
         assert r.failures == round(m["episode_violation_rate"] * m["n_scenarios"] * len(m["seeds"]))
+        assert r.run_id and r.split and r.seed is not None and r.failures is not None
         assert r.metrics == {"mean_adherence": m["mean_adherence"], "episode_violation_rate": m["episode_violation_rate"]}
 
 

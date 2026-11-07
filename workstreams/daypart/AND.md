@@ -470,7 +470,7 @@ Build detail (G25): `lab_rows(results_dir=None) -> LabTable {rows, member_failur
 footer}`, default the committed `docs/daypart/results`. Rows in order: base, sft, dpo, then each
 `env_baseline` arm with `status="ok"` (file order), then grpo. A `LabRow` is `{row, kind, status,
 run_id, file_digest, split: {prompt_set_version, n, training_rows, data_sha256, n_scenarios,
-horizon}, seed, cohort_seed, seeds, failures, degenerate, metrics, gate, reason}`. `metrics` is
+horizon}, seed (an int, or the arm's seeds list for an env row), cohort_seed, failures, degenerate, metrics, gate, reason}`. `metrics` is
 `{boundary_pass_rate, rubric_pass_rate}` (model rows) or `{mean_adherence, episode_violation_rate}`
 (env rows); `gate` is the r3 (sft) or r4 (dpo) block as recorded. An env row's `split.n` is the
 episode count `n_scenarios × len(seeds)` and its run id uses `metrics.runs_version` (`eval-v1`).

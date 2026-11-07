@@ -49,9 +49,8 @@ class LabRow(pydantic.BaseModel):
     run_id: str | None = None
     file_digest: str | None = None  # base only: sha256(boundary_eval.json)[:12], a file digest
     split: Split | None = None
-    seed: int | None = None  # model rows: meta.seed
+    seed: int | list[int] | None = None  # model rows: meta.seed; env rows: the arm's seeds
     cohort_seed: int | None = None  # sft/dpo: meta.cohort_seed
-    seeds: list[int] | None = None  # env rows
     failures: int | None = None
     degenerate: int | None = None  # model rows, shown separately from failures
     metrics: dict[str, float | None] = {}
@@ -156,7 +155,7 @@ def _env_row(arm: Mapping[str, Any], mx: Mapping[str, Any]) -> LabRow:
         status="ok",
         run_id=f"{version}@{digest[:DIGEST_CHARS]}/{name}" if version and digest else None,
         split=Split(n=episodes, n_scenarios=n_sc, horizon=_int(_get(m, "horizon"))),
-        seeds=seeds,
+        seed=seeds,
         failures=round(rate * episodes) if rate is not None and episodes is not None else None,
         metrics={"mean_adherence": _num(_get(m, "mean_adherence")), "episode_violation_rate": rate},
     )
