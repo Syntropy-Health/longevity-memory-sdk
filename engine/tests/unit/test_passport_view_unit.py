@@ -518,3 +518,18 @@ def test_c1_deeply_nested_results_give_no_run_id(tmp_path):
     (tmp_path / "pipeline.json").write_text("[" * 200_000 + "]" * 200_000, "utf-8")
     (tmp_path / "boundary_eval.json").write_text("[" * 200_000 + "]" * 200_000, "utf-8")
     assert boundary_run_id(tmp_path) is None
+
+
+def test_t1_day_back_in_time_ignores_later_saves(client):
+    """T1: ?day=N shows the value valid at day N; a value saved for a later day never leaks back."""
+    jid = _journal(client)
+    day20 = (START_DATE + dt.timedelta(days=20)).date().isoformat()
+    c1, _ = _save(client, jid, "slept 6 hours", [{"proposal_id": "p-1", "action": "correct", "date": day20}])
+    _save(client, jid, "slept 8 hours")
+    past = _card(_passport(client, jid, day=25), "observation:chc:sleep-duration")
+    assert (past["status"], past["value"], past["data_age_days"]) == ("ready", 6.0, 5)
+    assert c1 in past["thread"]["steps"][0]["ref"]
+    now = _card(_passport(client, jid, day=28), "observation:chc:sleep-duration")
+    assert (now["status"], now["value"]) == ("ready", 8.0)
+    before = _card(_passport(client, jid, day=19), "observation:chc:sleep-duration")
+    assert before["origin"] != "observed"
