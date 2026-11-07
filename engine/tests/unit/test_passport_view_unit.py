@@ -451,3 +451,36 @@ def test_explanation_rewritten_by_safe_text_is_suppressed(client, monkeypatch):
     card = _card(_passport(client, jid), "observation:chc:sleep-duration")
     assert card["explanation"] is None and card["explanation_status"] == "suppressed"
     assert card["thread"]["steps"][4]["membrane_verdict"] == "pass"
+
+
+def test_evaluation_step_without_a_lab_run(client, monkeypatch):
+    from daypart.passport import view
+
+    monkeypatch.setattr(view, "boundary_run_id", lambda *a, **k: None)
+    jid = _journal(client)
+    _save(client, jid, "slept 6 hours")
+    pp = _passport(client, jid)
+    evaluation = _card(pp, "observation:chc:sleep-duration")["thread"]["steps"][4]
+    assert evaluation["run_id"] is None and evaluation["label"] == "Membrane check: pass"
+    assert evaluation["link"] == "#passport/why-empty/evaluation" and evaluation["note"]
+    assert not [s for c in pp["cards"] for s in c["thread"]["steps"] if s["link"].startswith("#lab/")]
+
+
+def test_fixture_sourced_card_links_its_fixture(client):
+    jid = _journal(client)
+    ck = client.post("/api/checkins", json={"journal_id": jid, "fixture_id": "demo-bp-cuff"}).json()
+    decisions = [{"proposal_id": p["proposal_id"], "action": "discard" if p["flags"] else "confirm"}
+                 for p in ck["proposals"]]
+    confirmed = {p["concept_code"] for p in ck["proposals"] if not p["flags"]}
+    assert confirmed, ck["proposals"]
+    r = client.post(f"/api/checkins/{ck['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    pp = _passport(client, jid)
+    reg = load_registry()
+    for code in confirmed:
+        card = _card(pp, f"observation:{reg.by_code(code).concept_id}")
+        source = card["thread"]["steps"][0]
+        assert (card["origin"], card["method"], card["value_label"]) == ("observed", "fixture-sidecar-v1", "You recorded")
+        assert source["ref"] == "demo-bp-cuff" and source["link"] == "/api/fixtures/demo-bp-cuff"
+        assert source["label"] == "Demo fixture image"
+        assert client.get(source["link"]).status_code == 200
