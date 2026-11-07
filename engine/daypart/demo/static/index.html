@@ -1238,23 +1238,29 @@ function thread(steps) {
 var nsBusy = false;
 async function showNext() {
   clear($("ns-result"));
+  $("ns-panel").hidden = true;
   await loadStep();
 }
-function noSaved() {
-  return notice("info", "No suggestion yet", [para("Save a check-in first, then come back for a suggested next step. ", link("#checkin", "Go to check-in"))]);
+/* HAC-48 §3.4.1: 409 no_saved_checkin replaces the panel. From a POST it is an alert and takes focus. */
+function noSaved(fromPost) {
+  return notice("info", "Check in first", ["A next step comes from your last saved check-in, and you have not saved one yet.",
+    btnLink("#checkin", "Go to check-in", true)], fromPost ? { role: "alert", focus: true } : {});
 }
+/* GET the step into the panel. On failure the panel is hidden and the notice takes its place. Returns true on success. */
 async function loadStep() {
   var msg = clear($("ns-msg")), panel = $("ns-panel");
-  panel.hidden = true;
-  if (!(await ensureJournal())) { msg.append(serverError(journalErr, loadStep)); return; }
+  function fail(n) { panel.hidden = true; clear(panel); msg.append(n); return false; }
+  if (!(await ensureJournal())) return fail(serverError(journalErr, loadStep));
   var res = await api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/next-step");
-  if (isGone(res)) { sessionEnded(); return; }
-  if (res.status === 409 && code(res) === "no_saved_checkin") { msg.append(noSaved()); return; }
-  if (!res.ok || !res.data || typeof res.data.step_id !== "string") { msg.append(serverError(res, loadStep)); return; }
+  if (isGone(res)) { panel.hidden = true; sessionEnded(); return false; }
+  if (res.status === 409 && code(res) === "no_saved_checkin") return fail(noSaved(false));
+  if (!res.ok || !res.data || typeof res.data.step_id !== "string") return fail(serverError(res, loadStep));
   renderStep(res.data);
+  return true;
 }
 function renderStep(st) {
   var panel = clear($("ns-panel"));
+  panel.removeAttribute("aria-busy");
   if (st.replaced) {
     var tags = el("ul", "tags"); tags.append(el("li", "tag", "⇄ Replaced: Ask a professional")); panel.append(tags);
   }
@@ -1274,13 +1280,20 @@ function renderStep(st) {
   panel.append(row);
   panel.hidden = false;
 }
+/* While a choice is in flight (or a stale step is re-fetched) the old panel is busy and its buttons inert. */
+function nsPanelBusy(on) {
+  var panel = $("ns-panel");
+  if (on) panel.setAttribute("aria-busy", "true"); else panel.removeAttribute("aria-busy");
+  panel.querySelectorAll("button").forEach(function (b) { if (on) b.setAttribute("aria-disabled", "true"); else b.removeAttribute("aria-disabled"); });
+}
 async function choose(stepId, choice) {
   if (nsBusy) return;
   nsBusy = true;
-  var out = $("ns-result");
+  var out = $("ns-result"), msg = $("ns-msg");
+  nsPanelBusy(true);
   try {
     var res = await api("POST", "/api/journals/" + encodeURIComponent(S.journal) + "/next-step", { step_id: stepId, choice: choice });
-    clear(out);
+    clear(out); clear(msg);
     if (isGone(res)) { sessionEnded(); return; }
     var cont = link("#lab", "Continue to the learning lab");
     if (res.status === 200 && res.data) {
@@ -1289,14 +1302,24 @@ async function choose(stepId, choice) {
       return;
     }
     if (res.status === 422 && code(res) === "unknown_step") {
-      out.append(notice("info", "This suggestion has changed.", ["Here is the current suggestion."]));
-      await loadStep();
+      /* §3.4.2: nothing was recorded. Re-GET the step; never re-send the choice. */
+      if (await loadStep()) {
+        showError(msg, notice("info", "This suggestion has changed",
+          ["A newer check-in was saved, so here is the new suggestion. Your choice was not recorded. Choose again below."],
+          { role: "alert", focus: true }));
+      }
       return;
     }
-    if (res.status === 409 && code(res) === "no_saved_checkin") { $("ns-panel").hidden = true; out.append(noSaved()); return; }
-    showError(out, serverError(res, function () { choose(stepId, choice); }, { focus: true }));
+    if (res.status === 409 && code(res) === "no_saved_checkin") {
+      $("ns-panel").hidden = true; clear($("ns-panel"));
+      showError(msg, noSaved(true));
+      return;
+    }
+    /* any other status (5xx, network, timeout, or a 413/422 client bug): the panel stays; Try again re-sends */
+    showError(msg, serverError(res, function () { choose(stepId, choice); }, { focus: true }));
   } finally {
     nsBusy = false;
+    nsPanelBusy(false);
   }
 }
 
