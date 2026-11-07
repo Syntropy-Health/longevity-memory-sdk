@@ -328,6 +328,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
   <div id="pp-body" hidden>
     <dl class="meta panel" id="pp-meta" style="padding:var(--s3) var(--s4)"></dl>
     <h2>Cards</h2>
+    <p class="small muted">Where a public source states a reference range, the card shows it with the group it applies to and the source. It is reference text only, not a judgement of your value.</p>
     <div class="cards" id="pp-cards"></div>
     <h2 id="h-inventory" tabindex="-1" style="margin-top:var(--s6)">What the clone knows</h2>
     <p class="muted small">Each area and whether it has data. A gap means nothing has been confirmed yet.</p>
@@ -591,12 +592,15 @@ function btnLink(href, text, primary) { var a = link(href, text, "btn " + (prima
 
 /* ---------- formatting ---------- */
 var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/* "2026-11-07…" → "7 Nov 2026"; anything else is returned as is. */
+function fmtDay(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m && MONTHS[Number(m[2]) - 1] ? Number(m[3]) + " " + MONTHS[Number(m[2]) - 1] + " " + m[1] : iso;
+}
 function fmtDate(iso) {
   if (typeof iso !== "string") return null;
-  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (!m) return iso;
-  var s = Number(m[3]) + " " + MONTHS[Number(m[2]) - 1] + " " + m[1];
-  return (S.today && iso.slice(0, 10) === S.today) ? "Today, " + s : s;
+  var s = fmtDay(iso);
+  return (s !== iso && S.today && iso.slice(0, 10) === S.today) ? "Today, " + s : s;
 }
 function fmtUnit(u) {
   if (typeof u !== "string") return "";
@@ -1075,8 +1079,11 @@ async function submitReview(ev) {
 
 /* ---------- #passport ---------- */
 var STEP_NAMES = ["Source", "Observation", "Memory", "Explanation", "Evaluation"];
+/* HAC-48 §3.3.2: "reviewed: board sign-off 2026-11-07" → "Reviewed (board sign-off, 7 Nov 2026)"; any other shape verbatim. */
 function reviewLabel(s) {
-  return typeof s === "string" && /^reviewed: board sign-off/.test(s) ? "reviewed (board sign-off)" : null;
+  if (typeof s !== "string") return null;
+  var m = /^reviewed: board sign-off (\d{4}-\d{2}-\d{2})$/.exec(s);
+  return m ? "Reviewed (board sign-off, " + fmtDay(m[1]) + ")" : s;
 }
 async function showPassport(rest) {
   var msg = clear($("pp-msg")), body = $("pp-body");
@@ -1134,12 +1141,13 @@ function card(c, i) {
   if (ready && fmtNum(c.value) !== null) {
     if (c.value_label) art.append(el("p", "value-label", c.value_label));
     var v = el("p", "card-value", fmtNum(c.value) + " "); v.append(el("span", "unit", fmtUnit(c.unit))); art.append(v);
-    if (c.reference_range_status === "shown" && c.reference_range) art.append(rangeLine(c.reference_range));
-    else if (c.reference_range_status === "none") art.append(el("p", "range muted", "no reference range"));
   } else {
     art.append(el("p", "withheld-msg", c.message || "Not enough data yet."));
   }
   var meta = el("dl", "meta");
+  /* AM-1 (§3.3.1): the reference range is the first meta row, plain reference text; withheld = no row */
+  if (ready && c.reference_range_status === "shown" && c.reference_range) meta.append(el("dt", null, "Reference range"), rangeCell(c.reference_range));
+  else if (ready && c.reference_range_status === "none") { var rn = el("dd"); rn.append(nr("no reference range")); meta.append(el("dt", null, "Reference range"), rn); }
   meta.append(el("dt", null, "Data age"));
   var age = el("dd");
   age.append(ready && typeof c.data_age_days === "number" ? plural(c.data_age_days, "day", "days") : nr("none in the last 14 days"));
@@ -1161,20 +1169,30 @@ function card(c, i) {
     ex.append(p);
   } else {
     ex.append(el("p", "ex-title label small", "Not enough evidence"));
+    if (ready) ex.append(el("p", "small muted", "No reviewed source applies, so no explanation is shown."));
   }
   art.append(ex);
   art.append(thread(steps));
   return art;
 }
-function rangeLine(r) {
-  var lo = fmtNum(r.low), hi = fmtNum(r.high), span;
-  if (lo !== null && hi !== null) span = lo + "–" + hi;
-  else if (hi !== null) span = "up to " + hi;
-  else if (lo !== null) span = "from " + lo;
-  else span = "";
-  var p = el("p", "range", "Reference range: " + span + " " + fmtUnit(r.unit) + " · " + r.population + " · ");
-  p.append(link(r.source_url, "source"));
-  return p;
+/* The range numbers as shown ("60–100 /min", en dash, no spaces) and as spoken ("60 to 100 /min").
+   A one-sided range reads "up to 7 h" / "from 7 h" both ways. */
+function rangeText(r) {
+  var lo = fmtNum(r.low), hi = fmtNum(r.high), u = fmtUnit(r.unit), vis, say;
+  if (lo !== null && hi !== null) { vis = lo + "\u2013" + hi; say = lo + " to " + hi; }
+  else if (hi !== null) vis = say = "up to " + hi;
+  else if (lo !== null) vis = say = "from " + lo;
+  else vis = say = "";
+  return { visible: (vis + " " + u).trim(), spoken: (say + " " + u).trim() };
+}
+function rangeHost(u) { try { return new URL(u).hostname; } catch (e) { return null; } }
+function rangeCell(r) {
+  var t = rangeText(r), dd = el("dd");
+  dd.append(attrs(el("span", null, t.visible), { "aria-hidden": "true" }), el("span", "visually-hidden", t.spoken));
+  dd.append(el("span", "ref-pop", r.population));
+  var host = rangeHost(r.source_url);
+  dd.append(link(r.source_url, "Range source: " + (host || "not recorded"), "ref-src"));
+  return dd;
 }
 function thread(steps) {
   var d = el("details", "thread");
