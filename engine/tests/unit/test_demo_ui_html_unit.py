@@ -521,7 +521,8 @@ def test_rev2_next_no_saved_checkin_and_stale_step(html):
 
 def test_rev2_generic_server_and_network_errors(html):
     js = _script(html)
-    assert "AbortController" in js and "15000" in js
+    assert "AbortController" in js
+    assert re.search(r"^var TIMEOUT_MS = 15000;$", js, re.M)  # exactly 15 s (§3.8), not 150000
     assert "We could not reach the demo server. Check your connection and try again." in js
     assert "The demo had a problem on its side (error " in js and "Try again in a moment." in js
     assert '"Try again"' in js
