@@ -649,3 +649,36 @@ def test_c3_already_saved_revisit_shows_no_count():
     assert "Already saved" in got[0]
     assert got[1] == "Already saved"
     assert not re.search(r"Saved \d", got[2]), got[2]
+
+
+_THREAD = ["STEP_NAMES", "thread"]
+_STEPS_TAIL = """{ label: "Memory core-v1+u1", ontology_version: "core-v1+u1", readiness: "ready", link: "#passport/inventory" },
+  { label: "none", status: "suppressed", links: [], note: "no source" },
+  { label: "none", rule_version: "boundary-v1", run_id: null, link: "" }"""
+
+
+def _thread_links(step0: str, step1: str) -> object:
+    return _run_page(
+        _BASE + _THREAD,
+        f"""
+        var d = thread([{step0}, {step1}, {_STEPS_TAIL}]);
+        var lis = d.querySelectorAll("li");
+        return [0, 1].map(function (i) {{
+          return {{ text: lis[i].textContent, links: lis[i].querySelectorAll("a").map(function (a) {{ return [a.href, a.textContent]; }}) }};
+        }});
+        """,
+    )
+
+
+def test_c4_thread_links_same_origin_api_steps():
+    got = _thread_links(
+        '{ label: "Demo file", ref: "scale-photo", link: "/api/fixtures/scale-photo" }',
+        '{ label: "Saved observation", event_id: "e1", record_id: "r1", link: "/api/journals/j1/observations/r1" }',
+    )
+    assert [h for h, _ in got[0]["links"]] == ["/api/fixtures/scale-photo"]
+    assert [h for h, _ in got[1]["links"]] == ["/api/journals/j1/observations/r1"]
+    assert "check-in" not in got[0]["text"]  # a demo file is not a check-in
+    # an unsafe link is never an <a>
+    bad = _thread_links('{ label: "Demo file", ref: "x", link: "/api/%2e%2e/results" }',
+                        '{ label: "Saved observation", event_id: "e1", record_id: "r1", link: "javascript:alert(1)" }')
+    assert bad[0]["links"] == [] and bad[1]["links"] == []

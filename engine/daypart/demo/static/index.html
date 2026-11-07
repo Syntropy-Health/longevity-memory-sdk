@@ -1255,11 +1255,14 @@ function thread(steps) {
       b.append("none" + (s.note ? " · " + s.note : ""));
     } else if (i === 0) {
       b.append(String(s.label));
-      if (typeof s.link === "string" && s.link.charAt(0) === "#") b.append(" · ", link(s.link, s.ref ? "view check-in " + s.ref : "view"));
-      else if (s.ref) b.append(" · " + s.ref);
+      if (safeHref(s.link) !== null) {
+        var fixture = s.link.indexOf("/api/fixtures/") === 0;
+        if (fixture && s.ref) b.append(" · " + s.ref);
+        b.append(" · ", link(s.link, fixture ? "view demo file" : s.ref ? "view check-in " + s.ref : "view"));
+      } else if (s.ref) b.append(" · " + s.ref);
     } else if (i === 1) {
       b.append(String(s.label) + (s.event_id ? " · event " + s.event_id : "") + (s.record_id ? " · record " + s.record_id : ""));
-      if (typeof s.link === "string" && s.link.charAt(0) === "#") b.append(" · ", link(s.link, "view"));
+      if (safeHref(s.link) !== null) b.append(" · ", link(s.link, "view"));
     } else if (i === 2) {
       b.append(el("code", null, s.ontology_version), " · " + (s.readiness === "ready" ? "ready" : "not ready") + " · ");
       var inv = link(s.link, "inventory");
