@@ -310,3 +310,13 @@ def test_b1_env_arm_without_a_name_is_left_out_not_invented(copy, bad):
     names = [r.row for r in table.rows]
     assert names == ["base", "sft", "dpo", "env_always_none", "env_always_barrier_problem_solving", "grpo"]
     assert not any("None" in (r.run_id or "") for r in table.rows)
+
+
+@pytest.mark.parametrize("name", ["sft", "dpo"])
+def test_b2_missing_eval_side_adapter_is_a_mismatch(copy, name):
+    _edit(copy, "boundary_eval.json", lambda d: d["meta"]["adapters"].pop(name))
+    rows = _rows(lab_rows(copy))
+    r = rows[name]
+    assert r.status == PROVENANCE_MISMATCH and r.run_id is None
+    assert _numbers(r.model_dump()) == []
+    assert rows["dpo" if name == "sft" else "sft"].status == "ok"
