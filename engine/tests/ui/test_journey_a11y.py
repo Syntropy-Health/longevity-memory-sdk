@@ -415,6 +415,7 @@ def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
     kb.to("#rv-msg a[href='#passport']")
     kb.press("Enter")
     wait_route_ready(page, "passport")
+    expect(page.locator("#h-passport")).to_be_focused()  # in-app navigation moves focus to the h1 (K7)
     kb.to("details.thread > summary")
     kb.press("Enter")
     expect(page.locator("details.thread[open]")).to_have_count(1)
@@ -422,6 +423,7 @@ def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
     kb.to("#pp-body a[href='#next']")
     kb.press("Enter")
     wait_route_ready(page, "next")
+    expect(page.locator("#h-next")).to_be_focused()
     kb.to("#ns-panel button.btn--primary")
     expect(page.locator("#ns-panel button.btn--primary")).to_have_text("Choose")
     kb.press("Space")
@@ -430,6 +432,7 @@ def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
     kb.to("#ns-result a[href='#lab']")
     kb.press("Enter")
     wait_route_ready(page, "lab")
+    expect(page.locator("#h-lab")).to_be_focused()
     expect(page.locator("#screen-lab")).to_contain_text("Simulated outcomes are not patient outcomes")
     kb.to("#lab-body .table-wrap")  # the scrollable table region is reachable too
     kb.to("a", back=True)
@@ -692,3 +695,13 @@ def test_lab_failure_after_a_good_load_hides_the_table(page: Page, base_url: str
     goto(page, base_url, "lab")
     expect(page.locator("#lab-msg")).to_contain_text("error 503")
     expect(page.locator("#lab-body")).to_be_hidden()
+
+
+def test_inventory_deep_link_focuses_the_inventory_heading(browser: Browser, page_errors, base_url: str):
+    """G27 (9): a direct load of #passport/inventory focuses and scrolls to the inventory h2."""
+    page = _new_page(browser, page_errors, viewport=MOBILE)
+    page.goto(f"{base_url}#passport/inventory")
+    wait_route_ready(page, "passport")
+    expect(page.locator("#h-inventory")).to_be_focused()
+    expect(page.locator("#h-inventory")).to_be_in_viewport()
+    page.context.close()
