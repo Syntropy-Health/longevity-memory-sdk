@@ -311,7 +311,10 @@ def test_t9_4_real_input_refusal_lists_every_gate(page: Page, base_url: str, axe
 # ---------------------------------------------------------------- R10: keyboard-only journey
 
 
-RING_JS = """e => { const s = getComputedStyle(e);
+# A control drawn invisible (the decision radios: ``.opt input`` has opacity 0) shows its ring on the
+# visible sibling it styles (``.opt input:focus-visible + span``), so the ring is read there (QG P3 K3).
+RING_JS = """e => { const r = getComputedStyle(e).opacity === '0' && e.nextElementSibling ? e.nextElementSibling : e;
+  const s = getComputedStyle(r);
   return [s.outlineStyle, s.outlineWidth, s.outlineColor, s.boxShadow].join('|'); }"""
 
 
