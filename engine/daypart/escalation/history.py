@@ -82,6 +82,10 @@ def _as_texts(raw: Any) -> tuple[str, ...]:
         return ()
     if isinstance(raw, str):
         return (raw,)
+    if isinstance(raw, (bytes, bytearray)):  # decode, never iterate to ints: the crisis gate must see it
+        return (bytes(raw).decode("utf-8", errors="replace"),)
+    if isinstance(raw, Mapping):  # iterating would drop the values (the text) silently
+        raise TypeError(f"check-in text must be a string, got {type(raw).__name__}")
     if isinstance(raw, Iterable):
         return tuple(t for item in raw for t in _as_texts(item))
     return (str(raw),)

@@ -404,3 +404,19 @@ def test_fit_runs_shared_i1_guard(monkeypatch, cohort):
     monkeypatch.setattr(model, "assert_no_curated", lambda rows, man: calls.append(list(rows)))
     fit([(p, cohort.trajectories[p.member_id]) for p in cohort.training_profiles()[:3]], 0)
     assert len(calls) == 1 and len(calls[0]) == 3
+
+
+def test_qg_sec2_bytes_crisis_text_reaches_gate(cal):
+    days = [{"adhered": True, "sentiment": 1.0} for _ in range(41)]
+    days.append({"adhered": True, "sentiment": 1.0, "text": b"I want to kill myself"})
+    a = assess(days, cal)
+    assert a.decision == "escalate" and a.p_escalate == 1.0
+    assert assess(as_history(days[:41], [b"I want to kill myself"]), cal).decision == "escalate"
+
+
+def test_qg_sec2_mapping_text_is_refused():
+    with pytest.raises(TypeError, match="text"):
+        as_history([{"adhered": True, "text": {"body": "I want to kill myself"}}])
+    with pytest.raises(TypeError, match="text"):
+        as_history([{"adhered": True}], texts=[{"body": "x"}])
+
