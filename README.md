@@ -134,6 +134,10 @@ R3 (SFT beats base on boundary by at least 0.05 at rubric parity) passes. R4 (DP
 
 **Not built for this submission, stated plainly:** the GRPO intent policy, the reward model and the Jev question library are designed but not built. The harness reports them as `not_run`.
 
+## FHDIC Challenge 09
+
+The FHDIC Challenge 09 submission index (prototype, demo access, technical documentation, training record, Track B and Track C, and the assumptions, dependencies and limitations) is one page: [docs/daypart/FHDIC.md](docs/daypart/FHDIC.md).
+
 ## Meta models
 
 - **Muse Glimmer 30B** (`meta-models/Muse-Glimmer-30B`, Hugging Face weights) is the language model. We fine-tune it with SFT then DPO on Modal, using TRL and PEFT on transformers 5.22. It is loaded in 4-bit, and LoRA touches only the language tower, so the vision tower never runs.
