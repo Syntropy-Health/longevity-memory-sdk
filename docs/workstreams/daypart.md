@@ -1,5 +1,30 @@
 # daypart — dev doc
 
+## FHDIC P3 · UI and accessibility CI (HAC-38, in progress)
+
+`engine/daypart/demo/static/index.html` is the hash-route journey (`#checkin`, `#review`,
+`#passport`, `#next`, `#lab`, `#research`), built to the HAC-35 visual spec and the HAC-48 rev 2
+states (addendum G26, G27). Sections are found by their `screen-<route>` ids.
+
+**UI suite** (`engine/tests/ui/test_journey_a11y.py`, plan G10): Python Playwright drives the real app
+in headless Chromium and runs the vendored, sha-pinned axe-core in `tests/ui/vendor/` (never served).
+It covers T1.2, T2.1, T3.3, T8.4, T9.4 and T10.1–T10.4, plus the rev 2 states as behaviour. The `ui`
+dependency group is not a default group, so plain `uv run pytest -q` skips this module. Run it with:
+
+```bash
+cd engine
+uv sync --group ui
+uv run --group ui playwright install chromium   # or --with-deps on a host with root
+env -u MUSE_API_KEY -u META_MODEL_API_KEY DAYPART_UI_REQUIRED=1 uv run --group ui pytest -q tests/ui
+```
+
+- `DAYPART_UI_REQUIRED=1` turns a missing Playwright or browser into a failure instead of a skip.
+- `DAYPART_UI_CHROMIUM=<path>` uses a local Chromium binary when `playwright install` cannot run.
+
+**CI:** the `demo-ui` job in `.github/workflows/engine.yml` runs this suite with
+`DAYPART_UI_REQUIRED=1`, and `deploy-demo` now needs `demo-ui` (with `test`, `typecheck` and
+`attribution-boundary`), so a failing UI or axe check blocks the demo deploy.
+
 ## FHDIC P2 · Passport, next step and learning lab (HAC-38)
 
 **Overview.** P2 builds the read side of A&D HAC-33 on top of the P1 journal: the Health Clone
