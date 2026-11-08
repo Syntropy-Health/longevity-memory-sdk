@@ -979,3 +979,86 @@ def test_k6_footer_carries_the_attribution_loinc_notice_verbatim(html):
     assert " ".join(notice.split()) in " ".join(foot.text().split())
     hrefs = {n.attrs.get("href") for n in foot.iter() if n.tag == "a"}
     assert {"https://loinc.org", "https://loinc.org/license/"} <= hrefs
+
+
+_REFUSAL = ["FLAG_NAMES", "CORRECTION_WHY", "pTitle", "focusTarget", "refusalItem", "refused"]
+
+
+def _refusal(body: dict) -> dict:
+    import json
+
+    return _run_page(
+        _BASE + _API + _REVIEW + _REFUSAL,
+        f"""
+        S.checkins = {{ c1: {{ status: "pending_review", result: null, proposals: [
+          {{ proposal_id: "p1", concept_code: "8867-4", display: "Heart rate", unit: "/min", flags: [] }},
+          {{ proposal_id: "p2", concept_code: null, display: "zzz", unit: null, flags: ["unknown_code"] }} ] }} }};
+        ["rv-intro", "rv-msg", "rv-list", "session-msg", "rv-p1-first", "rv-p1-u", "rv-p1-d", "rv-p1-v", "rv-p1-t",
+         "rv-p2-first", "rv-p2-t"].forEach(function (i) {{ mk(i); }});
+        mk("rv-form", "form"); mk("rv-submit", "button");
+        document.querySelector = function () {{ return null; }};  // no decision radios in this stub
+        rvCurrent = "c1";
+        RESP.push([422, {json.dumps(body)}]);
+        await submitReview({{ preventDefault: function () {{}} }});
+        var n = $("rv-msg").children[0];
+        var items = n.querySelectorAll("li").map(function (li) {{
+          var a = li.querySelector("a"), target = null;
+          if (a) {{ document.activeElement = document.body; a.click(); target = document.activeElement.id; }}
+          return {{ text: li.textContent, target: target }};
+        }});
+        document.activeElement = document.body;
+        return {{ title: n.querySelector(".notice-title").textContent, role: n.getAttribute("role"),
+                 tabindex: n.getAttribute("tabindex"), items: items, formHidden: $("rv-form").hidden, posts: CALLS.length }};
+        """,
+    )
+
+
+def _focused_notice(body: dict) -> dict:
+    return _run_page(
+        _BASE + _API + _REVIEW + _REFUSAL,
+        f"""
+        S.checkins = {{ c1: {{ status: "pending_review", result: null, proposals: [] }} }};
+        ["rv-intro", "rv-msg", "rv-list", "session-msg"].forEach(function (i) {{ mk(i); }});
+        mk("rv-form", "form"); mk("rv-submit", "button");
+        rvCurrent = "c1";
+        RESP.push([422, {__import__("json").dumps(body)}]);
+        await submitReview({{ preventDefault: function () {{}} }});
+        return document.activeElement === $("rv-msg").children[0];
+        """,
+    )
+
+
+def test_k4_missing_decision_lists_each_value_and_links_its_first_choice():
+    """QG P3 K4: A&D §4.2 / T4.3: 422 ``missing_decision`` keeps the form, announces "Nothing was saved"
+    as a focused alert and links each listed value to its first decision (unknown ids: the list)."""
+    got = _refusal({"error": "missing_decision", "missing": ["p1", "ghost"]})
+    assert got["title"] == "Nothing was saved" and got["role"] == "alert" and got["tabindex"] == "-1"
+    assert got["formHidden"] is False and got["posts"] == 1
+    assert [i["target"] for i in got["items"]] == ["rv-p1-first", "rv-list"]
+    assert got["items"][0]["text"] == "Heart rate: choose a decision."
+    assert got["items"][1]["text"].startswith("A value: ")
+    empty = _refusal({"error": "missing_decision", "missing": []})
+    assert [i["text"] for i in empty["items"]] == ["Choose one decision for each value."]
+
+
+def test_k4_unresolved_flags_names_each_flag_and_links_the_card():
+    got = _refusal({"error": "unresolved_flags", "proposals": [{"proposal_id": "p2", "flags": ["unknown_code", "weird"]}]})
+    assert got["title"] == "Nothing was saved" and got["role"] == "alert"
+    assert got["items"] == [{"text": "“zzz”: still flagged (Unknown code, weird). Correct it, discard it or save it as unmapped.",
+                             "target": "rv-p2-t"}]
+
+
+def test_k4_invalid_correction_links_each_reason_to_its_field():
+    reasons = ["unit_not_allowed", "date_outside_window", "not_a_whole_number", "unknown_concept", "bogus"]
+    got = _refusal({"error": "invalid_correction", "proposals": [{"proposal_id": "p1", "reasons": reasons}]})
+    assert [i["target"] for i in got["items"]] == ["rv-p1-u", "rv-p1-d", "rv-p1-v", "rv-p1-t", "rv-p1-t"]
+    assert got["items"][0]["text"] == "Heart rate: the unit is not one this measure allows."
+    assert got["items"][1]["text"] == "Heart rate: the date must be within the last 28 days."
+    assert got["items"][4]["text"] == "Heart rate: this correction cannot be saved."
+    empty = _refusal({"error": "invalid_correction", "proposals": []})
+    assert [i["text"] for i in empty["items"]] == ["Check each value and try again."] and empty["formHidden"] is False
+
+
+@pytest.mark.parametrize("err", ["missing_decision", "unresolved_flags", "invalid_correction"])
+def test_k4_refusal_notice_takes_focus(err):
+    assert _focused_notice({"error": err}) is True
