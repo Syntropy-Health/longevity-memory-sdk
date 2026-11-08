@@ -22,6 +22,11 @@ principals:
           repos:
             - org: Syntropy-Health
               repo: lhm
+  mymm-psu:                      # Paperclip run $USER; same principal as `mo`
+    name: matt-mo
+    display_name: "Matt Mo"
+    address:
+      informal: "Matt"
   # alice:                       # system $USER
   #   name: alice                # principal slug (sandbox dir, addressing)
   #   display_name: "Alice Example"
@@ -37,7 +42,7 @@ principals:
 
 # ── Project ───────────────────────────────────────────────────────────────
 project:
-  name: "h2s_meta"
+  name: "longevity-memory-sdk"
   timezone: "UTC"
   # Monorepo app modules. Each becomes a workstream + a worktree (one worktree
   # agent per module) when you run `/airdlc-init-monorepo`. Leave empty for a
