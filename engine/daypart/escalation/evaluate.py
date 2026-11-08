@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from daypart.escalation import metrics as m
+from daypart.escalation.features import CRISIS_FEATURE
 from daypart.escalation.history import until
 from daypart.escalation.model import (
     CALIBRATOR_KIND,
@@ -62,13 +63,16 @@ def evaluate(seeds: Sequence[int], history_days: int = 42) -> dict[str, Any]:
     n_text = n_text_fail = 0
     for seed in seeds:
         cohort = generate(seed)
+        n_days = min(len(t.days) for t in cohort.trajectories.values())
+        if history_days > n_days:
+            raise ValueError(f"history_days={history_days} exceeds the {n_days}-day trajectories")
         cal = fit(cohort, seed)  # training profiles only (I1)
         p, dec, y = [], [], []
         for prof in cohort.heldout_profiles():
             a = assess(until(cohort.trajectories[prof.member_id], history_days - 1), cal)
             if a.text is not None:
                 n_text += 1
-                if not dsl.check(a.text, crisis_context=a.reasons == ["crisis_marker_hits"]).passed:
+                if not dsl.check(a.text, crisis_context=a.reasons == [CRISIS_FEATURE]).passed:
                     n_text_fail += 1
             p.append(a.p_escalate)
             dec.append(a.decision)
@@ -106,8 +110,8 @@ def evaluate(seeds: Sequence[int], history_days: int = 42) -> dict[str, Any]:
     base = _score(pb_all, db_all, y_all)
     base["p"] = _r6(sum(pb_all) / len(pb_all))
     return {
-        "heldout": "curated-25",
-        "train": "175 synthetic profiles per seed",
+        "heldout": f"curated-{len(y_all) // len(seeds)}",
+        "train": f"{per_seed[0]['n_train_members']} synthetic profiles per seed",
         "ground_truth": GROUND_TRUTH,
         "seeds": [int(s) for s in seeds],
         "history_days": int(history_days),

@@ -41,7 +41,7 @@ class History:
 
 
 def _refuse_latents(obj: Any) -> None:
-    if type(obj).__name__ in _LATENT_TYPES or (isinstance(obj, Mapping) and "latents" in obj and "days" not in obj):
+    if type(obj).__name__ in _LATENT_TYPES or (isinstance(obj, Mapping) and "latents" in obj):
         raise TypeError(
             f"escalation sees observables only; got {type(obj).__name__} (latents are hidden, track-b-spec)"
         )
@@ -65,7 +65,8 @@ def _as_day(obj: Any) -> Day:
         sentiment = float(sentiment)
         if not math.isfinite(sentiment):  # NaN would otherwise clamp to p = 0 ("stay silent")
             raise ValueError(f"sentiment must be finite, got {sentiment!r}")
-    text = next((t for k in _DAY_TEXT_KEYS if isinstance(t := _get(obj, k), str) and t), None)
+    parts = [t for k in _DAY_TEXT_KEYS for t in _as_texts(_get(obj, k)) if t.strip()]
+    text = "\n".join(parts) if parts else None  # every text field reaches the crisis gate
     state = _get(obj, "state")
     return Day(
         adhered=bool(adhered),
@@ -81,7 +82,9 @@ def _as_texts(raw: Any) -> tuple[str, ...]:
         return ()
     if isinstance(raw, str):
         return (raw,)
-    return tuple(str(t) for t in raw if t is not None)
+    if isinstance(raw, Iterable):
+        return tuple(t for item in raw for t in _as_texts(item))
+    return (str(raw),)
 
 
 def as_history(history: Any, texts: Iterable[str] | str | None = None) -> History:
@@ -102,12 +105,15 @@ def as_history(history: Any, texts: Iterable[str] | str | None = None) -> Histor
     if isinstance(history, Mapping):
         if "days" not in history and "adhered" in history:
             return History((_as_day(history),), extra)
-        raw_texts = next((history[k] for k in _HISTORY_TEXT_KEYS if k in history), None)
+        raw_texts = tuple(t for k in _HISTORY_TEXT_KEYS for t in _as_texts(history.get(k)))
         base = as_history(history.get("days", ()))
-        return History(base.days, base.texts + _as_texts(raw_texts) + extra)
+        return History(base.days, base.texts + raw_texts + extra)
     days_attr = getattr(history, "days", None)
     if days_attr is not None and not isinstance(history, (list, tuple)):  # a Trajectory-like object
-        return History(tuple(_as_day(d) for d in days_attr), extra)
+        attr_texts = tuple(t for k in _HISTORY_TEXT_KEYS for t in _as_texts(getattr(history, k, None)))
+        return History(tuple(_as_day(d) for d in days_attr), attr_texts + extra)
+    if isinstance(history, Sequence) and history and all(isinstance(t, str) for t in history):
+        return History((), tuple(history) + extra)  # a list of check-in texts
     if isinstance(history, Sequence) and len(history) == 2 and _is_text_part(history[1]) and not _is_day(history[0]):
         base = as_history(history[0])
         return History(base.days, base.texts + _as_texts(history[1]) + extra)
