@@ -2,7 +2,7 @@
 
 **An adherence-intelligence engine for health routines. It decides *what kind* of message a person should get today. Every word it sends passes a deterministic safety boundary first. It is trained on Meta's Muse Glimmer 30B and measured in a reproducible synthetic world.**
 
-- **Live demo:** [playground](https://supermomo668--daypart-demo-playground.us-east.modal.run) (inputs, outputs and parameters, step by step) · [results dashboard](https://supermomo668--daypart-demo-dashboard.us-east.modal.run) (benchmarks)
+- **Live demo:** [playground](https://supermomo668--daypart-demo-playground.us-east.modal.run) (inputs, outputs and parameters, step by step) · [research view: full results](https://supermomo668--daypart-demo-dashboard.us-east.modal.run) (Streamlit dashboard)
 - **Status:** hackathon build (Meta, Nov 2026). Synthetic data only. Not a medical device and not medical advice.
 
 ---
@@ -60,7 +60,7 @@ Demo   FastAPI playground + Streamlit dashboard, hosted on Modal   daypart.demo,
 | `memory` | Event typing, ontology with gated versioned updates, `metric_state(member, as_of)` |
 | `passport` | Member-facing pattern cards; withheld card when a metric is not ready (fail closed) |
 | `eval` | Deterministic harness: boundary corpus, env baselines, I1 gate, training arms |
-| `demo` | Playground API + static UI, results dashboard, `daypart-demo` CLI |
+| `demo` | Playground API + static UI, research view (results dashboard), `daypart-demo` CLI |
 
 It is built on Syntropy Health's pre-existing open-source **LHM** SDK (claim and narration guards, scoring, readiness), which is pinned, not modified. The boundary between old and new work is a git line; see [ATTRIBUTION.md](ATTRIBUTION.md).
 
@@ -76,7 +76,7 @@ uv sync --locked
 uv run pytest -q                                  # full suite
 uv run python -m daypart.eval --out metrics.json  # benchmark harness → metrics.json
 uv run daypart-demo serve                         # playground on http://127.0.0.1:8000
-uv run daypart-demo dashboard --metrics metrics.json   # results dashboard (Streamlit)
+uv run daypart-demo dashboard --metrics metrics.json   # research view: full results (Streamlit)
 ```
 
 Training (needs Modal credentials and Hugging Face access to `meta-models/Muse-Glimmer-30B`):

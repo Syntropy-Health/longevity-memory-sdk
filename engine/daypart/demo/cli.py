@@ -44,7 +44,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--cohort-seed", type=int, default=0)
     s.set_defaults(fn=_serve)
-    d = sub.add_parser("dashboard", help="run the Streamlit results dashboard")
+    d = sub.add_parser("dashboard", help="run the Streamlit research view (full results)")
     d.add_argument("--host", default="127.0.0.1")
     d.add_argument("--port", type=int, default=8501)
     d.add_argument("--metrics", default=None, help="metrics.json path (default docs/daypart/results/metrics.json)")
