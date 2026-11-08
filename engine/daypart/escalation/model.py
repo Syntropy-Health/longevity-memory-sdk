@@ -127,14 +127,14 @@ def _member_id(m: Any) -> str | None:
 
 
 def _is_curated(m: Any, mid: str | None) -> bool:
-    from daypart.simmember.cohort import CURATED_PROFILES
+    from daypart.simmember.cohort import CURATED_PROFILES, Profile
     from daypart.simmember.narrative import is_curated_profile
 
     curated_ids = {p.member_id for p in CURATED_PROFILES}
     if mid is not None and (mid.startswith("cur-") or mid in curated_ids):
         return True
     profile = m[0] if isinstance(m, tuple) and m else (m.get("profile") if isinstance(m, Mapping) else m)
-    if type(profile).__name__ == "Profile" and is_curated_profile(profile):
+    if isinstance(profile, Profile) and is_curated_profile(profile):
         return True
     if getattr(profile, "cohort", None) == "curated" or (isinstance(profile, Mapping) and profile.get("cohort") == "curated"):
         return True
