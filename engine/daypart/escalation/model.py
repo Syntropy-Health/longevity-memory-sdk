@@ -170,7 +170,9 @@ def _resolve(members: Any, seed: int) -> list[tuple[str, bool, Any]]:
             raise ValueError(f"unknown training member id {mid!r} for seed {seed}")
         return prof, c.trajectories[mid]
 
-    out: list[tuple[str, bool, Any]] = []
+    from daypart.simmember.narrative import is_curated_profile
+
+    parsed: list[tuple[Any, Any]] = []
     for m in items:
         traj = None
         if isinstance(m, str):
@@ -178,7 +180,7 @@ def _resolve(members: Any, seed: int) -> list[tuple[str, bool, Any]]:
         elif isinstance(m, tuple):
             prof, traj = m[0], (m[1] if len(m) > 1 else None)
         elif isinstance(m, Mapping):
-            prof = Profile.model_validate(m.get("profile", m) if "profile" in m else dict(m))
+            prof = m["profile"] if "profile" in m else {k: v for k, v in m.items() if k != "trajectory"}
             traj = m.get("trajectory")
         else:
             prof = m
@@ -186,12 +188,22 @@ def _resolve(members: Any, seed: int) -> list[tuple[str, bool, Any]]:
             prof = Profile.model_validate(prof)
         if traj is None:
             traj = generate_trajectory(prof.member_id, prof.latents, seed)
-        elif isinstance(traj, Mapping):
-            traj = Trajectory.model_validate(traj)
-        if getattr(traj, "member_id", prof.member_id) != prof.member_id:
+        elif not isinstance(traj, Trajectory):
+            traj = Trajectory.model_validate(traj)  # a real Trajectory always carries its member_id
+        parsed.append((prof, traj))
+
+    # Second I1 pass on the parsed objects: curated latents under another id, or a curated trajectory.
+    for prof, traj in parsed:
+        if is_curated_profile(prof):
+            curated.add(prof.member_id)
+        if _is_curated(traj, traj.member_id):
+            curated.add(traj.member_id)
+    if curated:
+        raise CuratedMemberError(f"fit refuses curated (held-out) members (I1): {', '.join(sorted(curated))}")
+    for prof, traj in parsed:
+        if traj.member_id != prof.member_id:
             raise ValueError(f"trajectory {traj.member_id!r} does not belong to {prof.member_id!r}")
-        out.append((prof.member_id, prof.latents.escalation_trigger != "none", traj))
-    return out
+    return [(prof.member_id, prof.latents.escalation_trigger != "none", traj) for prof, traj in parsed]
 
 
 def training_rows(members: Any, seed: int) -> list[dict[str, Any]]:

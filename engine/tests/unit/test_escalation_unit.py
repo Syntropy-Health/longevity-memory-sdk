@@ -264,3 +264,47 @@ def test_default_run_has_escalation_arm():
     arm = next(x for x in doc["arms"] if x["name"] == "escalation")
     assert arm["kind"] == "escalation" and arm["status"] == "ok"
     assert arm["metrics"]["n"] == 75 and arm["metrics"]["seeds"] == [0, 1, 2]
+
+
+# ------------------------------------------------------------------ QG findings (AIR-322 gate 1)
+
+
+def _renamed_curated() -> dict:
+    return CURATED_PROFILES[0].model_copy(update={"member_id": "syn-999", "cohort": "synthetic"}).model_dump(mode="json")
+
+
+@pytest.mark.parametrize(
+    "form",
+    [lambda d: d, lambda d: {"profile": d}, lambda d: (d, None)],
+    ids=["flat_dict", "profile_key", "tuple"],
+)
+def test_qg_f1_fit_refuses_curated_latents_in_dicts(form):
+    with pytest.raises(CuratedMemberError, match="syn-999"):
+        fit([form(_renamed_curated())], 0)
+    with pytest.raises(CuratedMemberError):
+        training_rows([form(_renamed_curated())], 0)
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf"), "nan"])
+def test_qg_f3_non_finite_sentiment_never_silences(cal, bad):
+    days = [{"adhered": False, "state": "lapsed", "checkin": True, "sentiment": bad}] * 20
+    with pytest.raises(ValueError):
+        assess(days, cal)
+
+
+def test_qg_f3_assessment_rejects_nan():
+    with pytest.raises(ValueError):
+        Assessment(p_escalate=float("nan"), decision="abstain", reasons=[], rule_version="x", calibrator_version="y")
+
+
+@pytest.mark.parametrize("n", [0, 1, 7, 13])
+def test_qg_f4_short_history_abstains(cal, n):
+    for h in (_days("0" * n, state="lapsed"), {"days": _days("1" * n), "texts": ["Walked after lunch."]}):
+        a = assess(h, cal)
+        assert a.decision == "abstain" and a.text is None and a.reasons == ["days_observed"]
+        assert a.p_escalate == pytest.approx(cal.base_rate)
+
+
+def test_qg_f4_crisis_gate_still_fires_on_short_history(cal):
+    assert assess("I want to end my life", cal).decision == "escalate"
+    assert assess(_days("1" * 14), cal).reasons != ["days_observed"]
