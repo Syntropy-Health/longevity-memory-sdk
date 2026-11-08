@@ -590,3 +590,58 @@ def test_passport_range_rows_and_review_label_match_the_api(page: Page, base_url
     expect(review).to_have_count(1)
     dd = page.locator("#pp-meta dt:has-text('Review') + dd")
     expect(dd).to_have_text("Reviewed (board sign-off, 7 Nov 2026)")
+
+
+# ---------------------------------------------------------------- timeout and extractor fault (QG P3.2 K2)
+
+
+def test_lab_request_times_out_at_15_s(page: Page, base_url: str):
+    """HAC-48 rev 2 §3.8: a request with no answer within 15 s is aborted and shows the network notice."""
+    held: list[Route] = []
+    calls = {"n": 0}
+
+    def hang(route: Route) -> None:
+        calls["n"] += 1
+        if calls["n"] > 1:
+            route.continue_()
+        else:
+            held.append(route)  # never answered: only the page's own timer can end this request
+
+    page.clock.install()
+    page.route(re.compile(r".*/api/lab$"), hang)
+    page.goto(f"{base_url}#lab")
+    expect(screen(page, "lab")).to_be_visible()
+    for _ in range(100):  # the route handler runs while Playwright waits
+        if held:
+            break
+        page.wait_for_timeout(20)
+    assert held, "the lab request was not sent"
+    msg = page.locator("#lab-msg")
+    page.clock.run_for(14_000)
+    expect(msg.locator(".notice")).to_have_count(0)
+    page.clock.run_for(1_500)
+    expect(msg).to_contain_text("could not reach the demo server")
+    msg.get_by_role("button", name="Try again").click()
+    wait_route_ready(page, "lab")
+    assert calls["n"] == 2
+    for r in held:
+        try:
+            r.abort()
+        except Exception:  # already ended by the page's abort
+            pass
+
+
+def test_extractor_fault_says_nothing_was_saved_and_keeps_the_form(page: Page, base_url: str):
+    """HAC-48 rev 2 §3.8: 500 extractor_output_invalid has its own notice, not the generic one."""
+    page.route(
+        re.compile(r".*/api/checkins$"),
+        lambda route: route.fulfill(status=500, content_type="application/json", body='{"error": "extractor_output_invalid"}'),
+    )
+    check_in_text(page, base_url)
+    msg = page.locator("#ci-msg")
+    expect(msg).to_contain_text("Something went wrong reading your check-in, so nothing was saved")
+    expect(msg).to_contain_text("This is a fault in the demo, not in what you wrote")
+    expect(msg.locator("[role=alert]")).to_have_count(1)
+    expect(msg).not_to_contain_text("error 500")
+    expect(page.locator("#ci-form")).to_be_visible()
+    assert page.evaluate("location.hash") == "#checkin"
