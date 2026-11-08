@@ -46,6 +46,13 @@ def _eval_boundary_prompts(cohort: Cohort) -> Iterable[Mapping[str, Any]]:
     return heldout_prompts(cohort)
 
 
+def _escalation_rows(cohort: Cohort) -> list[dict]:
+    """The rows Track B's ``fit`` trains on (it refuses curated members itself, too)."""
+    from daypart.escalation import training_rows
+
+    return training_rows(cohort, cohort.seed)
+
+
 _I1_MEMBERS = 12  # small fixed set of training members (<= 20) keeps the gate fast
 
 
@@ -83,6 +90,7 @@ BUILDERS: dict[str, Callable[[Cohort], Iterable[Mapping[str, Any]]]] = {
     "eval.boundary_prompts": _eval_boundary_prompts,
     "train.sft_dataset": _sft_dataset,
     "train.dpo_pairs": _dpo_pairs,
+    "escalation.fit_rows": _escalation_rows,
 }
 
 

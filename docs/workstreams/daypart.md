@@ -1,5 +1,113 @@
 # daypart — dev doc
 
+## FHDIC P2 · Passport, next step and learning lab (HAC-38)
+
+**Overview.** P2 builds the read side of A&D HAC-33 on top of the P1 journal: the Health Clone
+Passport, one suggested next step, and the learning-lab provenance table. Everything stays
+synthetic, and nothing interprets a value. A reference range sits beside a value only when a public
+source states it. A step that fails a safety check becomes the clinician handoff.
+
+```mermaid
+flowchart LR
+  J[(journal: saved check-ins<br/>+ simulated series)] --> PV[passport/view.py]
+  EV[(evidence/sources_v1.json<br/>5 public sources, 7 stated ranges)] --> PV
+  PV --> OC[20 observation cards<br/>value as recorded, ≤14 days or withheld]
+  PV --> PC[pattern cards = LHM flags]
+  PV --> TH[5-step evidence thread per card]
+  J --> NS[checkin/next_step.py<br/>next-step-v1, §4.7 rules in order]
+  NS --> G{membrane.post + dsl.check}
+  G -->|pass| STEP[step: choose → act:goal_set]
+  G -->|fail| HO[clinician handoff<br/>Ask a professional]
+  R[(docs/daypart/results/*.json)] --> LAB[demo/lab.py<br/>§4.8 formulas]
+  LAB --> ROWS[base · sft · dpo · 3 env baselines · grpo proposed]
+```
+
+**What changed.**
+- `evidence/registry.py` + `sources_v1.json` (P2.1): 5 public NIH/WHO sources, each labelled
+  `reviewed: board sign-off 2026-11-07` (AM-1). 7 concepts carry a `reference_range` copied from a
+  sentence on the source page, and the loader refuses any range that doesn't match its sentence.
+  Every other concept is `null`.
+- `passport/view.py` (P2.2): one observation card per registry concept, plus a pattern card for each existing LHM flag. The value is shown as recorded, and a
+  card older than 14 days is withheld with no number and no range. Each card has the 5-step thread
+  (empty steps link a why-empty note), an explanation only when it is sourced and safe, and data-gap
+  labels that pass the narration guard. Routes `GET /api/journals/{id}/passport?day=` and
+  `GET /api/inventory`.
+- `checkin/next_step.py` (P2.3): the §4.7 rules over the check-in saved last and over adherence by
+  UTC day. Text and reason go through `membrane.post()` + `dsl.check()`, and a failure gives the
+  clinician handoff. Routes GET/POST `/api/journals/{id}/next-step` (409 `no_saved_checkin`,
+  422 `unknown_step`).
+- `demo/lab.py` (P2.4): `lab_rows()` builds each field from its §4.8 formula. sft/dpo adapters are
+  cross-checked (a mismatch shows no number), grpo is "proposed, not built", and a missing,
+  malformed or non-finite field is `null`. Route `GET /api/lab`.
+
+**User-facing impact.** API only; the screens come in P3. No value is ever marked high or low.
+
+**Key decisions** (addendum G22–G25). Ranges are cited only from pages that could be fetched and
+read; AHA/CDC block automated fetches, so they are not cited (G22). Data-gap labels are safe
+display strings, and `/api/inventory` keeps the registry ids (G23). Saves are ordered numerically,
+so a same-time tie is broken by save order, not by event-id string order; for adherence, a later save wins its day (G24). The lab uses its own
+tolerant readers (no `MetricsDoc` validation) so that it always renders (G25).
+
+**Known issues / residual risk.**
+- P3 must HTML-escape strings that are not guarded at runtime: source URLs and `population` (G22), lab `row`,
+  `run_id` and `gate` (G25). Only `reason`, labels and text pass `safe_text`.
+- `/api/inventory` `gaps` are registry ids, and "preventive care" fails the narration guard. The UI must render `gap_labels`.
+- The passport and next-step calls are async (`await`). The sealed P2 string searches need the G23 exemptions.
+- The passport and the lab each compute the dpo run id; a lab provenance mismatch still links `#lab/<run_id>`, where the row says so.
+- A guard-failing registry string makes the passport return 500 (fail closed), not one withheld card.
+- Journals have no per-journal cap on check-ins (pre-P2, bounded by the 256-journal LRU and 60 min idle).
+- Rollback: revert the P2 range on `daypart/build`; P1 routes do not depend on P2 modules.
+
+**Run it**, from `engine/`: `uv run daypart-demo serve`, then GET the routes above.
+Tests: `env -u MUSE_API_KEY -u META_MODEL_API_KEY uv run pytest -q`.
+
+**Links.** Iteration receipts: P2.1 24831e4, P2.2 7ec2509, P2.3 2110440, P2.4 91f8875
+(`workstreams/daypart/qgr/`).
+
+## FHDIC P1 · Data core for the Clinical Human Clone (HAC-38)
+
+**Overview.** P1 builds the backend for the check-in → review loop of A&D HAC-33
+(`workstreams/daypart/AND.md`). Nothing the person enters reaches memory until they confirm it.
+Real-input mode exists only as a gate that always refuses. All inputs are synthetic.
+
+```mermaid
+flowchart LR
+  T[text ≤500] --> CR{crisis pre-check} -->|crisis| H[200 handoff, nothing stored]
+  CR --> PII{PII tripwire} -->|hit| R422[422 looks_like_personal_data]
+  PII --> X[rules-v1 extractor]
+  F[demo fixture / upload ≤1 MiB] --> S{magic bytes · sha256 allow-list} --> SC[sidecar extraction]
+  X --> P[(pending CheckIn<br/>proposals + blocking flags)]
+  SC --> P
+  P -->|review: all-or-nothing| V{corrections re-validated<br/>flags re-run}
+  V -->|confirm/correct| E[(EventLog core-v1+u1)]
+  V -->|save_unmapped| U[(provenance only)]
+  V -->|discard| D[gone]
+  G{{real-input gate<br/>REAL_INPUT_BUILD_ALLOWED=False}} -.-> T
+```
+
+**What changed.**
+- `memory/registry.py` + `registry_a4.json` + `loinc_verify_v1.csv`: 18 LOINC 2.83 codes and 2 local
+  ones in 3 verticals. `slice_ontology()` = `apply_update(core(), …)`, version `core-v1+u1`, adding
+  11 nodes; `core()` is unchanged. The LOINC notice is in ATTRIBUTION.
+- `governance/real_input.py` + YAML (12 gates, all open and unassigned), `/api/mode` (always 403),
+  and `docs/daypart/real-input-pathway.md`.
+- `checkin/`: proposal models, the rules-v1 text extractor with 7 blocking flags, the PII tripwire,
+  the crisis pre-check, fixture intake (4 synthetic fixtures + sidecars), per-visitor journals
+  (LRU 256, 60 min idle), and the review service (atomic, per-journal lock).
+- Routes: `POST /api/journals`, `GET /api/fixtures[/{id}]`, `POST /api/checkins` (JSON or
+  multipart, with a stream cap), `POST /api/checkins/{id}/review`,
+  `GET /api/journals/{j}/observations/{r}`. Modal `playground` runs with `max_containers=1`.
+
+**Key decisions** (plan G1–G12 and addendum G13).
+- 69725-0 failed LOINC verification (a single GAD item, not the GAD-2 total) and was dropped (D-A5).
+- The crisis pre-check owns its member-crisis lexicon, because boundary-v1 only carries reply handoff markers (G13).
+- An event value is stored in the canonical unit. The observation record keeps the value as recorded (e.g. 160 [lb_av]).
+- The review body may omit `journal_id`: check-ins map to their journal at the store level.
+
+**Run it**, from `engine/`: `uv run daypart-demo serve` (the FastAPI app; optional `--host`, `--port`,
+`--cohort-seed`, default 127.0.0.1:8000), then use the routes above.
+Tests: `env -u MUSE_API_KEY uv run pytest -q`.
+
 ## Slice G · 2.4 boundary eval (HAC-26)
 
 **Overview.** Plan task 2.4 compares the 4-bit Muse Glimmer 30B base, base+SFT and base+DPO on held-out prompts. It

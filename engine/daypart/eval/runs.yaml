@@ -46,3 +46,9 @@ arms:
   - name: jev
     kind: not_run
     reason: "Jev question library (4.1) is not built"
+  # Track B (AIR-319): calibrated escalation, fit on synthetic, scored on the curated-25.
+  # horizon = days of history each held-out member is assessed on.
+  - name: escalation
+    kind: escalation
+    seeds: [0, 1, 2]
+    horizon: 42

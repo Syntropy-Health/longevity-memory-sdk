@@ -147,6 +147,11 @@ class MemoryLhm:
         self._events = events if events is not None else EventLog(self._ontology)
         self._goal_nodes = tuple(goal_nodes)
 
+    @property
+    def adapter(self) -> LhmAdapter:
+        """The read-only cohort adapter this memory reads (the passport shows its latest series points)."""
+        return self._adapter
+
     async def metric_state(self, member_id: str, as_of: datetime) -> MemberMetricState:
         if not isinstance(member_id, str) or not _MEMBER_ID.fullmatch(member_id):
             raise ValueError("member_id must be an opaque cohort id (I7)")
