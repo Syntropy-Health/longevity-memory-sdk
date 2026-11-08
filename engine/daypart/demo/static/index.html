@@ -1025,13 +1025,15 @@ function proposalCard(p, units) {
   art.append(corr);
   return art;
 }
-/* The fields a Correct decision sends. Unit and date go only when the person changed them from the
-   proposal: the server clears unit_assumed / ambiguous_date for any field it is sent. */
+/* The fields a Correct decision sends. The server clears unit_assumed / ambiguous_date for any field it
+   is sent, so an unflagged unit or date goes only when the person changed it. On a proposal flagged
+   unit_assumed / ambiguous_date, Correct is how the person accepts it (Confirm is disabled), so the unit /
+   date shown in the Correct fields is stated even when unchanged (A&D §4.2; QG P3 R1, addendum G29). */
 function correction(p, v, u, dt) {
-  var d = {};
+  var d = {}, flags = Array.isArray(p.flags) ? p.flags : [];
   if (v !== "" && isFinite(Number(v))) d.value = Number(v);
-  if (u && u !== p.unit) d.unit = u;
-  if (dt && dt !== p.date) d.date = dt;
+  if (u && (u !== p.unit || flags.indexOf("unit_assumed") >= 0)) d.unit = u;
+  if (dt && (dt !== p.date || flags.indexOf("ambiguous_date") >= 0)) d.date = dt;
   return d;
 }
 function decisionsRv() {
