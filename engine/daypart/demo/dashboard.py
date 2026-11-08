@@ -1,5 +1,7 @@
 """Streamlit results dashboard (HAC-20): every arm of ``docs/daypart/results/metrics.json``.
 
+It is the Clinical Human Clone's research view: full results (HAC-38 plan task 13, A&D T1.4).
+
 Run: ``uv run streamlit run daypart/demo/dashboard.py`` (from ``engine/``), or ``uv run daypart-demo dashboard``.
 Optional: ``-- --metrics PATH``. Offline, no secrets.
 """
@@ -28,6 +30,8 @@ from daypart.demo.dashboard_data import (
 )
 
 SERIES = "#2a78d6"  # single-series bars: one hue, no legend
+PAGE_TITLE = "Clinical Human Clone: research view"  # T1.4
+PAGE_HEADER = PAGE_TITLE
 STATUS_LABEL = {"ok": "ok", "not_run": "not run", "failed": "FAILED"}
 
 
@@ -38,8 +42,8 @@ def _args() -> argparse.Namespace:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Daypart results", layout="wide")
-    st.title("Daypart benchmark results")
+    st.set_page_config(page_title=PAGE_TITLE, layout="wide")
+    st.title(PAGE_HEADER)
     st.caption("Synthetic SimMembers only. Not a consumer UI. Not medical advice.")
 
     path = _args().metrics or default_metrics_path()
