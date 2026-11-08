@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import lru_cache
@@ -307,7 +308,10 @@ def assess(history: Any, calibrator: Calibrator) -> Assessment:
             calibrator_version=calibrator.version,
             text=crisis_text,
         )
-    p = min(1.0, max(0.0, calibrator.predict(feats)))
+    p = calibrator.predict(feats)
+    if not math.isfinite(p):  # never clamp NaN into a confident "no_escalation"
+        raise ValueError(f"calibrator produced a non-finite probability ({p!r})")
+    p = min(1.0, max(0.0, p))
     decision = decide(p)
     contrib = calibrator.contributions(feats)
     ranked = sorted(contrib.items(), key=lambda kv: (-abs(kv[1]), kv[0]))

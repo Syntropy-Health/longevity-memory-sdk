@@ -7,6 +7,7 @@ refuses objects that carry latents (a ``Profile``, ``Latents`` or a whole ``Coho
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -60,13 +61,17 @@ def _as_day(obj: Any) -> Day:
     if adhered is None:
         raise ValueError(f"a history day needs 'adhered'; got {type(obj).__name__}")
     sentiment = _get(obj, "sentiment")
+    if sentiment is not None:
+        sentiment = float(sentiment)
+        if not math.isfinite(sentiment):  # NaN would otherwise clamp to p = 0 ("stay silent")
+            raise ValueError(f"sentiment must be finite, got {sentiment!r}")
     text = next((t for k in _DAY_TEXT_KEYS if isinstance(t := _get(obj, k), str) and t), None)
     state = _get(obj, "state")
     return Day(
         adhered=bool(adhered),
         checkin=bool(_get(obj, "checkin", False)) or text is not None,
         state=str(state) if state is not None else None,
-        sentiment=None if sentiment is None else float(sentiment),
+        sentiment=sentiment,
         text=text,
     )
 
