@@ -56,3 +56,11 @@ Contract: `docs/daypart/contracts/CONTRACT-slice-E-eval-passport.md` section E1.
 | `data/convert_r2_corpus.py` | converter; `uv run python tests/sealed/data/convert_r2_corpus.py --check` from `engine/` confirms the committed corpus is current | | aborts on any label mismatch and never relabels |
 
 Read by `test_eval.py` (`TestSeededCorpus`, `TestR2Metrics::test_seeded_corpus_meets_r2`, `TestDefaultConfig`) and by the default `runs.yaml` `r2_boundary_dsl` arm.
+
+## Track B: `daypart.escalation` calibrated escalation (AIR-319 child 3, AIR-323)
+
+Contract: AIR-319 document `track-b-spec` (contract v1). Written double-blind; `engine/daypart/escalation/` never read. Open shapes pinned in the file docstring (`history_from`, `fit` member pairs, `TAU_LOW`/`TAU_HIGH`, `Assessment.text`, arm named `*escalation*`) and posted to the CTO on AIR-323.
+
+| file | spec section | categories |
+|---|---|---|
+| `test_escalation.py` | Interface; Decision rule; Ground truth; Evaluation; Done when | `functional/esc-interface`, `functional/esc-features`, `functional/esc-decision`, `functional/esc-crisis-gate`, `functional/esc-determinism`, `functional/esc-i1`, `functional/esc-membrane`, `functional/esc-offline`, `integration/esc-eval-arm` |
