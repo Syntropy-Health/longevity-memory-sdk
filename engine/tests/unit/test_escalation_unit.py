@@ -253,7 +253,7 @@ def test_evaluate_deterministic_and_complete():
     for key in ("brier", "ece", "reliability", "abstention_rate", "precision", "recall", "base_rate"):
         assert key in a
     assert len(a["reliability"]) == 10 and a["text_checks"]["n"] == a["text_checks"]["passed"]
-    assert a["beats_base_rate"]["brier"] == (a["brier"] < a["base_rate"]["brier"])
+    assert a["vs_base_rate"]["brier_delta"] == pytest.approx(a["brier"] - a["base_rate"]["brier"], abs=1e-6)
     json.dumps(a)
     with pytest.raises(ValueError):
         evaluate([])
@@ -349,7 +349,7 @@ def test_evaluate_counts():
     d = a["decisions"]
     assert d["n_escalate"] + d["n_no_escalation"] + d["n_abstain"] == a["n"]
     assert a["base_rate"]["p"] == s["train_base_rate"]
-    assert a["beats_base_rate"]["ece"] == (a["ece"] < a["base_rate"]["ece"])
+    assert a["vs_base_rate"]["ece_delta"] == pytest.approx(a["ece"] - a["base_rate"]["ece"], abs=1e-6)
     assert (a["heldout"], a["train"]) == ("curated-25", "175 synthetic profiles per seed")
 
 

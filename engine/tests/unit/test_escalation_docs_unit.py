@@ -44,6 +44,6 @@ def test_reliability_and_headline_match_metrics():
     prose = " ".join(text.split())  # prose wraps across lines
     assert f"({a['n']} assessments, {a['positives']} positive, prevalence {a['prevalence']:.3f})" in prose
     assert f"training prevalence ({a['base_rate']['p']:.3f})" in prose
-    beats = a["beats_base_rate"]["brier"] or a["beats_base_rate"]["ece"]
+    beats = a["vs_base_rate"]["brier_delta"] < 0 or a["vs_base_rate"]["ece_delta"] < 0
     assert ("**no better than a constant base-rate predictor**" in prose) == (not beats)
     assert "nothing here is clinically validated" in prose.lower()

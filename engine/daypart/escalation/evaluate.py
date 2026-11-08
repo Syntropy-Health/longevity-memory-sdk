@@ -123,9 +123,10 @@ def evaluate(seeds: Sequence[int], history_days: int = 42) -> dict[str, Any]:
         "calibrator_kind": CALIBRATOR_KIND,
         **calibrated,
         "base_rate": base,
-        "beats_base_rate": {
-            "brier": calibrated["brier"] < base["brier"],
-            "ece": calibrated["ece"] < base["ece"],
+        # calibrated minus base rate; negative = calibrated is better (numbers only, no bools)
+        "vs_base_rate": {
+            "brier_delta": _r6(calibrated["brier"] - base["brier"]),
+            "ece_delta": _r6(calibrated["ece"] - base["ece"]),
         },
         "text_checks": {"n": n_text, "passed": n_text - n_text_fail},
         "per_seed": per_seed,

@@ -538,10 +538,6 @@
             }
           ]
         },
-        "beats_base_rate": {
-          "brier": false,
-          "ece": false
-        },
         "brier": 0.194339,
         "calibrator_kind": "logreg-l2-v1",
         "decision_rule_version": "escalation-rule-v1",
@@ -704,7 +700,11 @@
           "n": 35,
           "passed": 35
         },
-        "train": "175 synthetic profiles per seed"
+        "train": "175 synthetic profiles per seed",
+        "vs_base_rate": {
+          "brier_delta": 0.011482,
+          "ece_delta": 0.044686
+        }
       },
       "name": "escalation",
       "reason": null,
