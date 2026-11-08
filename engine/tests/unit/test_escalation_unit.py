@@ -195,7 +195,7 @@ def _forced(intercept: float) -> Calibrator:
     [(3.0, "escalate"), (-3.0, "no_escalation"), (0.0, "abstain")],
 )
 def test_tau_band(z, decision):
-    a = assess(_days("1010"), _forced(z))
+    a = assess(_days("10" * 10), _forced(z))
     assert a.decision == decision
     assert a.text == (POLICY_TEXT["clinician_handoff"] if decision == "escalate" else None)
     if a.text:

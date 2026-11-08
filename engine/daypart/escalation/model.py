@@ -35,6 +35,8 @@ CALIBRATOR_KIND = "logreg-l2-v1"
 
 #: History lengths (days) each training member contributes a row at.
 TRAIN_HISTORY_DAYS: tuple[int, ...] = (14, 28, 42)
+#: Below the shortest training history the model would extrapolate: abstain at the base rate.
+MIN_HISTORY_DAYS = min(TRAIN_HISTORY_DAYS)
 L2_PENALTY = 1.0
 _MAX_NEWTON = 100
 _TOL = 1e-10
@@ -308,6 +310,14 @@ def assess(history: Any, calibrator: Calibrator) -> Assessment:
             calibrator_version=calibrator.version,
             text=crisis_text,
         )
+    if feats["days_observed"] < MIN_HISTORY_DAYS:
+        return Assessment(
+            p_escalate=min(1.0, max(0.0, calibrator.base_rate)),
+            decision="abstain",
+            reasons=["days_observed"],
+            rule_version=RULE_VERSION,
+            calibrator_version=calibrator.version,
+        )
     p = calibrator.predict(feats)
     if not math.isfinite(p):  # never clamp NaN into a confident "no_escalation"
         raise ValueError(f"calibrator produced a non-finite probability ({p!r})")
@@ -329,6 +339,7 @@ __all__ = [
     "CALIBRATOR_KIND",
     "DECISION_RULE_VERSION",
     "L2_PENALTY",
+    "MIN_HISTORY_DAYS",
     "TAU_HIGH",
     "TAU_LOW",
     "TRAIN_HISTORY_DAYS",

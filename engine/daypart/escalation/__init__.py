@@ -10,6 +10,7 @@ from daypart.escalation.history import Day, History, as_history, until
 from daypart.escalation.model import (
     CALIBRATOR_KIND,
     DECISION_RULE_VERSION,
+    MIN_HISTORY_DAYS,
     TAU_HIGH,
     TAU_LOW,
     TRAIN_HISTORY_DAYS,
@@ -27,6 +28,7 @@ __all__ = [
     "CRISIS_FEATURE",
     "DECISION_RULE_VERSION",
     "FEATURE_NAMES",
+    "MIN_HISTORY_DAYS",
     "MODEL_FEATURES",
     "TAU_HIGH",
     "TAU_LOW",
