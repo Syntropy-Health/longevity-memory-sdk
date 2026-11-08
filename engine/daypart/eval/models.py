@@ -14,6 +14,8 @@ from pydantic import ConfigDict, model_validator
 
 SCHEMA = "daypart-metrics/v1"
 ARM_KINDS: frozenset[str] = frozenset({"r2_dsl", "env_baseline", "i1_gate", "boundary_eval", "not_run"})
+#: Kinds added after the slice-E contract (whose sealed suite pins ``ARM_KINDS``): Track B (AIR-319).
+EXTENSION_ARM_KINDS: frozenset[str] = frozenset({"escalation"})
 EVAL_MODELS: tuple[str, ...] = ("base", "sft", "dpo")  # same as daypart.eval.boundary.EVAL_MODELS
 POLICIES: tuple[str, ...] = ("always_none", "always_barrier_problem_solving", "random_intent")
 TRAINING_ARMS: tuple[str, ...] = ("sft", "dpo", "grpo", "rm", "jev")
@@ -57,6 +59,13 @@ class ArmConfig(pydantic.BaseModel):
                 raise ValueError(f"arm {self.name!r}: kind boundary_eval requires model in {EVAL_MODELS}")
             if _blank(self.results):
                 raise ValueError(f"arm {self.name!r}: kind boundary_eval requires a results directory")
+        if self.kind == "escalation":
+            if not self.seeds:
+                raise ValueError(f"arm {self.name!r}: kind escalation requires non-empty seeds")
+            if len(set(self.seeds)) != len(self.seeds):
+                raise ValueError(f"arm {self.name!r}: seeds must be unique")
+            if self.horizon < 1:
+                raise ValueError(f"arm {self.name!r}: horizon must be >= 1")
         if self.kind == "env_baseline":
             if self.policy is None:
                 raise ValueError(f"arm {self.name!r}: kind env_baseline requires a policy")
@@ -136,6 +145,7 @@ def _coerce_row(row: Any) -> CorpusRow:
 
 __all__ = [
     "ARM_KINDS",
+    "EXTENSION_ARM_KINDS",
     "ARM_STATUSES",
     "EVAL_MODELS",
     "POLICIES",

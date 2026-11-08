@@ -157,6 +157,13 @@ def _run_i1_gate(config: RunsConfig) -> dict:
     return {"builders": builders, "passed": all(v == "ok" for v in builders.values())}
 
 
+def _run_escalation(arm: ArmConfig) -> dict:
+    """Track B: fit on the synthetic profiles, score on the curated-25 (AIR-319 track-b-spec)."""
+    from daypart.escalation.evaluate import evaluate
+
+    return evaluate(arm.seeds, history_days=arm.horizon)
+
+
 # --------------------------------------------------------------------------- #
 # boundary_eval (2.4: base / SFT / DPO, read from committed results files)
 # --------------------------------------------------------------------------- #
@@ -236,6 +243,7 @@ def _run_arm(arm: ArmConfig, config: RunsConfig, root: pathlib.Path) -> dict:
         "env_baseline": lambda: _run_env_baseline(arm, config),
         "i1_gate": lambda: _run_i1_gate(config),
         "boundary_eval": lambda: _run_boundary_eval(arm, root),
+        "escalation": lambda: _run_escalation(arm),
     }
     runner = runners.get(arm.kind)
     if runner is None:
