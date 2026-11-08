@@ -9,6 +9,7 @@ descriptive names but must not carry the old Daypart names (addendum G28).
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -142,13 +143,31 @@ def test_missing_metrics_in_bare_mode_returns_cleanly(monkeypatch: pytest.Monkey
 
 
 def test_import_does_not_render_the_page() -> None:
-    """Importing the module (pytest collection, a sealed test) must not run ``main()``."""
+    """Importing the module (pytest collection, a sealed test) must not run ``main()``.
+
+    QG P3 K2: a stub ``streamlit`` records every call; a bare import must record none (the exit code and
+    stderr alone pass even when ``main()`` runs, because a bare-mode ``st.stop()`` returns quietly)."""
     engine = Path(__file__).resolve().parents[2]
     env = {**os.environ, "DAYPART_METRICS": MISSING}
     env.pop("MUSE_API_KEY", None)
+    probe = (
+        "import json, sys, types\n"
+        "calls = []\n"
+        "class Rec:\n"
+        "    def __init__(self, name): self.name = name\n"
+        "    def __call__(self, *a, **k): calls.append(self.name); return Rec(self.name + '()')\n"
+        "    def __getattr__(self, n): return Rec(self.name + '.' + n)\n"
+        "    def __enter__(self): return self\n"
+        "    def __exit__(self, *a): return False\n"
+        "    def __iter__(self): return iter([Rec(self.name + '[0]'), Rec(self.name + '[1]'), Rec(self.name + '[2]')])\n"
+        "st = types.ModuleType('streamlit')\n"
+        "st.__getattr__ = lambda n: Rec('st.' + n)\n"
+        "sys.modules['streamlit'] = st\n"
+        "import daypart.demo.dashboard\n"
+        "print(json.dumps(calls))\n"
+    )
     proc = subprocess.run(
-        [sys.executable, "-c", "import daypart.demo.dashboard"],
-        cwd=engine, env=env, capture_output=True, text=True, timeout=120,
+        [sys.executable, "-c", probe], cwd=engine, env=env, capture_output=True, text=True, timeout=120,
     )
     assert proc.returncode == 0, proc.stderr[-2000:]
-    assert "no metrics file" not in proc.stderr
+    assert json.loads(proc.stdout.strip().splitlines()[-1]) == []
