@@ -308,3 +308,81 @@ def test_qg_f4_short_history_abstains(cal, n):
 def test_qg_f4_crisis_gate_still_fires_on_short_history(cal):
     assert assess("I want to end my life", cal).decision == "escalate"
     assert assess(_days("1" * 14), cal).reasons != ["days_observed"]
+
+
+def test_hardening_every_text_field_reaches_crisis_gate(cal):
+    crisis = "I want to kill myself"
+    for h in (
+        [{"adhered": True, "text": "fine", "journal": crisis}],
+        {"days": [], "texts": [], "journals": [crisis]},
+        {"days": [], "texts": ["ok"], "checkin_texts": [crisis]},
+        [{"adhered": True, "text": [crisis]}],
+        ["a", "b", crisis],
+        [crisis],
+    ):
+        assert features(h)["crisis_marker_hits"] >= 1.0, h
+
+    class Traj:
+        days = tuple(_days("1" * 20))
+        texts = (crisis,)
+
+    assert assess(Traj(), cal).decision == "escalate"
+
+
+def test_hardening_latents_key_always_refused():
+    with pytest.raises(TypeError):
+        features({"days": _days("11"), "latents": CURATED_PROFILES[0].latents.model_dump()})
+
+
+def test_evaluate_rejects_history_beyond_trajectories():
+    with pytest.raises(ValueError):
+        evaluate([0], history_days=43)
+    with pytest.raises(ValueError):
+        evaluate([0], history_days=0)
+
+
+def test_evaluate_counts():
+    a = evaluate([0], history_days=14)
+    s = a["per_seed"][0]
+    assert (s["n_heldout"], s["n_train_members"], s["n_train_rows"]) == (25, 175, 525)
+    assert a["positives"] == sum(p.latents.escalation_trigger != "none" for p in CURATED_PROFILES)
+    d = a["decisions"]
+    assert d["n_escalate"] + d["n_no_escalation"] + d["n_abstain"] == a["n"]
+    assert a["base_rate"]["p"] == s["train_base_rate"]
+    assert a["beats_base_rate"]["ece"] == (a["ece"] < a["base_rate"]["ece"])
+    assert (a["heldout"], a["train"]) == ("curated-25", "175 synthetic profiles per seed")
+
+
+def test_fit_order_invariant(cohort):
+    pairs = [(p, cohort.trajectories[p.member_id]) for p in cohort.training_profiles()[:30]]
+    assert fit(pairs, 0).version == fit(list(reversed(pairs)), 0).version
+
+
+def test_training_rows_short_trajectory(cohort):
+    from daypart.simmember.trajectory import Trajectory
+
+    p = cohort.training_profiles()[0]
+    short = Trajectory(member_id=p.member_id, days=cohort.trajectories[p.member_id].days[:20])
+    assert {r["history_days"] for r in training_rows([(p, short)], 0)} == {14, 20}
+    with pytest.raises(ValueError):
+        fit([(p, Trajectory(member_id=p.member_id, days=()))], 0)
+
+
+def test_recent_window_and_text_counts_as_checkin():
+    f = features(_days("0" * 10 + "1" * 7))
+    assert f["recent_adherence_rate"] == 1.0 and f["adherence_rate"] == pytest.approx(7 / 17)
+    assert features([{"adhered": True, "checkin": False, "text": "hi"}])["checkin_rate"] == 1.0
+
+
+def test_membrane_failure_paths(monkeypatch, cal):
+    import daypart.escalation.model as model
+
+    bad = dsl.Verdict(passed=False, violations=(), rule_version="x")
+    model._texts.cache_clear()
+    monkeypatch.setattr(dsl, "check", lambda *a, **k: bad)
+    try:
+        with pytest.raises(RuntimeError, match="membrane.dsl.check"):
+            assess(_days("1" * 20), cal)
+    finally:
+        monkeypatch.undo()
+        model._texts.cache_clear()

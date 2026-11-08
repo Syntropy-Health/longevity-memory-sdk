@@ -24,6 +24,8 @@ clinician hand-off, and then decides `escalate`, `no_escalation` or `abstain`.
 - **Decision rule.**
   - Hard gate: a crisis-marker hit (the `boundary-v1` pack markers or member crisis language, via
     `daypart.checkin.crisis.is_crisis`) always gives `escalate` with `p_escalate = 1.0`.
+  - With less than 14 days of history (the shortest training history): `abstain` at the training base
+    rate, because the model would be extrapolating.
   - Otherwise: `escalate` if p ≥ 0.8, `no_escalation` if p ≤ 0.2, `abstain` in between. Both thresholds
     are fixed constants, set at 4:1 odds before any held-out run and never tuned on held-out data.
 - **Text.** Only an escalation emits text. The model-driven text is the existing `clinician_handoff`
@@ -59,9 +61,9 @@ Reliability (calibrated; only non-empty bins of the 10 equal-width bins):
 | 0.9–1.0 | 5 | 0.934 | 0.400 |
 
 **Reading.** Escalation precision (0.771) is about the same as the prevalence (0.760), so the
-model-driven escalations carry no real lift. In the simulator, `escalation_trigger` changes behaviour
-only through a +0.03 shift in slip risk (`simmember.dynamics.risk`), which is too weak for the observable
-history to recover. The crisis hard gate does work, but it is tested only in unit and sealed tests: the
+model-driven escalations carry no real lift. In the baseline (no-intervention) trajectories the arm scores,
+`escalation_trigger` changes behaviour only through a +0.03 shift in slip risk
+(`simmember.dynamics.risk`), which is too weak for the observable history to recover. The crisis hard gate does work, but it is tested only in unit and sealed tests: the
 simulator's held-out histories carry no check-in text, so the arm never exercises it.
 
 ### Limitations

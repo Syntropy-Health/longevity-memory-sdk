@@ -306,3 +306,46 @@ def test_cli_config_error_exit_2(tmp_path, capsys, body):
     assert main(["--runs", str(runs), "--out", str(out)]) == 2
     cap = capsys.readouterr()
     assert cap.err and not cap.out and not out.exists()
+
+
+# --------------------------------------------------------------------------- Track B escalation arm (AIR-322)
+
+
+@pytest.mark.parametrize(
+    "kw",
+    [
+        {"name": "x", "kind": "escalation"},
+        {"name": "x", "kind": "escalation", "seeds": (0, 0)},
+        {"name": "x", "kind": "escalation", "seeds": (0,), "horizon": 0},
+    ],
+)
+def test_escalation_arm_config_invalid(kw):
+    with pytest.raises(pydantic.ValidationError):
+        ArmConfig(**kw)
+
+
+def test_escalation_arm_failure_is_reported(monkeypatch):
+    import daypart.escalation.evaluate as ev
+
+    def boom(*a, **k):
+        raise RuntimeError("kaput")
+
+    monkeypatch.setattr(ev, "evaluate", boom)
+    arm = run(_cfg(ArmConfig(name="escalation", kind="escalation", seeds=(0,), horizon=14)))["arms"][0]
+    assert (arm["status"], arm["metrics"]) == ("failed", None) and arm["reason"].startswith("RuntimeError")
+
+
+def test_escalation_i1_builder_catches_a_leak(monkeypatch):
+    from daypart.simmember.cohort import Cohort
+
+    monkeypatch.setattr(Cohort, "training_profiles", lambda self: self.profiles)  # curated slip in
+    assert i1_check.results(0)["escalation.fit_rows"] == "fail"
+
+
+def test_extension_arm_kinds_are_runnable():
+    from daypart.eval import ARM_KINDS, EXTENSION_ARM_KINDS
+
+    assert not (ARM_KINDS & EXTENSION_ARM_KINDS)
+    for kind in EXTENSION_ARM_KINDS:
+        arm = run(_cfg(ArmConfig(name="k", kind=kind, seeds=(0,), horizon=14)))["arms"][0]
+        assert arm["status"] == "ok", arm["reason"]
