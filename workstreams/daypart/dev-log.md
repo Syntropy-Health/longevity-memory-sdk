@@ -5,3 +5,4 @@
 - P2 phase complete — deep gate fixed A&D literal gaps (passport await, observation step shapes), passport RecursionError 500, day-back leak test, e2e journey test (commit 179d67d)
 - P3.1 — UI rebuild: hash-route journey to HAC-35 + HAC-48 rev 2 states, /api/units; QG 15 kept + 3 fixed (commit ada2950)
 - P3.2 — UI and a11y CI: Playwright + vendored axe suite (T1.2, T2.1, T3.3, T8.4, T9.4, T10.1-T10.4, rev 2 states), demo-ui job gates deploy-demo; QG K1-K8 fixed, each test red on a mutant (commit aaf5ad5)
+- P3.3 — dashboard renamed Clinical Human Clone: research view (T1.4); import-safe; README/CLI/link say research view: full results (commit cf57d54)
