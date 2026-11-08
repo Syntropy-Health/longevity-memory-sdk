@@ -542,3 +542,51 @@ def test_server_or_network_error_shows_notice_and_retries(page: Page, base_url: 
     expect(msg.locator(".notice")).to_have_count(0)
     assert calls["n"] == 2
 
+
+
+# ---------------------------------------------------------------- AM-1 range row and review label (QG P3.2 K1)
+
+
+def _journal_id(page: Page) -> str:
+    return page.evaluate("JSON.parse(sessionStorage.getItem('chc.session.v1')).journal")
+
+
+def test_passport_range_rows_and_review_label_match_the_api(page: Page, base_url: str):
+    """HAC-48 rev 2 §3.3.1–2: each ready card's first meta row is its sourced range (shown and spoken
+    text, population, source link) or "no reference range"; a withheld card has no range row; the
+    passport meta carries the review label once."""
+    saved_journal(page, base_url)
+    goto(page, base_url, "passport")
+    wait_route_ready(page, "passport")
+    api = page.request.get(f"{base_url}api/journals/{_journal_id(page)}/passport").json()
+    arts = page.locator("#pp-cards > article")
+    expect(arts).to_have_count(len(api["cards"]))
+    shown = none = 0
+    for i, c in enumerate(api["cards"]):
+        art = arts.nth(i)
+        first_dt = art.locator("dl.meta > dt").first
+        if c["status"] != "ready":
+            expect(art.locator("dl.meta > dt", has_text="Reference range")).to_have_count(0)
+            continue
+        if c.get("reference_range_status") == "shown":
+            r = c["reference_range"]
+            lo, hi, unit = r["low"], r["high"], r["unit"]
+            expect(first_dt).to_have_text("Reference range")
+            dd = art.locator("dl.meta > dd").first
+            expect(dd.locator("span[aria-hidden=true]")).to_have_text(f"{lo:g}–{hi:g} {unit}")
+            expect(dd.locator(".visually-hidden")).to_have_text(f"{lo:g} to {hi:g} {unit}")
+            expect(dd.locator(".ref-pop")).to_have_text(r["population"])
+            src = dd.locator("a.ref-src")
+            expect(src).to_have_attribute("href", r["source_url"])
+            host = re.sub(r"^https://([^/]+).*$", r"\1", r["source_url"])
+            expect(src).to_have_text(f"Range source: {host}")
+            shown += 1
+        elif c.get("reference_range_status") == "none":
+            expect(first_dt).to_have_text("Reference range")
+            expect(art.locator("dl.meta > dd").first).to_contain_text("no reference range")
+            none += 1
+    assert shown >= 1 and none >= 1, (shown, none)  # the saved sleep value is sourced, the steps value is not
+    review = page.locator("#pp-meta dt", has_text="Review")
+    expect(review).to_have_count(1)
+    dd = page.locator("#pp-meta dt:has-text('Review') + dd")
+    expect(dd).to_have_text("Reviewed (board sign-off, 7 Nov 2026)")
