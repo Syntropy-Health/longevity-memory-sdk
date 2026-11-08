@@ -936,3 +936,33 @@ def test_t2_handoff_body_is_the_api_text_verbatim_and_the_form_is_gone(html):
     hand = _section(_script(html), "function showHandoff", "\n}\n")
     for banned in ("988", "911", "href", "link(", "btnLink(", "tel:", "http", "lifeline"):
         assert banned not in hand, banned
+
+
+def test_k1_lab_mismatch_and_missing_seed_rows_render_the_a_and_d_words():
+    """QG P3 K1: A&D §4.8 / T8.3 and G25: an adapter mismatch row shows "provenance mismatch" (the API
+    ``status``, verbatim) and no number; a missing seed renders "not recorded" (T8.3's UI half)."""
+    got = _run_page(
+        _BASE + _LAB,
+        """
+        var mm = labRow({ row: "sft", kind: "model", status: "provenance mismatch", run_id: "tag/sft",
+          split: { prompt_set_version: "v1", n: 10, training_rows: 99, data_sha256: "abcdefabcdef0000" },
+          seed: 3, failures: 1, degenerate: 0, metrics: { boundary_pass_rate: 0.9, rubric_pass_rate: 0.8 } });
+        var ns = labRow({ row: "base", kind: "model", status: "ok", run_id: "tag/base",
+          split: { prompt_set_version: "v1", n: 10 }, seed: null, failures: 1, degenerate: 0, metrics: {} });
+        var gp = labRow({ row: "grpo", kind: "proposed", status: "proposed, not built", reason: "not run" });
+        function cells(tr) { return tr.children.map(function (c) { return [c.getAttribute("data-label"), c.textContent]; }); }
+        return { mm: cells(mm), ns: cells(ns), gp: cells(gp) };
+        """,
+    )
+    mm = dict(got["mm"])
+    assert "provenance mismatch" in mm["Run ID"]  # the A&D's words, case and all
+    assert "n =" not in mm["Split"] and "training rows" not in mm["Split"]
+    for label in ("Seed", "Failures", "Metric"):
+        assert not re.search(r"\d", mm[label]), (label, mm[label])
+    assert "not shown" in mm["Metric"]
+    assert dict(got["ns"])["Seed"] == "not recorded"
+    gp = dict(got["gp"])
+    assert "proposed, not built" in gp["Run ID"] and gp["Metric"] == "No number. Reason: not run"
+    assert not re.search(r"\d", gp["Metric"])
+    for row in (got["mm"], got["ns"], got["gp"]):
+        assert all(label for label, _ in row)  # every cell has data-label (the 375 px stacked layout)
