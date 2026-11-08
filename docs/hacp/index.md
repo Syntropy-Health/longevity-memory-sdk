@@ -11,7 +11,7 @@ flowchart LR
 | Build plan locked (G1–G12, addendum G13) | Agent | HAC-38 document `plan` |
 | AM-1: board sign-off label; ranges only where a source states them | CTO (board answer) | HAC-38 |
 | P2 build decisions G22–G25 | Agent | `workstreams/daypart/plan/ADDENDUM-fhdic.md` |
-| P3 build decisions G26–G28 (HAC-48 rev 2 intake, screen ids, dashboard name) | Agent | `workstreams/daypart/plan/ADDENDUM-fhdic.md` |
+| P3 build decisions G26–G29 (HAC-48 rev 2 intake, screen ids, dashboard name, Correct on a flagged value) | Agent | `workstreams/daypart/plan/ADDENDUM-fhdic.md` |
 
 | Section | State |
 |---|---|

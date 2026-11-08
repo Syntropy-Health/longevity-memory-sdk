@@ -17,7 +17,7 @@ as the optional research view. A browser + axe suite in CI gates the demo deploy
 **User-facing impact.** A visitor can do the whole journey in the browser, by keyboard alone, at
 375 px wide, with 0 axe violations. No screen marks a value high or low.
 
-**Key decisions** (addendum G26–G28). Sections are found by `screen-<route>` ids (the bare route ids
+**Key decisions** (addendum G26–G29). Sections are found by `screen-<route>` ids (the bare route ids
 left focus on the body on a deep link). Every API string is set as text; links go through one
 allow-list. The axe file lives in `tests/ui/vendor/` and is never served. The `ui` group is not a
 default group, so the `test` job is unchanged (G10).

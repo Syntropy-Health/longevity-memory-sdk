@@ -264,7 +264,7 @@ correction clears a flag only if the re-run no longer raises it, so correcting o
 systolic ≤ diastolic contradiction clears both when they no longer conflict. Discarded and
 `save_unmapped` proposals stay in the re-run set (G17), so two values for one concept are resolved
 by discarding both (or saving them unmapped) and checking in again. `unit_assumed` clears when `correct`
-states a unit explicitly.
+states a unit explicitly; `ambiguous_date` clears when `correct` states a date inside the window.
 
 **Extractor contract (G21).** Every extractor returns `Proposal` models only. `create_checkin`
 passes each extractor's output through `validate_proposals`, which dumps and revalidates every item

@@ -603,7 +603,7 @@ def test_c2_correct_sends_unit_and_date_only_when_changed():
 
 
 def test_r1_correct_on_a_flagged_proposal_states_the_shown_unit_and_date():
-    """QG P3 R1: A&D §4.2, ``unit_assumed`` clears when ``correct`` states a unit explicitly (and
+    """QG P3 R1: A&D §4.1, ``unit_assumed`` clears when ``correct`` states a unit explicitly (and
     ``ambiguous_date`` a date). On a flagged proposal Confirm is disabled and Correct is the way to accept
     it, so the unit / date shown in the Correct fields is sent even when unchanged; otherwise a single-unit
     concept (heart rate, only ``/min``) or a right guessed date could never be cleared."""
