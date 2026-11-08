@@ -203,6 +203,7 @@
       "kind": "i1_gate",
       "metrics": {
         "builders": {
+          "escalation.fit_rows": "ok",
           "eval.boundary_prompts": "ok",
           "eval.scenarios": "ok",
           "simmember.training_profiles": "ok",
@@ -435,6 +436,279 @@
       "name": "jev",
       "reason": "Jev question library (4.1) is not built",
       "status": "not_run"
+    },
+    {
+      "kind": "escalation",
+      "metrics": {
+        "abstention_rate": 0.533333,
+        "base_rate": {
+          "abstention_rate": 1.0,
+          "brier": 0.182857,
+          "decisions": {
+            "n": 75,
+            "n_abstain": 75,
+            "n_escalate": 0,
+            "n_no_escalation": 0,
+            "true_positives": 0
+          },
+          "ece": 0.019048,
+          "p": 0.779048,
+          "precision": null,
+          "recall": 0.0,
+          "reliability": [
+            {
+              "bin": 0,
+              "frac_positive": null,
+              "hi": 0.1,
+              "lo": 0.0,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 1,
+              "frac_positive": null,
+              "hi": 0.2,
+              "lo": 0.1,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 2,
+              "frac_positive": null,
+              "hi": 0.3,
+              "lo": 0.2,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 3,
+              "frac_positive": null,
+              "hi": 0.4,
+              "lo": 0.3,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 4,
+              "frac_positive": null,
+              "hi": 0.5,
+              "lo": 0.4,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 5,
+              "frac_positive": null,
+              "hi": 0.6,
+              "lo": 0.5,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 6,
+              "frac_positive": null,
+              "hi": 0.7,
+              "lo": 0.6,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 7,
+              "frac_positive": 0.76,
+              "hi": 0.8,
+              "lo": 0.7,
+              "mean_p": 0.779048,
+              "n": 75
+            },
+            {
+              "bin": 8,
+              "frac_positive": null,
+              "hi": 0.9,
+              "lo": 0.8,
+              "mean_p": null,
+              "n": 0
+            },
+            {
+              "bin": 9,
+              "frac_positive": null,
+              "hi": 1.0,
+              "lo": 0.9,
+              "mean_p": null,
+              "n": 0
+            }
+          ]
+        },
+        "beats_base_rate": {
+          "brier": false,
+          "ece": false
+        },
+        "brier": 0.194339,
+        "calibrator_kind": "logreg-l2-v1",
+        "decision_rule_version": "escalation-rule-v1",
+        "decisions": {
+          "n": 75,
+          "n_abstain": 40,
+          "n_escalate": 35,
+          "n_no_escalation": 0,
+          "true_positives": 27
+        },
+        "ece": 0.063734,
+        "ground_truth": "simmember Latents.escalation_trigger != 'none' (simulator only, not clinical)",
+        "heldout": "curated-25",
+        "history_days": 42,
+        "n": 75,
+        "per_seed": [
+          {
+            "abstention_rate": 0.52,
+            "base_rate_brier": 0.183216,
+            "base_rate_ece": 0.028571,
+            "brier": 0.200626,
+            "calibrator_version": "logreg-l2-v1:1d7364dbf395",
+            "ece": 0.118727,
+            "n_heldout": 25,
+            "n_train_members": 175,
+            "n_train_rows": 525,
+            "positives": 19,
+            "precision": 0.75,
+            "recall": 0.473684,
+            "seed": 0,
+            "train_base_rate": 0.788571
+          },
+          {
+            "abstention_rate": 0.56,
+            "base_rate_brier": 0.182433,
+            "base_rate_ece": 0.005714,
+            "brier": 0.188211,
+            "calibrator_version": "logreg-l2-v1:f801ef05423f",
+            "ece": 0.069562,
+            "n_heldout": 25,
+            "n_train_members": 175,
+            "n_train_rows": 525,
+            "positives": 19,
+            "precision": 0.818182,
+            "recall": 0.473684,
+            "seed": 1,
+            "train_base_rate": 0.765714
+          },
+          {
+            "abstention_rate": 0.52,
+            "base_rate_brier": 0.182922,
+            "base_rate_ece": 0.022857,
+            "brier": 0.194181,
+            "calibrator_version": "logreg-l2-v1:12186864e472",
+            "ece": 0.070491,
+            "n_heldout": 25,
+            "n_train_members": 175,
+            "n_train_rows": 525,
+            "positives": 19,
+            "precision": 0.75,
+            "recall": 0.473684,
+            "seed": 2,
+            "train_base_rate": 0.782857
+          }
+        ],
+        "positives": 57,
+        "precision": 0.771429,
+        "prevalence": 0.76,
+        "recall": 0.473684,
+        "reliability": [
+          {
+            "bin": 0,
+            "frac_positive": null,
+            "hi": 0.1,
+            "lo": 0.0,
+            "mean_p": null,
+            "n": 0
+          },
+          {
+            "bin": 1,
+            "frac_positive": null,
+            "hi": 0.2,
+            "lo": 0.1,
+            "mean_p": null,
+            "n": 0
+          },
+          {
+            "bin": 2,
+            "frac_positive": null,
+            "hi": 0.3,
+            "lo": 0.2,
+            "mean_p": null,
+            "n": 0
+          },
+          {
+            "bin": 3,
+            "frac_positive": null,
+            "hi": 0.4,
+            "lo": 0.3,
+            "mean_p": null,
+            "n": 0
+          },
+          {
+            "bin": 4,
+            "frac_positive": null,
+            "hi": 0.5,
+            "lo": 0.4,
+            "mean_p": null,
+            "n": 0
+          },
+          {
+            "bin": 5,
+            "frac_positive": 1.0,
+            "hi": 0.6,
+            "lo": 0.5,
+            "mean_p": 0.599691,
+            "n": 1
+          },
+          {
+            "bin": 6,
+            "frac_positive": 0.75,
+            "hi": 0.7,
+            "lo": 0.6,
+            "mean_p": 0.65143,
+            "n": 12
+          },
+          {
+            "bin": 7,
+            "frac_positive": 0.740741,
+            "hi": 0.8,
+            "lo": 0.7,
+            "mean_p": 0.755015,
+            "n": 27
+          },
+          {
+            "bin": 8,
+            "frac_positive": 0.833333,
+            "hi": 0.9,
+            "lo": 0.8,
+            "mean_p": 0.838084,
+            "n": 30
+          },
+          {
+            "bin": 9,
+            "frac_positive": 0.4,
+            "hi": 1.0,
+            "lo": 0.9,
+            "mean_p": 0.933806,
+            "n": 5
+          }
+        ],
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "tau_high": 0.8,
+        "tau_low": 0.2,
+        "text_checks": {
+          "n": 35,
+          "passed": 35
+        },
+        "train": "175 synthetic profiles per seed"
+      },
+      "name": "escalation",
+      "reason": null,
+      "status": "ok"
     }
   ],
   "cohort_seed": 0,
@@ -443,12 +717,12 @@
     "valence": "valence-v2"
   },
   "rule_version": "boundary-v1",
-  "runs_digest": "71c12e33859c60ddf829cf9a9dcbad3bde15643ce85f4c1aca822d9cc528cd7b",
+  "runs_digest": "f1c0709dca7d4838b014e95a43219fd73ec03d250918c4c6f2a8cb6bcd9f36fd",
   "runs_version": "eval-v1",
   "schema": "daypart-metrics/v1",
   "summary": {
     "failed": 0,
     "not_run": 3,
-    "ok": 8
+    "ok": 9
   }
 }

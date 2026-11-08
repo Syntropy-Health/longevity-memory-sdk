@@ -50,13 +50,15 @@ def test_default_runs():
     assert cfg.version == "eval-v1" and cfg.cohort_seed == 0
     assert [a.name for a in cfg.arms] == [
         "r2_boundary_dsl", "env_always_none", "env_always_barrier_problem_solving",
-        "env_random_intent", "i1_gate", "base", "sft", "dpo", "grpo", "rm", "jev",
+        "env_random_intent", "i1_gate", "base", "sft", "dpo", "grpo", "rm", "jev", "escalation",
     ]
     assert cfg.arms[0].corpus == "tests/sealed/data/r2_corpus_v1.jsonl"
     for arm, pol in zip(cfg.arms[1:4], POLICIES):
         assert (arm.kind, arm.policy, arm.n_scenarios, arm.seeds, arm.horizon) == ("env_baseline", pol, 50, (0, 1, 2), 14)
     assert all((a.kind, a.model) == ("boundary_eval", a.name) for a in cfg.arms[5:8])
-    assert all(a.kind == "not_run" and a.reason.strip() for a in cfg.arms[8:])
+    assert all(a.kind == "not_run" and a.reason.strip() for a in cfg.arms[8:11])
+    track_b = cfg.arms[11]
+    assert (track_b.kind, track_b.seeds, track_b.horizon) == ("escalation", (0, 1, 2), 42)
 
 
 @pytest.mark.parametrize(

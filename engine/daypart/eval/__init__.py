@@ -16,6 +16,7 @@ from daypart.eval.harness import (
 )
 from daypart.eval.models import (
     ARM_KINDS,
+    EXTENSION_ARM_KINDS,
     ARM_STATUSES,
     POLICIES,
     SCHEMA,
@@ -30,6 +31,7 @@ from daypart.eval.policies import POLICY_TEXT
 
 __all__ = [
     "ARM_KINDS",
+    "EXTENSION_ARM_KINDS",
     "ARM_STATUSES",
     "POLICIES",
     "POLICY_TEXT",
