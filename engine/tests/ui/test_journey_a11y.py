@@ -318,25 +318,35 @@ RING_JS = """e => { const s = getComputedStyle(e);
 class Keyboard:
     """Moves focus with Tab / Shift+Tab only and records each focused element's ring.
 
-    ``rings`` holds (description, focused ring, unfocused ring): the unfocused ring is read once
-    focus has moved on, so every Tab stop is checked against T10.2's visible-focus rule.
+    ``focused`` holds (description, focused ring) for every stop, so each one is checked against the
+    spec ring. ``rings`` holds (description, focused ring, unfocused ring): the unfocused ring is read
+    only once focus has really left the element, so a stop that a key is pressed on stays pending
+    until the next Tab moves on (QG P3.2 K5). A stop removed from the page before focus left it is
+    listed in ``dropped``. ``targets`` are the stops ``to()`` was asked to reach.
     """
 
     MAX_STOPS = 200
 
     def __init__(self, page: Page):
         self.page = page
+        self.focused: list[tuple[str, str]] = []
         self.rings: list[tuple[str, str, str]] = []
+        self.dropped: list[str] = []
+        self.targets: list[str] = []
         self._pending: tuple[Any, str, str] | None = None
 
     def _settle_previous(self) -> None:
         if self._pending is None:
             return
         handle, desc, focused = self._pending
+        state = handle.evaluate("e => !e.isConnected ? 'gone' : e === document.activeElement ? 'focused' : 'left'")
+        if state == "focused":  # a key was pressed on it and focus stayed: read it after the next move
+            return
         self._pending = None
-        connected = handle.evaluate("e => e.isConnected && e !== document.activeElement")
-        if connected:
+        if state == "left":
             self.rings.append((desc, focused, handle.evaluate(RING_JS)))
+        else:
+            self.dropped.append(desc)
         handle.dispose()
 
     def press(self, key: str) -> None:
@@ -346,11 +356,16 @@ class Keyboard:
     def _step(self, key: str) -> str:
         self.page.keyboard.press(key)
         self._settle_previous()
+        if self._pending is not None:  # focus did not move (a single focusable element): keep the old one
+            self._pending[0].dispose()
+            self._pending = None
         handle = self.page.evaluate_handle("document.activeElement")
         desc = handle.evaluate(
             "e => e.tagName + (e.id ? '#' + e.id : '') + ' ' + (e.value && e.type === 'radio' ? e.value : (e.textContent || '').trim().slice(0, 40))"
         )
-        self._pending = (handle, desc, handle.evaluate(RING_JS))
+        ring = handle.evaluate(RING_JS)
+        self.focused.append((desc, ring))
+        self._pending = (handle, desc, ring)
         return desc
 
     def to(self, match: str, *, text: str = "", back: bool = False) -> None:
@@ -359,8 +374,9 @@ class Keyboard:
         key = "Shift+Tab" if back else "Tab"
         probe = "([s, t]) => { const e = document.activeElement; return !!e && e.matches(s) && (e.textContent || '').includes(t); }"
         for _ in range(self.MAX_STOPS):
-            self._step(key)
+            desc = self._step(key)
             if self.page.evaluate(probe, [match, text]):
+                self.targets.append(desc)
                 return
         raise AssertionError(f"{key} never reached {match}")
 
@@ -420,10 +436,13 @@ def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
     kb.press("Shift+Tab")  # settle the last stop
 
     assert len(kb.rings) >= 15, kb.rings
+    checked = {d for d, _, _ in kb.rings}
+    unchecked = [t for t in kb.targets if t not in checked]
+    assert unchecked == [], f"journey stops never compared focused vs unfocused: {unchecked}"
     same = [(d, f) for d, f, u in kb.rings if f == u]
     assert same == [], f"focused elements with no visible focus change: {same}"
-    # the spec's ring (HAC-35 §5): a solid outline of at least 2 px, not the browser's 1 px default
-    thin = [(d, f) for d, f, _ in kb.rings if not _strong_ring(f)]
+    # the spec's ring (HAC-35 §5, stricter than T10.2's "differs"): a solid outline of at least 2 px
+    thin = [(d, f) for d, f in kb.focused if not _strong_ring(f)]
     assert thin == [], f"focused elements without the spec focus ring: {thin}"
 
 
