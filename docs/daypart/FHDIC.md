@@ -13,7 +13,7 @@ This page was prepared by agents. The principal submits it; agents submit nothin
 | **Technical documentation** | [Architecture](#architecture) · [How to run](#how-to-run) · [Build contracts](contracts/) · [A&D (Clinical Human Clone)](../../workstreams/daypart/AND.md) · [Dev doc](../workstreams/daypart.md) |
 | **Assumptions, dependencies, limitations** | [Section below](#assumptions-dependencies-limitations) |
 | **Training record** | [Section below](#training-record) · raw records in [`docs/daypart/results/`](results/) |
-| **Track B** (calibrated escalation) | in progress (AIR-319 child 2) |
+| **Track B** (calibrated escalation) | Built; its calibration is no better than the base rate. [Section below](#track-b-calibrated-escalation-standalone-fallback) |
 | **Track C** (prevention passport) | Built. [Section below](#track-c-prevention-passport) |
 
 The HAC-38 submission pack (`docs/daypart/submission/`) is not on `daypart/build` yet, so this page holds the content itself. When the pack lands, this index links to it.
@@ -155,9 +155,78 @@ Built, as the passport:
 - **Pattern passport** (on `main`): one card per metric; the number is shown only when the metric is ready and the claim is safe, otherwise the card is withheld (fail closed). Code: [`engine/daypart/passport/`](../../engine/daypart/passport/). Tests: [`engine/tests/sealed/test_passport.py`](../../engine/tests/sealed/test_passport.py) (sealed, written from [contract slice E](contracts/CONTRACT-slice-E-eval-passport.md)), [`engine/tests/unit/test_passport_unit.py`](../../engine/tests/unit/test_passport_unit.py).
 - **Health Clone Passport** (on staging, `daypart/build`): observation cards from confirmed check-ins, values as recorded and withheld after 14 days, pattern cards from LHM flags, a 5-step evidence thread per card, reference ranges only where a public source states them; plus the suggested next step that falls back to a clinician handoff. Code: [`engine/daypart/passport/view.py`](../../engine/daypart/passport/view.py), [`engine/daypart/checkin/next_step.py`](../../engine/daypart/checkin/next_step.py), [`engine/daypart/evidence/`](../../engine/daypart/evidence/). Tests: [`engine/tests/unit/test_passport_view_unit.py`](../../engine/tests/unit/test_passport_view_unit.py), [`engine/tests/unit/test_next_step_unit.py`](../../engine/tests/unit/test_next_step_unit.py), [`engine/tests/unit/test_evidence_unit.py`](../../engine/tests/unit/test_evidence_unit.py), [`engine/tests/unit/test_lab_unit.py`](../../engine/tests/unit/test_lab_unit.py).
 
-## Track B: calibrated escalation
+## Track B: calibrated escalation (standalone fallback)
 
-In progress (AIR-319 child 2). The CTO updates this section and the index row at land: to built, with its tests, or to not built, in which case it is listed under limitations.
+**Status: built, and it does not beat the base rate.** It is a tested standalone module,
+`engine/daypart/escalation/`. On the 25 held-out profiles its calibration is
+**no better than a constant base-rate predictor**: the Brier score and ECE are both worse. That is the result, reported as is.
+Contract: AIR-319 document `track-b-spec`. Code: [`engine/daypart/escalation/`](../../engine/daypart/escalation/). Tests: [`engine/tests/unit/test_escalation_docs_unit.py`](../../engine/tests/unit/test_escalation_docs_unit.py), [`engine/tests/unit/test_escalation_unit.py`](../../engine/tests/unit/test_escalation_unit.py), plus the sealed Track B suite.
+
+### What it does
+For one synthetic member at day *t*, it estimates `p_escalate`, the probability that the member needs a
+clinician hand-off, and then decides `escalate`, `no_escalation` or `abstain`.
+
+- **Observables only.** `features(history)` reads per-day state, adherence, check-in flags, sentiment
+  and check-in text. It refuses any object that carries latents (`Profile`, `Latents`, `Cohort`).
+- **Calibrator.** An L2-regularised logistic regression (Newton's method, so no randomness) over 11
+  history features. `fit(members, seed)` trains on the 175 synthetic profiles. Each profile gives one row
+  at 14, 28 and 42 days of history. `fit` raises `CuratedMemberError` (an I1 `CuratedLeakError`) when
+  given any curated id, a curated profile, or curated latents under another id. The I1 gate
+  (`python -m daypart.ci.i1_check`) also checks the rows `fit` trains on (`escalation.fit_rows`).
+- **Decision rule.**
+  - Hard gate: a crisis-marker hit (the `boundary-v1` pack markers or member crisis language, via
+    `daypart.checkin.crisis.is_crisis`) always gives `escalate` with `p_escalate = 1.0`.
+  - With less than 14 days of history (the shortest training history): `abstain` at the training base
+    rate, because the model would be extrapolating.
+  - Otherwise: `escalate` if p ≥ 0.8, `no_escalation` if p ≤ 0.2, `abstain` in between. Both thresholds
+    are fixed constants, set at 4:1 odds before any held-out run and never tuned on held-out data.
+- **Text.** Only an escalation emits text, and it is exactly the existing `clinician_handoff` policy
+  text (contract v1.1), for model-driven and crisis escalations alike. It passes `membrane.dsl.check()`,
+  and the arm checks every emitted text again. The engine's check-in crisis path, which is separate from
+  this module, still sends its own emergency-services hand-off.
+
+### Results (`python -m daypart.eval`, arm `escalation`)
+Ground truth is the simulator's hidden `escalation_trigger != "none"`. Held-out set: the curated-25,
+assessed on 42 days of history, under seeds 0, 1 and 2 (75 assessments, 57 positive, prevalence 0.760).
+Source: `docs/daypart/results/metrics.json`, regenerated by
+`cd engine && uv run python -m daypart.eval --out ../docs/daypart/results/metrics.json`.
+
+<!-- track-b-results: checked against metrics.json by engine/tests/unit/test_escalation_docs_unit.py -->
+| metric | calibrated | base rate |
+|---|---|---|
+| brier | 0.194 | 0.183 |
+| ece | 0.064 | 0.019 |
+| abstention_rate | 0.533 | 1.000 |
+| precision | 0.771 | n/a |
+| recall | 0.474 | 0.000 |
+
+The base-rate predictor always predicts the training prevalence (0.779). That value falls inside the
+abstain band, so it never escalates.
+
+Reliability (calibrated; only non-empty bins of the 10 equal-width bins):
+
+| bin | n | mean p | observed positive rate |
+|---|---|---|---|
+| 0.5–0.6 | 1 | 0.600 | 1.000 |
+| 0.6–0.7 | 12 | 0.651 | 0.750 |
+| 0.7–0.8 | 27 | 0.755 | 0.741 |
+| 0.8–0.9 | 30 | 0.838 | 0.833 |
+| 0.9–1.0 | 5 | 0.934 | 0.400 |
+
+**Reading.** Escalation precision (0.771) is about the same as the prevalence (0.760), so the
+model-driven escalations carry no real lift. In the baseline (no-intervention) trajectories the arm scores,
+`escalation_trigger` changes behaviour only through a +0.03 shift in slip risk
+(`simmember.dynamics.risk`), which is too weak for the observable history to recover. The crisis hard gate does work, but it is tested only in unit and sealed tests: the
+simulator's held-out histories carry no check-in text, so the arm never exercises it.
+
+### Limitations
+- **Simulator-only ground truth.** The labels come from synthetic latents. Nothing here is clinically
+  validated. No real member data is used, and no clinical claim is made.
+- **Not better than the base rate** on this simulator. In this build it is a fallback that defaults to
+  abstaining, not a predictor to rely on.
+- The 25 held-out profiles give 75 correlated assessments, so every metric has wide uncertainty.
+- The crisis gate is lexical: wording outside the marker list and the crisis patterns is missed.
+- It is standalone: nothing in the demo or the check-in pipeline calls it yet.
 
 ## Assumptions, dependencies, limitations
 
