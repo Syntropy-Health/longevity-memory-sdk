@@ -420,3 +420,18 @@ def test_qg_sec2_mapping_text_is_refused():
     with pytest.raises(TypeError, match="text"):
         as_history([{"adhered": True}], texts=[{"body": "x"}])
 
+
+
+def test_qg_tst1_evaluate_uses_exactly_history_days(monkeypatch):
+    import daypart.escalation.evaluate as ev_mod
+
+    seen = []
+    real = ev_mod.assess
+
+    def spy(h, cal):
+        seen.append(len(as_history(h).days))
+        return real(h, cal)
+
+    monkeypatch.setattr(ev_mod, "assess", spy)
+    ev_mod.evaluate([0], history_days=14)
+    assert len(seen) == 25 and set(seen) == {14}
