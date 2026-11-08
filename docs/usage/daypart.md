@@ -26,7 +26,7 @@ hosted demo once the CTO deploys each phase to staging; until then, run the demo
 
 Run `uv run daypart-demo serve` from `engine/` (or open the hosted demo) and follow the journey:
 
-1. **Check in** (`#checkin`, "What matters today?"): type a line, pick a demo file, or upload one.
+1. **Check in** (`#checkin`, "What matters today?"): type a line, or pick a demo file or demo image. (The API also takes a multipart upload; it accepts only the allow-listed demo fixtures.)
 2. **Review** (`#review`): confirm, correct, discard or save each proposal as unmapped. Nothing is
    saved until you finish the review. Crisis language shows a fixed hand-off notice instead.
 3. **Passport** (`#passport`): one card per measure, with its evidence thread. A sourced reference
