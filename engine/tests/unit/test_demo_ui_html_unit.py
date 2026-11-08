@@ -602,6 +602,26 @@ def test_c2_correct_sends_unit_and_date_only_when_changed():
     ]
 
 
+def test_r1_correct_on_a_flagged_proposal_states_the_shown_unit_and_date():
+    """QG P3 R1: A&D §4.2, ``unit_assumed`` clears when ``correct`` states a unit explicitly (and
+    ``ambiguous_date`` a date). On a flagged proposal Confirm is disabled and Correct is the way to accept
+    it, so the unit / date shown in the Correct fields is sent even when unchanged; otherwise a single-unit
+    concept (heart rate, only ``/min``) or a right guessed date could never be cleared."""
+    got = _run_js(
+        ["correction"],
+        "[correction({unit:'/min',date:'2026-11-07',value:62,flags:['unit_assumed']}, '62', '/min', '2026-11-07'),"
+        " correction({unit:'h',date:'2026-09-28',value:7,flags:['ambiguous_date']}, '7', 'h', '2026-09-28'),"
+        " correction({unit:'kg',date:'2026-11-07',value:70,flags:['contradiction']}, '70', 'kg', '2026-11-07'),"
+        " correction({unit:'/min',date:'2026-11-07',value:62,flags:['unit_assumed','ambiguous_date']}, '62', '', '')]",
+    )
+    assert got == [
+        {"value": 62, "unit": "/min"},
+        {"value": 7, "date": "2026-09-28"},
+        {"value": 70},
+        {"value": 62},
+    ]
+
+
 def test_c1_correct_unit_select_offers_the_allowed_units():
     units = "{'29463-7':['kg','[lb_av]','g'],'8867-4':['/min']}"
     got = _run_js(
