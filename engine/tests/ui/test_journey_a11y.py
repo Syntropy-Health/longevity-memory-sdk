@@ -771,3 +771,42 @@ def test_next_choice_post_failure(page: Page, base_url: str, axe_source: str, fa
     msg.get_by_role("button", name="Try again").click()
     expect(page.locator("#ns-result")).to_contain_text("Goal set")
     assert posts["n"] == 2
+
+
+# ---------------------------------------------------------------- A&D §4.1: a flagged value is never confirmed
+
+
+FLAG_CASES = [("unit_assumed", "slept 6", "unit"), ("ambiguous_date", "slept 6 hours on monday", "date")]
+
+
+@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
+@pytest.mark.parametrize("flag,text,field", FLAG_CASES, ids=[c[0] for c in FLAG_CASES])
+def test_flagged_proposal_correct_states_the_shown_field(
+    browser: Browser, page_errors, base_url: str, axe_source: str, flag: str, text: str, field: str, viewport
+):
+    """QG P3 K5 (and R1, G29): on a ``unit_assumed`` / ``ambiguous_date`` proposal Confirm is disabled;
+    an unedited Correct sends the unit / date shown, the save succeeds, and the open Correct fields pass
+    axe and reflow."""
+    page = _new_page(browser, page_errors, viewport=viewport)
+    posted: list[str] = []
+    page.on("request", lambda r: posted.append(r.post_data or "") if r.method == "POST" and r.url.endswith("/review") else None)
+    check_in_text(page, base_url, text)
+    wait_review(page)
+    art = page.locator("#rv-list article").first
+    expect(art.locator("ul.tags")).to_contain_text(FLAG_LABELS[flag])
+    expect(art.locator("input[type=radio][value=confirm]")).to_be_disabled()
+    expect(art.locator(".notice")).to_contain_text("It cannot be confirmed")
+    art.locator("input[type=radio][value=correct]").check()
+    expect(art.locator(".correct-fields")).to_be_visible()
+    shown = art.locator("[id$='-u']").input_value() if field == "unit" else art.locator("input[type=date]").input_value()
+    where = f"#review Correct open ({flag}) @ {viewport['width']}px"
+    assert_axe_clean(page, axe_source, where)
+    assert_no_hscroll(page, where)
+    page.click("#rv-submit")
+    expect(page.locator("#rv-msg")).to_contain_text("to your clone")
+    decision = json.loads(posted[-1])["decisions"][0]
+    assert decision["action"] == "correct" and decision.get(field) == shown, (decision, shown)
+    page.context.close()
+
+
+FLAG_LABELS = {"unit_assumed": "Unit assumed", "ambiguous_date": "Ambiguous date"}

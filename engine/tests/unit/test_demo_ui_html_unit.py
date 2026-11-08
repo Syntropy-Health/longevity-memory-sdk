@@ -1062,3 +1062,78 @@ def test_k4_invalid_correction_links_each_reason_to_its_field():
 @pytest.mark.parametrize("err", ["missing_decision", "unresolved_flags", "invalid_correction"])
 def test_k4_refusal_notice_takes_focus(err):
     assert _focused_notice({"error": err}) is True
+
+
+_PCARD = ["FLAG_NAMES", "FLAG_WHY", "ACTIONS", "SOURCE_KINDS", "pTitle", "shiftDate", "unitChoices", "updateCountRv", "proposalCard"]
+_FLAGGED = (
+    '{ proposal_id: "p1", concept_code: "8867-4", display: "Heart rate", value: 62, unit: "/min", date: "2026-09-27",'
+    ' flags: ["unit_assumed"], blocking: true, confidence: "medium", method: "rules-v1", source_kind: "text" }'
+)
+_AMBIG = (
+    '{ proposal_id: "p2", concept_code: "93832-4", display: "Sleep", value: 7, unit: "h", date: "2026-09-28",'
+    ' flags: ["ambiguous_date"], blocking: true, confidence: "medium", method: "rules-v1", source_kind: "text" }'
+)
+# decisionsRv asks for the checked radio by name; the stub DOM has no attribute selectors.
+_CHECKED = """document.querySelector = function (sel) { var m = /name="([^"]+)"/.exec(sel);
+  return ALL.find(function (e) { return e.name === m[1] && e.checked && connected(e); }) || null; };"""
+
+
+def test_k5_flagged_proposal_card_cannot_be_confirmed():
+    """QG P3 K5: A&D §4.1: a blocking flag is never confirmed. Confirm is disabled, Correct is the first
+    decision, and the card says why (aria-describedby on the fieldset)."""
+    got = _run_page(
+        _BASE + _REVIEW + _PCARD,
+        f"""
+        var units = {{ "8867-4": ["/min"], "93832-4": ["h", "min"] }};
+        var list = mk("rv-list");
+        function look(p) {{
+          var art = proposalCard(p, units); list.append(art);
+          var radios = art.querySelectorAll("input").filter(function (i) {{ return i.type === "radio"; }});
+          var fs = art.querySelector("fieldset");
+          return {{ cls: art.className, ids: radios.map(function (r) {{ return [r.value, r.id, r.disabled === true]; }}),
+                   described: fs.getAttribute("aria-describedby"), why: (art.querySelector("p.notice") || {{ textContent: null }}).textContent }};
+        }}
+        var p1 = {_FLAGGED};
+        var free = Object.assign({{}}, p1, {{ proposal_id: "p3", flags: [], blocking: false, confidence: "high" }});
+        return [look(p1), look(free)];
+        """,
+    )
+    blocked, free = got
+    assert "proposal--blocked" in blocked["cls"]
+    assert blocked["ids"][0] == ["confirm", "", True]
+    assert blocked["ids"][1] == ["correct", "rv-p1-first", False]
+    assert blocked["described"] == "rv-p1-why"
+    assert "The unit was not written, so it was assumed." in blocked["why"] and "It cannot be confirmed" in blocked["why"]
+    assert free["ids"][0] == ["confirm", "rv-p3-first", False] and free["described"] is None and free["why"] is None
+
+
+def test_k5_correct_decision_reads_value_unit_and_date_fields():
+    """QG P3 K5 / R1 (G29): an unedited Correct on a flagged card states the shown unit (unit_assumed) or
+    date (ambiguous_date); edited fields are read from their own inputs."""
+    got = _run_page(
+        _BASE + _REVIEW + _PCARD,
+        f"""
+        {_CHECKED}
+        var units = {{ "8867-4": ["/min"], "93832-4": ["h", "min"] }};
+        var p1 = {_FLAGGED}, p2 = {_AMBIG};
+        S.checkins = {{ c1: {{ status: "pending_review", result: null, proposals: [p1, p2] }} }};
+        rvCurrent = "c1";
+        var list = mk("rv-list");
+        [p1, p2].forEach(function (p) {{ list.append(proposalCard(p, units)); }});
+        function pick(base) {{ ALL.find(function (e) {{ return e.name === base + "-d" && e.value === "correct"; }}).checked = true; }}
+        pick("rv-p1"); pick("rv-p2");
+        $("rv-p1-u").value = "/min";  // a select's value is its selected option in a browser
+        $("rv-p2-u").value = "h";
+        var unedited = decisionsRv().decisions;
+        $("rv-p1-v").value = "64"; $("rv-p2-d").value = "2026-09-29";
+        return [unedited, decisionsRv().decisions];
+        """,
+    )
+    assert got[0] == [
+        {"proposal_id": "p1", "action": "correct", "value": 62, "unit": "/min"},
+        {"proposal_id": "p2", "action": "correct", "value": 7, "date": "2026-09-28"},
+    ]
+    assert got[1] == [
+        {"proposal_id": "p1", "action": "correct", "value": 64, "unit": "/min"},
+        {"proposal_id": "p2", "action": "correct", "value": 7, "date": "2026-09-29"},
+    ]
