@@ -966,3 +966,16 @@ def test_k1_lab_mismatch_and_missing_seed_rows_render_the_a_and_d_words():
     assert not re.search(r"\d", gp["Metric"])
     for row in (got["mm"], got["ns"], got["gp"]):
         assert all(label for label, _ in row)  # every cell has data-label (the 375 px stacked layout)
+
+
+def test_k6_footer_carries_the_attribution_loinc_notice_verbatim(html):
+    """QG P3 K6: D-A5 / T5.6: the LOINC notice in the UI footer is the ATTRIBUTION notice word for word."""
+    attribution = (Path(__file__).resolve().parents[3] / "ATTRIBUTION.md").read_text()
+    sec = attribution[attribution.index("### LOINC") :]
+    notice = next(p for p in sec.split("\n\n")[1:] if p.strip()).strip()
+    assert notice.startswith("This material contains content from LOINC")
+    root = _tree(html)
+    foot = next(n for n in root.iter() if n.tag == "footer")
+    assert " ".join(notice.split()) in " ".join(foot.text().split())
+    hrefs = {n.attrs.get("href") for n in foot.iter() if n.tag == "a"}
+    assert {"https://loinc.org", "https://loinc.org/license/"} <= hrefs
