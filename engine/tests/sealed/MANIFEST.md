@@ -64,3 +64,5 @@ Contract: AIR-319 document `track-b-spec` (contract v1). Written double-blind; `
 | file | spec section | categories |
 |---|---|---|
 | `test_escalation.py` | Interface; Decision rule; Ground truth; Evaluation; Done when | `functional/esc-interface`, `functional/esc-features`, `functional/esc-decision`, `functional/esc-crisis-gate`, `functional/esc-determinism`, `functional/esc-i1`, `functional/esc-membrane`, `functional/esc-offline`, `integration/esc-eval-arm` |
+
+**Edit (AIR-332):** `test_eval.py` `DEFAULT_ARMS` gains `("escalation", "escalation")` as the 12th arm, and `TestDefaultConfig::test_arms_and_summary` expects it `ok` (summary `ok` = 6 + boundary_eval ok, `not_run` = 12 − ok). Source: `track-b-spec` contract v1.1 item 4 (one packaged arm, `kind: escalation`) and "Done when" (runs offline in CI). Name and append position as directed by the CTO on AIR-332.
