@@ -6,7 +6,6 @@ import json
 
 import pytest
 
-from daypart.checkin.crisis import HANDOFF_TEXT
 from daypart.escalation import (
     FEATURE_NAMES,
     MODEL_FEATURES,
@@ -180,8 +179,9 @@ def test_crisis_hard_gate(cal):
     clean = {"days": _days("1" * 30), "texts": ["Walked after lunch, felt good."]}
     for text in ("I want to end my life", "I called the crisis line last night", "thinking about suicide"):
         a = assess({"days": _days("1" * 30), "texts": [text]}, cal)
-        assert (a.p_escalate, a.decision, a.reasons, a.text) == (1.0, "escalate", ["crisis_marker_hits"], HANDOFF_TEXT)
-        assert dsl.check(a.text, crisis_context=True).passed
+        handoff = POLICY_TEXT["clinician_handoff"]
+        assert (a.p_escalate, a.decision, a.reasons, a.text) == (1.0, "escalate", ["crisis_marker_hits"], handoff)
+        assert dsl.check(a.text).passed
     assert assess(clean, cal).reasons != ["crisis_marker_hits"]
 
 
@@ -386,3 +386,21 @@ def test_membrane_failure_paths(monkeypatch, cal):
     finally:
         monkeypatch.undo()
         model._texts.cache_clear()
+
+
+def test_history_from_v11(cohort):
+    from daypart.escalation import history_from
+
+    traj = cohort.trajectories["syn-003"]
+    h = history_from(traj, 9, ["fine today"])
+    assert isinstance(h, History) and len(h.days) == 10 and h.texts == ("fine today",)
+    assert features(h) == features(until(as_history(traj, ["fine today"]), 9))
+
+
+def test_fit_runs_shared_i1_guard(monkeypatch, cohort):
+    import daypart.escalation.model as model
+
+    calls = []
+    monkeypatch.setattr(model, "assert_no_curated", lambda rows, man: calls.append(list(rows)))
+    fit([(p, cohort.trajectories[p.member_id]) for p in cohort.training_profiles()[:3]], 0)
+    assert len(calls) == 1 and len(calls[0]) == 3

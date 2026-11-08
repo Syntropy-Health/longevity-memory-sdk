@@ -22,7 +22,7 @@ from pydantic import ConfigDict, field_validator
 
 from daypart.escalation.features import CRISIS_FEATURE, MODEL_FEATURES, features
 from daypart.escalation.history import until
-from daypart.simmember.manifest import CuratedLeakError
+from daypart.simmember.manifest import CuratedLeakError, assert_no_curated, latent_hash
 
 #: Decision band: fixed constants (4:1 odds either way), never tuned on held-out data.
 TAU_LOW = 0.2
@@ -41,6 +41,17 @@ L2_PENALTY = 1.0
 _MAX_NEWTON = 100
 _TOL = 1e-10
 _N_REASONS = 3
+
+def _curated_manifest() -> dict[str, Any]:
+    from daypart.simmember.cohort import CURATED_PROFILES
+
+    return {
+        "curated_ids": sorted(p.member_id for p in CURATED_PROFILES),
+        "curated_latent_hashes": {p.member_id: latent_hash(p.latents) for p in CURATED_PROFILES},
+    }
+
+
+_CURATED_MANIFEST = _curated_manifest()
 
 Decision = Literal["escalate", "no_escalation", "abstain"]
 
@@ -203,6 +214,13 @@ def _resolve(members: Any, seed: int) -> list[tuple[str, bool, Any]]:
             curated.add(traj.member_id)
     if curated:
         raise CuratedMemberError(f"fit refuses curated (held-out) members (I1): {', '.join(sorted(curated))}")
+    try:  # and the shared I1 guard every training-data path runs (track-b-spec v1.1)
+        assert_no_curated(
+            ({"profile": prof.model_dump(mode="json"), "trajectory_member": traj.member_id} for prof, traj in parsed),
+            _CURATED_MANIFEST,
+        )
+    except CuratedLeakError as exc:
+        raise CuratedMemberError(str(exc)) from None
     for prof, traj in parsed:
         if traj.member_id != prof.member_id:
             raise ValueError(f"trajectory {traj.member_id!r} does not belong to {prof.member_id!r}")
@@ -272,16 +290,15 @@ def fit(members: Any, seed: int) -> Calibrator:
 
 
 @lru_cache(maxsize=1)
-def _texts() -> tuple[str, str]:
-    """(model escalate text, crisis escalate text), both checked by the membrane DSL once."""
-    from daypart.checkin.crisis import HANDOFF_TEXT
+def _texts() -> str:
+    """The escalate text (v1.1: exactly the ``clinician_handoff`` policy text), checked by the DSL once."""
     from daypart.eval.policies import POLICY_TEXT
     from daypart.membrane import dsl
 
     handoff = POLICY_TEXT["clinician_handoff"]
-    if not dsl.check(handoff).passed or not dsl.check(HANDOFF_TEXT, crisis_context=True).passed:
+    if not dsl.check(handoff).passed:
         raise RuntimeError("escalation text fails membrane.dsl.check()")
-    return handoff, HANDOFF_TEXT
+    return handoff
 
 
 def decide(p: float) -> Decision:
@@ -300,7 +317,7 @@ def assess(history: Any, calibrator: Calibrator) -> Assessment:
     if not isinstance(calibrator, Calibrator):
         raise TypeError(f"assess needs a fitted Calibrator, got {type(calibrator).__name__}")
     feats = features(history)
-    handoff, crisis_text = _texts()
+    handoff = _texts()
     if feats[CRISIS_FEATURE] > 0:
         return Assessment(
             p_escalate=1.0,
@@ -308,7 +325,7 @@ def assess(history: Any, calibrator: Calibrator) -> Assessment:
             reasons=[CRISIS_FEATURE],
             rule_version=RULE_VERSION,
             calibrator_version=calibrator.version,
-            text=crisis_text,
+            text=handoff,
         )
     if feats["days_observed"] < MIN_HISTORY_DAYS:
         return Assessment(

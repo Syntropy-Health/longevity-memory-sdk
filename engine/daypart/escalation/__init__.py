@@ -6,7 +6,7 @@ simulator's hidden ``escalation_trigger`` and is not clinically validated.
 """
 
 from daypart.escalation.features import CRISIS_FEATURE, FEATURE_NAMES, MODEL_FEATURES, features
-from daypart.escalation.history import Day, History, as_history, until
+from daypart.escalation.history import Day, History, as_history, history_from, until
 from daypart.escalation.model import (
     CALIBRATOR_KIND,
     DECISION_RULE_VERSION,
@@ -42,6 +42,7 @@ __all__ = [
     "assess",
     "decide",
     "features",
+    "history_from",
     "fit",
     "training_rows",
     "until",

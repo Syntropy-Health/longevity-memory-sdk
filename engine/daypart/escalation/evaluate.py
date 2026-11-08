@@ -12,8 +12,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from daypart.escalation import metrics as m
-from daypart.escalation.features import CRISIS_FEATURE
-from daypart.escalation.history import until
+from daypart.escalation.history import history_from
 from daypart.escalation.model import (
     CALIBRATOR_KIND,
     DECISION_RULE_VERSION,
@@ -69,10 +68,10 @@ def evaluate(seeds: Sequence[int], history_days: int = 42) -> dict[str, Any]:
         cal = fit(cohort, seed)  # training profiles only (I1)
         p, dec, y = [], [], []
         for prof in cohort.heldout_profiles():
-            a = assess(until(cohort.trajectories[prof.member_id], history_days - 1), cal)
+            a = assess(history_from(cohort.trajectories[prof.member_id], history_days - 1), cal)
             if a.text is not None:
                 n_text += 1
-                if not dsl.check(a.text, crisis_context=a.reasons == [CRISIS_FEATURE]).passed:
+                if not dsl.check(a.text).passed:
                     n_text_fail += 1
             p.append(a.p_escalate)
             dec.append(a.decision)

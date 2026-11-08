@@ -140,4 +140,10 @@ def until(history: Any, t: int) -> History:
     return History(h.days[: t + 1], h.texts)
 
 
-__all__ = ["Day", "History", "as_history", "until"]
+def history_from(trajectory: Any, day: int, texts: Iterable[str] | str = ()) -> History:
+    """The observables of ``trajectory`` for days ``0..day`` inclusive, plus check-in ``texts``
+    (track-b-spec v1.1). The trajectory's latents are never seen: only its day records are read."""
+    return until(as_history(trajectory, texts), day)
+
+
+__all__ = ["Day", "History", "as_history", "history_from", "until"]

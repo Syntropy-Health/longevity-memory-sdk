@@ -28,9 +28,10 @@ clinician hand-off, and then decides `escalate`, `no_escalation` or `abstain`.
     rate, because the model would be extrapolating.
   - Otherwise: `escalate` if p ≥ 0.8, `no_escalation` if p ≤ 0.2, `abstain` in between. Both thresholds
     are fixed constants, set at 4:1 odds before any held-out run and never tuned on held-out data.
-- **Text.** Only an escalation emits text. The model-driven text is the existing `clinician_handoff`
-  policy text. A crisis hit uses the engine's existing crisis hand-off text (the same policy text plus
-  emergency services). Both pass `membrane.dsl.check()`; the arm checks every emitted text again.
+- **Text.** Only an escalation emits text, and it is exactly the existing `clinician_handoff` policy
+  text (contract v1.1), for model-driven and crisis escalations alike. It passes `membrane.dsl.check()`,
+  and the arm checks every emitted text again. The engine's check-in crisis path, which is separate from
+  this module, still sends its own emergency-services hand-off.
 
 ### Results (`python -m daypart.eval`, arm `escalation`)
 Ground truth is the simulator's hidden `escalation_trigger != "none"`. Held-out set: the curated-25,
