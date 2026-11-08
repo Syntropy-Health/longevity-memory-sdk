@@ -658,3 +658,18 @@ def test_extractor_fault_says_nothing_was_saved_and_keeps_the_form(page: Page, b
     expect(msg).not_to_contain_text("error 500")
     expect(page.locator("#ci-form")).to_be_visible()
     assert page.evaluate("location.hash") == "#checkin"
+
+
+def test_lab_failure_after_a_good_load_hides_the_table(page: Page, base_url: str):
+    """QG P3.2 K4: #lab-body starts hidden in the markup, so prove the failure path hides a shown table."""
+    goto(page, base_url, "lab")
+    wait_route_ready(page, "lab")
+    expect(page.locator("#lab-body")).to_be_visible()
+    page.route(
+        re.compile(r".*/api/lab$"),
+        lambda route: route.fulfill(status=503, content_type="application/json", body='{"error": "unavailable"}'),
+    )
+    goto(page, base_url, "checkin")
+    goto(page, base_url, "lab")
+    expect(page.locator("#lab-msg")).to_contain_text("error 503")
+    expect(page.locator("#lab-body")).to_be_hidden()
