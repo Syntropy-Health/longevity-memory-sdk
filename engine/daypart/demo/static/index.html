@@ -911,8 +911,10 @@ function loadUnits() {
   }
   return unitsPending;
 }
+var rvSeq = 0;
 async function showReview(id) {
   rvCurrent = id || null;
+  var seq = ++rvSeq; /* only the latest load draws (QG P3 B2): two overlapping loads never both render */
   var intro = $("rv-intro"), msg = clear($("rv-msg")), form = $("rv-form"), list = clear($("rv-list"));
   form.hidden = true;
   intro.textContent = "";
@@ -925,7 +927,7 @@ async function showReview(id) {
   }
   if (ci.status === "saved") { msg.append(ci.alreadySaved && !ci.result ? alreadySavedNotice(false) : savedNotice(ci.result)); return; }
   var ures = await loadUnits();
-  if (rvCurrent !== id) return; /* the route moved on while the units loaded */
+  if (seq !== rvSeq || rvCurrent !== id) return; /* a newer load, or the route moved on, while the units loaded */
   if (!(ures.ok && ures.data && ures.data.units && typeof ures.data.units === "object")) {
     msg.append(serverError(ures, function () { showReview(id); }));
     return;

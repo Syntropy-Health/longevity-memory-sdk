@@ -647,7 +647,7 @@ def test_c1_review_fetches_the_allowed_units(html):
     assert '"/api/units"' in rv and "unitChoices(p, units)" in rv
 
 
-_REVIEW = ["persist", "correction", "decisionsRv", "pid", "rvCurrent", "unitsPending", "loadUnits", "showReview", "savedNotice", "alreadySavedNotice", "submitReview", "sessionEnded"]
+_REVIEW = ["persist", "correction", "decisionsRv", "pid", "rvCurrent", "unitsPending", "loadUnits", "rvSeq", "showReview", "savedNotice", "alreadySavedNotice", "submitReview", "sessionEnded"]
 
 
 def test_c3_already_saved_revisit_shows_no_count():
