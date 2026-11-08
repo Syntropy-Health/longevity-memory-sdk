@@ -1137,3 +1137,24 @@ def test_k5_correct_decision_reads_value_unit_and_date_fields():
         {"proposal_id": "p1", "action": "correct", "value": 64, "unit": "/min"},
         {"proposal_id": "p2", "action": "correct", "value": 7, "date": "2026-09-29"},
     ]
+
+
+def test_b2_overlapping_review_loads_render_each_card_once():
+    """QG P3 B2: two showReview calls for the same check-in while /api/units is pending (leave and come
+    back on a slow network) must draw each proposal card once, not twice with duplicate ids."""
+    got = _run_page(
+        _BASE + _API + _REVIEW + _PCARD,
+        f"""
+        {_CHECKED}
+        S.checkins = {{ c1: {{ status: "pending_review", result: null, proposals: [{_FLAGGED}, {_AMBIG}] }} }};
+        ["rv-intro", "rv-msg", "rv-list", "rv-status", "session-msg"].forEach(function (i) {{ mk(i); }});
+        mk("rv-form", "form");
+        RESP.push([200, {{ units: {{ "8867-4": ["/min"], "93832-4": ["h", "min"] }} }}]);
+        var a = showReview("c1"), b = showReview("c1");
+        await Promise.all([a, b]);
+        var ids = ALL.filter(function (e) {{ return e.id && connected(e); }}).map(function (e) {{ return e.id; }});
+        return {{ cards: $("rv-list").children.length, dup: ids.filter(function (x, i) {{ return ids.indexOf(x) !== i; }}),
+                 gets: CALLS.length }};
+        """,
+    )
+    assert got == {"cards": 2, "dup": [], "gets": 1}
