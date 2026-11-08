@@ -494,25 +494,38 @@ def test_next_before_any_saved_checkin_says_check_in_first(page: Page, base_url:
 
 
 def test_next_stale_step_refetches_and_never_resends(page: Page, base_url: str, axe_source: str):
+    """HAC-48 rev 2 §3.4.2: a 422 unknown_step re-GETs the step once, shows the new suggestion and
+    the "changed" note, and never re-sends the choice."""
     saved_journal(page, base_url)
     posts: list[str] = []
+    gets = {"n": 0}
 
     def stale(route: Route) -> None:
         if route.request.method == "POST":
             posts.append(route.request.post_data or "")
             route.fulfill(status=422, content_type="application/json", body='{"error": "unknown_step"}')
-        else:
+            return
+        gets["n"] += 1
+        if gets["n"] == 1:
             route.continue_()
+            return
+        real = route.fetch().json()  # the refetch: a newer step than the one on screen
+        real.update(step_id="newer-step", text="A newer suggestion after your latest check-in.")
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(real))
 
     page.route(re.compile(r".*/api/journals/[^/]+/next-step$"), stale)
     goto(page, base_url, "next")
     wait_route_ready(page, "next")
+    old_text = page.locator("#ns-panel .suggestion").inner_text()
     page.locator("#ns-panel button.btn--primary").click()
     note = page.locator("#ns-msg")
     expect(note).to_contain_text("This suggestion has changed")
     expect(note.locator("[tabindex]").first).to_be_focused()
-    expect(page.locator("#ns-panel button").first).to_be_visible()
-    page.wait_for_timeout(300)
+    expect(page.locator("#ns-panel .suggestion")).to_have_text("A newer suggestion after your latest check-in.")
+    assert old_text != "A newer suggestion after your latest check-in."
+    expect(page.locator("#ns-panel")).not_to_have_attribute("aria-busy", "true")
+    page.wait_for_timeout(2_000)  # longer than any plausible automatic retry
+    assert gets["n"] == 2, gets
     assert len(posts) == 1, posts
     assert_axe_clean(page, axe_source, "#next 422 unknown_step")
 
