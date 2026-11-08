@@ -201,12 +201,22 @@ def wait_route_ready(page: Page, route: str) -> None:
     expect(page.locator(ready).first).to_be_visible()
 
 
+def research_episode(page: Page) -> None:
+    """On ``#research``: start an episode and take one step, so the episode form, the adherence grid and
+    the log are drawn (the content most likely to overflow at 375 px; QG P3 B3)."""
+    expect(page.locator("#r-member option").first).to_be_attached()
+    page.click("#r-start")
+    expect(page.locator("#r-step")).to_be_enabled()
+    page.click("#r-step")
+    expect(page.locator("#r-log > *").first).to_be_attached()
+
+
 # ---------------------------------------------------------------- R1, R10: every route, realistic state
 
 
 @pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
 def test_every_route_banner_axe_and_reflow(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
-    """T1.2, T10.1, T10.3 on the 5 routes, walked in journey order with real data."""
+    """T1.2, T10.1, T10.3 on the 5 journey routes, walked in journey order with real data, then #research."""
     page = _new_page(browser, page_errors, viewport=viewport)
     seen: list[str] = []
 
@@ -241,7 +251,11 @@ def test_every_route_banner_axe_and_reflow(browser: Browser, page_errors, base_u
     wait_route_ready(page, "lab")
     check("lab")
 
-    assert seen == ROUTES
+    goto(page, base_url, "research")  # A&D §4.10 has six routes; T10.3 says every route (QG P3 B3)
+    research_episode(page)
+    check("research")
+
+    assert seen == ROUTES + ["research"]
     page.context.close()
 
 
@@ -476,9 +490,12 @@ MOTION_JS = """() => {
 def test_t10_4_reduced_motion_zeroes_every_duration(browser: Browser, page_errors, base_url: str):
     page = _new_page(browser, page_errors, viewport=DESKTOP, reduced_motion="reduce")
     saved_journal(page, base_url)
-    for route in ROUTES:
+    for route in ROUTES + ["research"]:  # every route (QG P3 B3)
         goto(page, base_url, route)
-        wait_route_ready(page, route)
+        if route == "research":
+            research_episode(page)
+        else:
+            wait_route_ready(page, route)
         bad = page.evaluate(MOTION_JS)
         assert bad == [], f"#{route}: {bad[:10]}"
     page.context.close()
