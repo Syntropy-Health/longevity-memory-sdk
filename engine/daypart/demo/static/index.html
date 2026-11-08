@@ -1455,7 +1455,7 @@ function labRow(r) {
     return tr;
   }
   var mismatch = r.status === "provenance mismatch";
-  if (mismatch) id.append(el("span", "tag tag--flag", "⚠ Provenance mismatch"), " ");
+  if (mismatch) id.append(el("span", "tag tag--flag", "⚠ " + r.status), " ");  /* A&D T8.3: the status verbatim */
   if (typeof r.run_id === "string") { var a = link("#lab/" + r.run_id, null, "mono"); a.textContent = r.run_id; id.append(a); }
   else if (!mismatch) id.append(nr());
   if (r.row === "base" && typeof r.file_digest === "string") {
