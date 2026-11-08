@@ -705,3 +705,49 @@ def test_inventory_deep_link_focuses_the_inventory_heading(browser: Browser, pag
     expect(page.locator("#h-inventory")).to_be_focused()
     expect(page.locator("#h-inventory")).to_be_in_viewport()
     page.context.close()
+
+
+# ---------------------------------------------------------------- next-step POST failures (QG P3.2 K6)
+
+
+@pytest.mark.parametrize("failure", ["500", "network", "409"])
+def test_next_choice_post_failure(page: Page, base_url: str, axe_source: str, failure: str):
+    """HAC-48 rev 2 §3.4.1, §3.8: a failed choice keeps the panel, focuses the notice and Try again
+    re-sends it; a 409 no_saved_checkin hides the panel and focuses "Check in first"."""
+    saved_journal(page, base_url)
+    posts = {"n": 0}
+
+    def broken(route: Route) -> None:
+        if route.request.method != "POST":
+            route.continue_()
+            return
+        posts["n"] += 1
+        if posts["n"] > 1:
+            route.continue_()
+        elif failure == "500":
+            route.fulfill(status=500, content_type="application/json", body='{"error": "internal"}')
+        elif failure == "409":
+            route.fulfill(status=409, content_type="application/json", body='{"error": "no_saved_checkin"}')
+        else:
+            route.abort("failed")
+
+    page.route(re.compile(r".*/api/journals/[^/]+/next-step$"), broken)
+    goto(page, base_url, "next")
+    wait_route_ready(page, "next")
+    page.locator("#ns-panel button.btn--primary").click()
+    msg = page.locator("#ns-msg")
+    alert = msg.locator("[role=alert]")
+    expect(alert).to_have_count(1)
+    expect(alert).to_be_focused()
+    if failure == "409":
+        expect(alert).to_contain_text("Check in first")
+        expect(page.locator("#ns-panel")).to_be_hidden()
+        expect(msg.locator("a[href='#checkin']")).to_have_count(1)
+        assert_axe_clean(page, axe_source, "#next POST 409")
+        return
+    expect(alert).to_contain_text("error 500" if failure == "500" else "could not reach the demo server")
+    expect(page.locator("#ns-panel button.btn--primary")).to_be_visible()
+    assert_axe_clean(page, axe_source, f"#next POST {failure}")
+    msg.get_by_role("button", name="Try again").click()
+    expect(page.locator("#ns-result")).to_contain_text("Goal set")
+    assert posts["n"] == 2
