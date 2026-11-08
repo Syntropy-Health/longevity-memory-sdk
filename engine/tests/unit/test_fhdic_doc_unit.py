@@ -9,11 +9,11 @@ REPO = Path(__file__).resolve().parents[3]
 DOC = REPO / "docs" / "daypart" / "FHDIC.md"
 README = REPO / "README.md"
 
-# AC5: each statement must appear verbatim (case-insensitive) on the page.
-REQUIRED_STATEMENTS = [
-    "synthetic data only",
-    "175 train",
-    "25 held-out",
+# AC5: each limitation and dependency is its own bullet in the limitations section, so a phrase
+# that only appears elsewhere (a `uv run` command, a modal.run URL) does not count.
+LIMITATIONS_HEADING = "## Assumptions, dependencies, limitations"
+REQUIRED_BULLETS = [
+    "synthetic data only: 175 train / 25 held-out profiles",
     "simulator-only results",
     "no clinical or safety validation",
     "no phi",
@@ -23,12 +23,14 @@ REQUIRED_STATEMENTS = [
     "grpo, the reward model and the jev question library are designed, not built",
     "meta eligibility is unconfirmed and out of scope here",
     "python 3.12",
-    "uv",
+    "uv,",
     "pinned lhm",
     "modal",
-    "meta-models/muse-glimmer-30b",
+    "hugging face meta-models/muse-glimmer-30b",
     "muse spark (optional)",
 ]
+# Wording the page must carry so it does not overstate what the code guarantees (QG F1).
+REQUIRED_CAVEATS = ["not a privacy control"]
 
 # AC1: index rows, in the order the challenge lists its deliverables.
 INDEX_ROWS = [
@@ -57,9 +59,42 @@ def _relative_links(text: str) -> list[str]:
     return out
 
 
-@pytest.mark.parametrize("statement", REQUIRED_STATEMENTS)
-def test_required_statement_present(statement):
-    assert statement in _text().lower()
+def _section(text: str, heading: str) -> str:
+    start = text.index(heading)
+    nxt = text.find("\n## ", start + len(heading))
+    return text[start : nxt if nxt != -1 else len(text)]
+
+
+def _bullets(section: str) -> list[str]:
+    return [l[2:].replace("`", "").strip().lower() for l in section.splitlines() if l.startswith("- ")]
+
+
+def _missing_bullets(text: str) -> list[str]:
+    if LIMITATIONS_HEADING not in text:
+        return list(REQUIRED_BULLETS)
+    bullets = _bullets(_section(text, LIMITATIONS_HEADING))
+    return [b for b in REQUIRED_BULLETS if not any(x.startswith(b) for x in bullets)]
+
+
+@pytest.mark.parametrize("statement", REQUIRED_BULLETS)
+def test_required_statement_is_a_limitations_bullet(statement):
+    assert statement not in _missing_bullets(_text())
+
+
+@pytest.mark.parametrize("caveat", REQUIRED_CAVEATS)
+def test_required_caveat_in_limitations(caveat):
+    assert caveat in _section(_text(), LIMITATIONS_HEADING).lower()
+
+
+def test_statements_elsewhere_on_page_do_not_count():
+    """QG F4: `uv run`, a modal.run URL or "Python 3.12+" in How to run must not satisfy AC5."""
+    page = (
+        "## How to run\n\nRequires Python 3.12+ and uv. `uv run modal run x` on modal.run, "
+        "meta-models/Muse-Glimmer-30B.\n\n" + LIMITATIONS_HEADING + "\n\n- Pinned LHM.\n"
+    )
+    missing = _missing_bullets(page)
+    for dep in ("python 3.12", "uv,", "modal", "hugging face meta-models/muse-glimmer-30b"):
+        assert dep in missing
 
 
 def test_every_relative_link_resolves():
@@ -86,8 +121,14 @@ def test_index_comes_first_and_lists_every_deliverable():
 
 
 def test_track_b_is_placeholder_until_cto_updates_it():
-    row = next(l for l in _text().splitlines() if re.match(r"^\|\s*\**Track B", l))
-    assert "in progress (AIR-319 child 2)" in row or "built" in row.lower()
+    """AC6: the placeholder, or after the CTO's update "Built" or "Not built" (then a limitation)."""
+    text = _text()
+    rows = [l for l in text.splitlines() if re.match(r"^\|\s*\**Track B\b", l)]
+    assert len(rows) == 1
+    status = rows[0].strip().strip("|").split("|")[-1].strip()
+    assert status == "in progress (AIR-319 child 2)" or re.match(r"^(Built|Not built)\b", status), status
+    if status.startswith("Not built"):
+        assert any("track b" in b for b in _bullets(_section(text, LIMITATIONS_HEADING)))
 
 
 def test_track_c_names_both_passports_and_their_tests():
