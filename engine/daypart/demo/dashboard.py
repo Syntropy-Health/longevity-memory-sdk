@@ -52,6 +52,7 @@ def main() -> None:
     except MetricsFileError as exc:
         st.error(str(exc))
         st.stop()
+        return  # st.stop() only raises inside a script run; outside one it returns
 
     c = st.columns(4)
     c[0].metric("Arms", len(doc.arms))
@@ -184,4 +185,5 @@ def _training_panel(directory) -> None:
     )
 
 
-main()
+if __name__ == "__main__":  # `streamlit run` executes the script as __main__; an import renders nothing
+    main()
