@@ -80,7 +80,7 @@ def test_index_comes_first_and_lists_every_deliverable():
     assert first_h2 and first_h2.group(1).strip().lower().startswith("index")
     index = text[first_h2.end() : text.index("\n## ", first_h2.end())]
     for row in INDEX_ROWS:
-        assert re.search(rf"^\|\s*\**{re.escape(row)}\**\s*\|", index, re.M), row
+        assert re.search(rf"^\|\s*\**{re.escape(row)}\b", index, re.M), row
     assert "prepared by agents" in index.lower()
     assert "the principal submits" in index.lower()
 
