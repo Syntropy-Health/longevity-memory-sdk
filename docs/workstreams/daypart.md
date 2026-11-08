@@ -1,6 +1,26 @@
 # daypart — dev doc
 
-## FHDIC P3 · UI and accessibility CI (HAC-38, in progress)
+## FHDIC P3 · UI and accessibility CI (HAC-38)
+
+**Overview.** P3 puts screens on the P1/P2 API (A&D R1, R10). The demo page is now the Clinical Human
+Clone journey: check in → review → passport → next step → learning lab, with the old playground kept
+as the optional research view. A browser + axe suite in CI gates the demo deploy.
+
+**What changed.**
+- P3.1 (ada2950): `index.html` rebuilt as the hash-route journey, built to the HAC-35 spec and the 6
+  HAC-48 rev 2 states (reference range, review label, crisis hand-off, `#next` 409 and 422, 5xx /
+  network / 15 s notices). New read-only route `GET /api/units`. API title "Clinical Human Clone API".
+- P3.2 (aaf5ad5): `engine/tests/ui/test_journey_a11y.py` (22 tests) and the `demo-ui` CI job.
+- P3.3 (cf57d54): the Streamlit dashboard is "Clinical Human Clone: research view" (T1.4) and is
+  import-safe; README, CLI help and the research-screen link call it "research view: full results".
+
+**User-facing impact.** A visitor can do the whole journey in the browser, by keyboard alone, at
+375 px wide, with 0 axe violations. No screen marks a value high or low.
+
+**Key decisions** (addendum G26–G28). Sections are found by `screen-<route>` ids (the bare route ids
+left focus on the body on a deep link). Every API string is set as text; links go through one
+allow-list. The axe file lives in `tests/ui/vendor/` and is never served. The `ui` group is not a
+default group, so the `test` job is unchanged (G10).
 
 `engine/daypart/demo/static/index.html` is the hash-route journey (`#checkin`, `#review`,
 `#passport`, `#next`, `#lab`, `#research`), built to the HAC-35 visual spec and the HAC-48 rev 2
@@ -24,6 +44,19 @@ env -u MUSE_API_KEY -u META_MODEL_API_KEY DAYPART_UI_REQUIRED=1 uv run --group u
 **CI:** the `demo-ui` job in `.github/workflows/engine.yml` runs this suite with
 `DAYPART_UI_REQUIRED=1`, and `deploy-demo` now needs `demo-ui` (with `test`, `typecheck` and
 `attribution-boundary`), so a failing UI or axe check blocks the demo deploy.
+
+**Known issues / residual risk.**
+- The UI suite needs Chromium system libraries; it skips locally without them (unless
+  `DAYPART_UI_REQUIRED=1`). `demo-ui` in CI is the referee.
+- The workflow has no `permissions:` block and pins actions by tag (pre-existing, workflow-wide).
+- No per-journal cap on check-ins (pre-P2, unchanged).
+- Rollback: revert the P3 merge on `daypart/build`; the P2 API is untouched by P3 except the additive
+  `GET /api/units` and the API title, so the previous page and dashboard come back as they were.
+
+**Release note.** Added: the Clinical Human Clone browser journey, `GET /api/units`, the `demo-ui`
+gate. Changed: the API title and the dashboard name ("Clinical Human Clone: research view").
+
+**Links.** Iteration receipts: P3.1 ada2950, P3.2 aaf5ad5, P3.3 cf57d54. Spec: HAC-35, HAC-48.
 
 ## FHDIC P2 · Passport, next step and learning lab (HAC-38)
 
