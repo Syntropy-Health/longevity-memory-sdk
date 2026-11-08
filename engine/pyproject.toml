@@ -19,6 +19,7 @@ daypart-demo = "daypart.demo.cli:main"
 [dependency-groups]
 demo = [
     "fastapi>=0.115,<1",
+    "python-multipart>=0.0.20,<1",
     "streamlit>=1.40,<2",
     "uvicorn>=0.30,<1",
 ]
@@ -43,7 +44,17 @@ include = ["daypart*"]
 [tool.setuptools.package-data]
 "daypart.membrane" = ["rules/*.yaml"]
 "daypart.eval" = ["runs.yaml"]
-"daypart.demo" = ["static/*.html"]
+"daypart.demo" = ["static/*.html", "fixtures/*"]
+"daypart.memory" = ["*.json", "*.csv"]
+"daypart.governance" = ["*.yaml"]
+
+[tool.pyright]
+# CI type check (HAC-38 G20): basic mode over the daypart package.
+include = ["daypart"]
+# Runs only inside the Modal image; torch/transformers/peft/trl/modal are not engine dependencies.
+exclude = ["daypart/train/modal_app.py"]
+typeCheckingMode = "basic"
+pythonVersion = "3.12"
 
 [tool.pytest.ini_options]
 addopts = ""

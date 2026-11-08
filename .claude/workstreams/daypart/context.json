@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "workstream": "daypart",
+  "updated_at": "2026-11-07T21:55:06.117994+00:00",
+  "linear": {
+    "initiative_url": "",
+    "initiative_id": ""
+  },
+  "paperclip": {
+    "parent": "HAC-30",
+    "phases": {
+      "design": "HAC-33",
+      "build": "HAC-38"
+    }
+  },
+  "github": {
+    "repo": ""
+  },
+  "phases": {
+    "P1.1": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "29e0171",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-0037-92755c2.md",
+      "summary": "A4 concept registry, slice_ontology core-v1+u1, LOINC 2.83",
+      "pr": "",
+      "updated_at": "2026-11-07T00:37:25.439807+00:00"
+    },
+    "P1": {
+      "status": "complete",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "HAC-38",
+      "gh": "",
+      "commit": "896eff7",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-phase-complete-20261107-0151-23af1bb.md",
+      "summary": "Data core: registry, real-input gate, check-in review loop, journals, routes",
+      "pr": "",
+      "updated_at": "2026-11-07T01:51:50.117820+00:00",
+      "iteration_count": 0
+    },
+    "P1.6": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "6d3413a",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-0216-9aa1b5f.md",
+      "summary": "AM-1 applied; sealed P1 suite (HAC-39) 1500/1500 green; G17 whole-set re-run; G18 crisis vocabulary",
+      "pr": "",
+      "updated_at": "2026-11-07T02:16:49.750347+00:00"
+    },
+    "P1.7": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "a46f759",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-0231-a79c704.md",
+      "summary": "pyright basic CI (G20) + typed extractor boundary (G21)",
+      "pr": "",
+      "updated_at": "2026-11-07T02:32:16.129349+00:00"
+    },
+    "P2.1": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "24831e4",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-0254-8430ac7.md",
+      "summary": "evidence registry sources_v1 + 7 sourced reference ranges (AM-1, G22)",
+      "pr": "",
+      "updated_at": "2026-11-07T02:54:45.084451+00:00"
+    },
+    "P2.2": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "7ec2509",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-2101-bfef6f9.md",
+      "summary": "Health Clone Passport view + /api/journals/{id}/passport, /api/inventory (G23)",
+      "pr": "",
+      "updated_at": "2026-11-07T21:01:49.841316+00:00"
+    },
+    "P2.3": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "2110440",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-2129-b5a348b.md",
+      "summary": "next step (next_step.py, GET/POST next-step, T7.1-T7.4)",
+      "pr": "",
+      "updated_at": "2026-11-07T21:30:23.737141+00:00"
+    },
+    "P2.4": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "91f8875",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-2154-901d46a.md",
+      "summary": "learning lab rows + /api/lab (T8.1-T8.3)",
+      "pr": "",
+      "updated_at": "2026-11-07T21:55:06.117959+00:00"
+    }
+  }
+}

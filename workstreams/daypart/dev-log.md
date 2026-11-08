@@ -1,0 +1,4 @@
+- P2.1 — evidence registry + 7 sourced reference ranges (commit 24831e4)
+- P2.2 — Health Clone Passport view: observation + pattern cards, 5-step thread, suppression, sourced ranges, guard-safe inventory; routes passport + inventory (commit 7ec2509)
+- P2.3 — suggested next step: next_step.py + GET/POST /api/journals/{id}/next-step (T7.1-T7.4, G24); QG fixed save-order and same-day tie bugs (also in the passport pattern card); docs-ticket-align false no-ticket persists (filed) (commit 2110440)
+- P2.4 — learning lab rows: demo/lab.py + GET /api/lab (T8.1-T8.3, G25); QG fixed non-finite-number 500 (K1), nameless env arm (B1), pinned formulas at non-zero rates (commit 91f8875)

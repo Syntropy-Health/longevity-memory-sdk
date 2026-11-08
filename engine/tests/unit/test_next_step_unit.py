@@ -1,0 +1,497 @@
+"""HAC-38 P2 task 8: the suggested next step (A&D §4.7, R7).
+
+Covers T7.1-T7.4: after a saved check-in the journal gets one deterministic step (rules in §4.7
+order, no thresholds on clinical values), the step passes the membrane or is replaced by the
+clinician-handoff text, "choose" writes one ``act:goal_set`` ActionEvent and the other choices
+write nothing, and there is no step before any saved check-in. Synthetic only.
+"""
+
+import asyncio
+import datetime as dt
+
+import pytest
+
+fastapi = pytest.importorskip("fastapi")
+from fastapi.testclient import TestClient
+
+from daypart.checkin import next_step
+from daypart.checkin.next_step import (
+    ASK_PROFESSIONAL_LABEL,
+    HANDOFF_TEXT,
+    OPTIONS,
+    AdherenceDay,
+    select_intent,
+)
+from daypart.demo.app import create_app
+from daypart.eval import POLICY_TEXT
+from daypart.membrane import dsl
+from daypart.memory.events import ActionEvent
+from syntropy.lhm.metrics.claims import assert_narration_safe
+
+DOSING = "Take 500 mg of ibuprofen twice a day."
+D0 = dt.date(2026, 1, 1)
+
+
+@pytest.fixture()
+def client():
+    with pytest.MonkeyPatch.context() as mp:
+        mp.delenv("DAYPART_REAL_INPUT", raising=False)
+        with TestClient(create_app(cohort_seed=0)) as c:
+            yield c
+
+
+def _journal(client, member_id="syn-001"):
+    r = client.post("/api/journals", json={"member_id": member_id})
+    assert r.status_code == 201, r.text
+    return r.json()["journal_id"]
+
+
+def _save(client, jid, text):
+    ck = client.post("/api/checkins", json={"journal_id": jid, "text": text})
+    assert ck.status_code == 201, ck.text
+    body = ck.json()
+    decisions = [{"proposal_id": p["proposal_id"], "action": "confirm"} for p in body["proposals"]]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    return body["checkin_id"]
+
+
+def _actions(client, jid):
+    j = client.app.state.journals.get(jid)
+    return [e for e in j.all_events() if isinstance(e, ActionEvent)]
+
+
+def _days(*values):
+    """Adherence days ending today: ``_days(1, 0, 0)`` = two days ago adhered, then two misses."""
+    n = len(values)
+    return tuple(AdherenceDay(date=D0 - dt.timedelta(days=n - 1 - i), value=v) for i, v in enumerate(values))
+
+
+# --- T7.1: the step after a saved check-in --------------------------------------------------------
+
+
+def test_t7_1_step_after_saved_checkin(client):
+    jid = _journal(client)
+    cid = _save(client, jid, "slept 6 hours and walked 8000 steps")
+    r = client.get(f"/api/journals/{jid}/next-step")
+    assert r.status_code == 200, r.text
+    step = r.json()
+    assert set(step) >= {"step_id", "text", "reason", "intent", "membrane", "options", "replaced"}
+    assert step["options"] == ["choose", "defer", "ask_professional"] == list(OPTIONS)
+    assert step["text"].strip() and step["reason"].strip()
+    assert step["intent"] in {"barrier_problem_solving", "celebrate_streak", "check_in_question"}
+    assert step["text"] == POLICY_TEXT[step["intent"]]
+    assert step["replaced"] is False
+    assert step["membrane"] == {"decision": "pass", "rule_hits": []}
+    assert cid in step["step_id"]
+    for s in (step["text"], step["reason"]):
+        assert_narration_safe(s)
+        assert dsl.check(s).passed
+
+
+def test_t7_1_step_is_deterministic(client):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    a = client.get(f"/api/journals/{jid}/next-step").json()
+    b = client.get(f"/api/journals/{jid}/next-step").json()
+    assert a == b
+
+
+def test_symptom_report_routes_to_a_person_and_names_the_concept_not_the_value(client):
+    jid = _journal(client)
+    _save(client, jid, "pain 4/10")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["intent"] == "clinician_handoff"
+    assert step["text"] == HANDOFF_TEXT
+    assert step["replaced"] is False
+    assert "pain" in step["reason"].lower()
+    assert "4" not in step["reason"]
+
+
+def test_only_the_last_saved_checkin_counts(client):
+    jid = _journal(client)
+    _save(client, jid, "pain 4/10")
+    _save(client, jid, "walked 8000 steps")
+    # A pending (unreviewed) symptom check-in does not count either.
+    assert client.post("/api/checkins", json={"journal_id": jid, "text": "pain 6/10"}).status_code == 201
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["intent"] != "clinician_handoff"
+
+
+# --- §4.7 rule order (pure selection) -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("symptom", "days", "intent"),
+    [
+        ("Pain severity", _days(1, 1, 1, 1), "clinician_handoff"),  # rule 1 beats a streak
+        ("Pain severity", _days(1, 0, 0), "clinician_handoff"),  # rule 1 beats missed adherence
+        (None, _days(1, 0, 0), "barrier_problem_solving"),
+        (None, _days(0, 1, 0), "barrier_problem_solving"),
+        (None, _days(0, 0, 0), "barrier_problem_solving"),
+        (None, _days(1, 1, 1), "celebrate_streak"),
+        (None, _days(0, 1, 1, 1), "celebrate_streak"),
+        (None, _days(1, 1), "check_in_question"),  # streak of 2
+        (None, _days(1, 0, 1, 1), "check_in_question"),  # one miss of 3, streak of 2
+        (None, _days(1, 1, 0), "check_in_question"),  # one miss, streak broken
+        (None, (), "check_in_question"),
+    ],
+)
+def test_rules_apply_in_order(symptom, days, intent):
+    assert select_intent(symptom, days, today=D0).intent == intent
+
+
+def test_days_outside_the_last_three_do_not_count_as_misses():
+    assert select_intent(None, _days(0, 0, 1, 1), today=D0).intent == "check_in_question"
+
+
+def test_a_gap_day_breaks_the_streak():
+    days = (AdherenceDay(D0 - dt.timedelta(days=3), 1.0), AdherenceDay(D0 - dt.timedelta(days=1), 1.0),
+            AdherenceDay(D0, 1.0))
+    assert select_intent(None, days, today=D0).intent == "check_in_question"
+
+
+@pytest.mark.parametrize(
+    ("member_id", "before", "after"),
+    [("syn-004", "celebrate_streak", "check_in_question"), ("syn-003", "check_in_question", "barrier_problem_solving")],
+)
+def test_a_saved_adherence_value_overrides_the_simulated_day(client, member_id, before, after):
+    jid = _journal(client, member_id)
+    j = client.app.state.journals.get(jid)
+    simulated = asyncio.run(next_step.adherence_days(j))
+    assert simulated[-1].date == j.today and simulated[-1].value == 1.0  # the member adhered today (simulated)
+    _save(client, jid, "walked 8000 steps")
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == before
+    _save(client, jid, "adherence 0%")
+    days = asyncio.run(next_step.adherence_days(j))
+    assert days[-1].date == j.today and days[-1].value == 0.0
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == after
+
+
+# --- T7.2: a step the membrane blocks is replaced ------------------------------------------------
+
+
+def test_t7_2_dosing_text_is_replaced_by_the_handoff(client, monkeypatch):
+    monkeypatch.setattr(next_step, "POLICY_TEXT", {k: DOSING for k in POLICY_TEXT})
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["replaced"] is True
+    assert step["text"] == POLICY_TEXT["clinician_handoff"] == HANDOFF_TEXT
+    assert step["intent"] == "clinician_handoff"
+    assert step["label"] == ASK_PROFESSIONAL_LABEL == "Ask a professional"
+    assert step["membrane"]["decision"] == "escalate"
+    assert step["reason"] == next_step.REPLACED_REASON
+    assert DOSING not in repr(step)
+
+
+def test_t7_2_also_holds_when_the_eval_library_is_patched(client, monkeypatch):
+    from daypart.eval import policies
+
+    monkeypatch.setattr(policies, "POLICY_TEXT", {k: DOSING for k in POLICY_TEXT})
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["replaced"] is True and step["text"] == HANDOFF_TEXT
+
+
+@pytest.mark.parametrize(
+    ("draft", "layer0", "hits"),
+    [
+        ("Stop taking your medication.", "pass", {"dosing.imperative"}),  # layer 0 passes, the DSL fails
+        (DOSING, "fail", {"dosing.unit_quantity", "lhm.imperative_dose"}),  # layer 0 fails; hits still shown
+    ],
+)
+def test_t4_dsl_rule_hits_are_reported(client, monkeypatch, draft, layer0, hits):
+    from daypart.membrane.post import post
+
+    assert post(draft).trace["layer0"]["outcome"] == layer0
+    monkeypatch.setattr(next_step, "POLICY_TEXT", {k: draft for k in POLICY_TEXT})
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["replaced"] is True and step["membrane"]["decision"] == "escalate"
+    assert hits <= set(step["membrane"]["rule_hits"])
+
+
+# --- T7.3: choices -------------------------------------------------------------------------------
+
+
+def test_t7_3_choose_writes_one_goal_set(client):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert r.status_code == 200, r.text
+    eid = r.json()["recorded"]
+    acts = _actions(client, jid)
+    assert [(a.event_id, a.code) for a in acts] == [(eid, "act:goal_set")]
+    j = client.app.state.journals.get(jid)
+    assert acts[0].member_id == j.member.member_id
+    assert acts[0].occurred_at == dt.datetime.combine(j.today, dt.time(12), dt.timezone.utc)
+    # Choosing the same step again records nothing new.
+    r2 = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert r2.status_code == 200 and r2.json()["recorded"] == eid
+    assert len(_actions(client, jid)) == 1
+
+
+@pytest.mark.parametrize("choice", ["defer", "ask_professional"])
+def test_t7_3_other_choices_write_nothing(client, choice):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    before = len(client.app.state.journals.get(jid).all_events())
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": choice})
+    assert r.status_code == 200, r.text
+    assert r.json() == {"recorded": None}
+    assert len(client.app.state.journals.get(jid).all_events()) == before
+
+
+def test_a_new_saved_checkin_gives_a_new_step_id(client):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    old = client.get(f"/api/journals/{jid}/next-step").json()["step_id"]
+    _save(client, jid, "slept 7 hours")
+    new = client.get(f"/api/journals/{jid}/next-step").json()["step_id"]
+    assert new != old
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": old, "choice": "choose"})
+    assert r.status_code == 422 and r.json() == {"error": "unknown_step"}
+    assert _actions(client, jid) == []
+
+
+# --- T7.4 and refusals ---------------------------------------------------------------------------
+
+
+def test_t7_4_no_step_before_a_saved_checkin(client):
+    jid = _journal(client)
+    r = client.get(f"/api/journals/{jid}/next-step")
+    assert r.status_code == 409 and r.json() == {"error": "no_saved_checkin"}
+    # A pending check-in is not a saved one.
+    assert client.post("/api/checkins", json={"journal_id": jid, "text": "walked 8000 steps"}).status_code == 201
+    r = client.get(f"/api/journals/{jid}/next-step")
+    assert r.status_code == 409 and r.json() == {"error": "no_saved_checkin"}
+
+
+def test_choice_before_a_saved_checkin_is_refused(client):
+    jid = _journal(client)
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": "x", "choice": "choose"})
+    assert r.status_code == 409 and r.json() == {"error": "no_saved_checkin"}
+    assert _actions(client, jid) == []
+
+
+def test_unknown_journal_is_404(client):
+    assert client.get("/api/journals/nope/next-step").status_code == 404
+    r = client.post("/api/journals/nope/next-step", json={"step_id": "x", "choice": "defer"})
+    assert r.status_code == 404 and r.json() == {"error": "unknown_journal"}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"step_id": "x", "choice": "maybe"},
+        {"step_id": "x"},
+        {"choice": "choose"},
+        {"step_id": 3, "choice": "choose"},
+        {"step_id": "x", "choice": "choose", "extra": 1},
+        [],
+    ],
+)
+def test_malformed_choice_is_422(client, body):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    r = client.post(f"/api/journals/{jid}/next-step", json=body)
+    assert r.status_code == 422 and r.json() == {"error": "invalid_request"}
+    assert _actions(client, jid) == []
+
+
+def test_non_json_choice_is_422(client):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    r = client.post(f"/api/journals/{jid}/next-step", content=b"not json", headers={"content-type": "application/json"})
+    assert r.status_code == 422 and r.json() == {"error": "invalid_request"}
+
+
+@pytest.mark.parametrize(
+    ("symptom", "days"),
+    [("Pain severity", ()), (None, _days(0, 0, 0)), (None, _days(1, 1, 1)), (None, ())],
+)
+def test_every_rule_text_and_reason_is_safe(symptom, days):
+    sel = select_intent(symptom, days, today=D0)
+    for s in (POLICY_TEXT[sel.intent], sel.reason):
+        assert s.strip()
+        assert_narration_safe(s)
+        assert dsl.check(s).passed
+
+
+# --- QG P2.3 regressions ---------------------------------------------------------------------------
+
+
+def _create(client, jid, text):
+    ck = client.post("/api/checkins", json={"journal_id": jid, "text": text})
+    assert ck.status_code == 201, ck.text
+    return ck.json()
+
+
+def _review(client, body, action="confirm"):
+    decisions = [{"proposal_id": p["proposal_id"], "action": action} for p in body["proposals"]]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+
+
+def test_c1_last_saved_is_by_save_order_not_creation_order(client):
+    jid = _journal(client)
+    a = _create(client, jid, "pain 4/10")
+    b = _create(client, jid, "walked 8000 steps")
+    _review(client, b)
+    _review(client, a)  # A is created first but saved last
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["step_id"] == f"ns-{a['checkin_id']}"
+    assert step["intent"] == "clinician_handoff"
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert r.status_code == 200 and r.json()["recorded"]
+
+
+def test_c2_a_later_save_wins_its_day_past_the_e9_e10_boundary(client):
+    jid = _journal(client, "syn-004")  # simulated streak ending today
+    for _ in range(8):
+        _save(client, jid, "slept 7 hours")
+    _save(client, jid, "adherence 0%")  # -e9
+    _save(client, jid, "adherence 100%")  # -e10, the latest entry for today
+    j = client.app.state.journals.get(jid)
+    days = asyncio.run(next_step.adherence_days(j))
+    assert days[-1].date == j.today and days[-1].value == 1.0
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == "celebrate_streak"
+
+
+def test_select_intent_later_entry_wins_a_date():
+    days = _days(1, 1, 1) + (AdherenceDay(D0, 0.0),)
+    assert select_intent(None, days, today=D0).intent == "check_in_question"
+    days = _days(1, 0, 0) + (AdherenceDay(D0, 1.0),)
+    assert select_intent(None, days, today=D0).intent == "check_in_question"
+
+
+def test_t1_a_save_after_choose_gets_fresh_event_ids(client):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"}).status_code == 200
+    _save(client, jid, "slept 7 hours")  # must not reuse the goal_set id
+    j = client.app.state.journals.get(jid)
+    ids = [e.event_id for e in j.all_events()]
+    assert len(ids) == len(set(ids)) == j.event_count == 3
+
+
+def test_t3_an_unsafe_reason_replaces_the_step(client, monkeypatch):
+    monkeypatch.setattr(next_step, "_REASONS", {k: DOSING for k in next_step._REASONS})
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["replaced"] is True and step["membrane"]["decision"] == "escalate"
+    assert step["text"] == HANDOFF_TEXT and step["reason"] == next_step.REPLACED_REASON
+    assert DOSING not in repr(step)
+
+
+@pytest.mark.parametrize("library", [{}, {k: 123 for k in POLICY_TEXT}, {k: ["x"] for k in POLICY_TEXT}])
+def test_t5_a_missing_or_non_string_step_text_fails_closed(client, monkeypatch, library):
+    monkeypatch.setattr(next_step, "POLICY_TEXT", library)
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+    r = client.get(f"/api/journals/{jid}/next-step")
+    assert r.status_code == 200, r.text
+    step = r.json()
+    assert step["replaced"] is True and step["text"] == HANDOFF_TEXT
+    assert step["membrane"]["decision"] == "escalate"
+
+
+def test_t5_a_dsl_error_fails_closed(client, monkeypatch):
+    jid = _journal(client)
+    _save(client, jid, "walked 8000 steps")
+
+    def boom(*_a, **_k):
+        raise RuntimeError("rule pack unavailable")
+
+    monkeypatch.setattr(dsl, "check", boom)
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["replaced"] is True and step["text"] == HANDOFF_TEXT
+    assert step["membrane"] == {"decision": "escalate", "rule_hits": []}
+
+
+@pytest.mark.parametrize(("member_id", "intent"), [("syn-004", "celebrate_streak"), ("syn-003", "check_in_question"),
+                                                   ("syn-001", "barrier_problem_solving")])
+def test_t11_each_adherence_rule_through_the_route(client, member_id, intent):
+    jid = _journal(client, member_id)
+    _save(client, jid, "walked 8000 steps")
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["intent"] == intent and step["text"] == POLICY_TEXT[intent]
+    assert step["label"] == next_step.STEP_LABEL == "Suggested next step"  # T6: not replaced
+    assert set(step) == {"step_id", "text", "reason", "intent", "label", "membrane", "options", "replaced"}
+
+
+def test_t8_a_corrected_symptom_still_routes_to_a_person(client):
+    jid = _journal(client)
+    body = _create(client, jid, "pain 4/10")
+    decisions = [{"proposal_id": body["proposals"][0]["proposal_id"], "action": "correct", "value": 5}]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["intent"] == "clinician_handoff"
+    assert "pain" in step["reason"].lower() and "4" not in step["reason"] and "5" not in step["reason"]
+
+
+def test_t7_a_discarded_symptom_does_not_route_to_a_person(client):
+    jid = _journal(client, "syn-004")
+    body = _create(client, jid, "pain 4/10, walked 8000 steps")
+    by_code = {p["concept_code"]: p["proposal_id"] for p in body["proposals"]}
+    decisions = [{"proposal_id": by_code["72514-3"], "action": "discard"},
+                 {"proposal_id": by_code["55423-8"], "action": "confirm"}]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == "celebrate_streak"
+
+
+def test_t7_an_unmapped_word_does_not_route_to_a_person(client):
+    jid = _journal(client, "syn-004")
+    body = _create(client, jid, "headache, walked 8000 steps")
+    decisions = [{"proposal_id": p["proposal_id"], "action": "save_unmapped" if p["concept_code"] is None else "confirm"}
+                 for p in body["proposals"]]
+    r = client.post(f"/api/checkins/{body['checkin_id']}/review", json={"decisions": decisions})
+    assert r.status_code == 200, r.text
+    j = client.app.state.journals.get(jid)
+    assert any(rec.status == "unmapped" for rec in j.provenance.values())
+    assert client.get(f"/api/journals/{jid}/next-step").json()["intent"] == "celebrate_streak"
+
+
+# --- P2 phase gate: the journey end to end over HTTP -----------------------------------------------
+
+
+def test_t2_e2e_checkin_passport_next_step_choose(client):
+    """Check-in saved → passport card → next step → choose → the passport is unchanged (an action never
+    feeds a card) and the next step is stable; a new save gives a new step and retires the old one."""
+    jid = _journal(client)
+    assert client.get(f"/api/journals/{jid}/next-step").status_code == 409
+    pp0 = client.get(f"/api/journals/{jid}/passport").json()
+    assert not any(c["origin"] == "observed" for c in pp0["cards"] if c["card_id"].startswith("observation:"))
+
+    cid = _save(client, jid, "slept 6 hours")
+    pp1 = client.get(f"/api/journals/{jid}/passport").json()
+    sleep = next(c for c in pp1["cards"] if c["card_id"] == "observation:chc:sleep-duration")
+    assert (sleep["origin"], sleep["value"]) == ("observed", 6.0)
+    assert sleep["thread"]["steps"][0]["link"] == f"#review/{cid}"
+
+    step = client.get(f"/api/journals/{jid}/next-step").json()
+    assert step["step_id"] == f"ns-{cid}"
+    r = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert r.status_code == 200, r.text
+    eid = r.json()["recorded"]
+
+    pp2 = client.get(f"/api/journals/{jid}/passport").json()
+    assert pp2 == pp1
+    assert not any("act:" in c["card_id"] for c in pp2["cards"])
+    assert client.get(f"/api/journals/{jid}/next-step").json() == step
+    again = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert again.json()["recorded"] == eid
+
+    cid2 = _save(client, jid, "walked 8000 steps")
+    assert client.get(f"/api/journals/{jid}/next-step").json()["step_id"] == f"ns-{cid2}"
+    stale = client.post(f"/api/journals/{jid}/next-step", json={"step_id": step["step_id"], "choice": "choose"})
+    assert stale.status_code == 422 and stale.json() == {"error": "unknown_step"}
