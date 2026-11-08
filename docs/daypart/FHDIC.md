@@ -164,10 +164,10 @@ In progress (AIR-319 child 2). The CTO updates this section and the index row at
 **Assumptions and limitations**
 
 - Synthetic data only: 175 train / 25 held-out profiles. The 25 held-out profiles are excluded from all training (invariant I1, enforced in CI).
-- Simulator-only results: every number on this page comes from SimMember, a seeded synthetic cohort, not from people.
+- Simulator-only results: every adherence and model-evaluation result on this page comes from SimMember, a seeded synthetic cohort, or from synthetic test text (the sealed R2 corpus), never from people. Cost, time and GPU figures are from the Modal run record.
 - No clinical or safety validation has been done.
-- No PHI: the engine never receives or stores personal health information; the PII tripwire refuses input that looks like personal data, and real-input mode is a gate that always refuses.
-- No medical, diagnostic, dosing or treatment advice: every message passes the deterministic `boundary-v1` DSL, and a failing draft is replaced by a safe one or a clinician handoff.
+- No PHI: the demo is built for synthetic input only and must not be given real personal health information; do not enter real data. Real-input mode is a gate that always refuses. The PII tripwire refuses some input that looks like personal data (email, phone, ID, name, date of birth); it is defence in depth, not a privacy control, and a confirmed check-in value is saved to the demo journal.
+- No medical, diagnostic, dosing or treatment advice: the engine is not designed to give it. Every draft is checked by the deterministic `boundary-v1` DSL, and a failing draft is replaced by a safe one or a clinician handoff. That check is measured (R2, on the sealed 202-row corpus), not proven: it does not guarantee that no unsafe text gets through.
 - No Malaffi/Sahatna integration.
 - No consumer UI: the playground and dashboard are demonstration surfaces for judges, not a product.
 - GRPO, the reward model and the Jev question library are designed, not built; the eval harness reports them as `not_run`.
