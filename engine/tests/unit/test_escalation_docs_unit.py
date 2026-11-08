@@ -41,8 +41,9 @@ def test_reliability_and_headline_match_metrics():
         if r["n"]:
             line = f"| {r['lo']:.1f}–{r['hi']:.1f} | {r['n']} | {r['mean_p']:.3f} | {r['frac_positive']:.3f} |"
             assert line in text, line
-    assert f"({a['n']} assessments, {a['positives']} positive, prevalence {a['prevalence']:.3f})" in text
-    assert f"training prevalence ({a['base_rate']['p']:.3f})" in text
+    prose = " ".join(text.split())  # prose wraps across lines
+    assert f"({a['n']} assessments, {a['positives']} positive, prevalence {a['prevalence']:.3f})" in prose
+    assert f"training prevalence ({a['base_rate']['p']:.3f})" in prose
     beats = a["beats_base_rate"]["brier"] or a["beats_base_rate"]["ece"]
-    assert ("**no better than a constant base-rate predictor**" in text) == (not beats)
-    assert "not clinically" in text.lower() or "nothing here is clinically validated" in text.lower()
+    assert ("**no better than a constant base-rate predictor**" in prose) == (not beats)
+    assert "nothing here is clinically validated" in prose.lower()
