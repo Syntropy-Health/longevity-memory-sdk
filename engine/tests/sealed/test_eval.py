@@ -63,6 +63,8 @@ DEFAULT_ARMS = (
     ("grpo", "not_run"),
     ("rm", "not_run"),
     ("jev", "not_run"),
+    # Track B contract v1.1 item 4 (AIR-319 track-b-spec): one packaged arm, kind escalation.
+    ("escalation", "escalation"),
 )
 # G3: the default boundary_eval arms read <results>/boundary_eval.json (+ training.json for sft/dpo).
 BOUNDARY_RESULTS = "../docs/daypart/results"
@@ -1249,9 +1251,10 @@ class TestDefaultConfig:
             be_status = ["not_run"] * 3
             for a in be:
                 assert "boundary_eval.json" in a["reason"]
-        assert [a["status"] for a in data["arms"]] == ["ok"] * 5 + be_status + ["not_run"] * 3
-        n_ok = 5 + be_status.count("ok")
-        assert data["summary"] == {"ok": n_ok, "not_run": 11 - n_ok, "failed": 0}
+        # Track B v1.1 item 4 + "Done when": the escalation arm runs offline in CI, so it is ok.
+        assert [a["status"] for a in data["arms"]] == ["ok"] * 5 + be_status + ["not_run"] * 3 + ["ok"]
+        n_ok = 6 + be_status.count("ok")
+        assert data["summary"] == {"ok": n_ok, "not_run": len(DEFAULT_ARMS) - n_ok, "failed": 0}
 
     def test_r2_arm_meets_acceptance(self, default_run):
         _, text = default_run
