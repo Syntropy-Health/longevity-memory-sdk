@@ -86,6 +86,11 @@ def _defined_assumptions() -> set[str]:
     return set(re.findall(r"^- \*\*((?:D-)?A\d+|O\d+)\.\*\*", _text("assumptions-limits.md"), re.M))
 
 
+def _resolve(name: str, target: str) -> Path:
+    """A relative link target, resolved from the directory of the file that links it."""
+    return ((PACK / name).parent / target.split("#", 1)[0]).resolve()
+
+
 def _repo_path(span: str) -> Path | None:
     """A code span that names a repo path (has a slash or a known top-level file), else None."""
     path = span.split("#", 1)[0].split(":", 1)[0].strip()
@@ -106,13 +111,27 @@ def test_t11_1_every_pack_file_exists_and_is_not_empty(name: str) -> None:
 
 
 def _ledger_table_body_lines(text: str) -> list[str]:
-    """Every table line except the header and separator rows (QG P4.1 K2)."""
+    """Every body line of every ledger table (QG P4.1 K2, P4 phase gate P4).
+
+    A table starts at a "| id |" header and runs to the next blank line. Every non-blank line in
+    it except the separator is a body line, with or without a leading pipe: GitHub renders
+    "L41 | claim | evidence |" as a row too, so a parser keyed on the pipe would skip it. A text
+    with no header is treated as one table (for the malformed-row self-tests).
+    """
+    lines = text.splitlines()
+    has_header = any(ln.strip().startswith("| id |") for ln in lines)
+    in_table = not has_header
     out = []
-    for line in text.splitlines():
+    for line in lines:
         s = line.strip()
-        if not s.startswith("|") or re.fullmatch(r"\|[\s|:-]+\|?", s) or s.startswith("| id |"):
+        if s.startswith("| id |"):
+            in_table = True
             continue
-        out.append(s)
+        if not s:
+            in_table = in_table and not has_header  # a blank line ends a table
+            continue
+        if in_table and not re.fullmatch(r"\|?[\s|:-]+\|?", s):
+            out.append(s)
     return out
 
 
@@ -133,6 +152,7 @@ def test_t11_1_ledger_ids_are_contiguous() -> None:
     "| L8 | claim | `ATTRIBUTION.md`",
     "| l8 | claim | `ATTRIBUTION.md` |",
     "| L8a | claim | `ATTRIBUTION.md` |",
+    "L8 | claim | `ATTRIBUTION.md` |",
 ])
 def test_t11_1_malformed_rows_are_caught(bad: str) -> None:
     assert _ledger_table_body_lines(bad) == [bad]
@@ -283,7 +303,7 @@ def test_relative_links_resolve(name: str) -> None:
     for target in LINK_RE.findall(_text(name)):
         if target.startswith(("http://", "https://", "mailto:", "#")):
             continue
-        path = ((PACK / name).parent / target.split("#", 1)[0]).resolve()  # relative to the linking file
+        path = _resolve(name, target)
         assert path.exists(), f"{name}: dead link {target}"
 
 
@@ -345,4 +365,12 @@ def test_mismatch_row_withholds_every_number() -> None:
                 .splitlines() if ln.startswith("| dpo |"))
     cells = [c.strip() for c in line.strip("|").split("|")]
     assert cells[4:] == [PROVENANCE_MISMATCH] * 5, cells
+    assert cells[3] == "ps; data sha256 abcdef", cells  # G25: run id, prompt set and data sha only
+    assert "141" not in line and "99" not in line
     assert "passed" not in line and not re.search(r"\d", " ".join(cells[4:]))
+
+
+def test_links_resolve_relative_to_the_linking_file() -> None:
+    assert _resolve("sources/x.md", "../README.md").is_file()
+    assert not _resolve("sources/x.md", "README.md").exists()
+    assert _resolve("README.md", "architecture.md#components").is_file()
