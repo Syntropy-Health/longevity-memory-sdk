@@ -50,5 +50,5 @@ The prose says only "Submit your working prototype by 20 November".
 ## Gaps
 
 The registered-participant dashboard (token-gated) and any rules sent by e-mail are where the
-unpublished rules most likely sit. Agents cannot see either. Organiser contact on the page:
-support+fhdic@hack2skill.com.
+unpublished rules most likely sit. Agents cannot see either. The event page lists the organiser's
+support contact.
