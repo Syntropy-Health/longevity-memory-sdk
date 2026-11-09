@@ -32,6 +32,24 @@ own titles by position (HAC-34).
 - Ledger paths are checked to exist, not to say what the claim says. The claim-to-file reading is
   the reviewer's.
 - No video or deck is in the repo.
+- Below the gate threshold, not fixed (scores in `workstreams/daypart/qg/p4.1-findings.md`): the URL
+  check is case-sensitive and http(s)-only, and the link check reads inline links only; the renderer
+  does not neutralise markdown in results strings (they are committed files); `--results` at a
+  missing directory renders "not recorded" rather than failing; the overclaiming check covers three
+  phrases; a few ledger claims (lapse handling, the gap inventory) have no row of their own.
+- Rollback: revert the P4 merge on `daypart/build`. P4 touches docs, one tool and one test only,
+  so nothing in the running app changes.
+
+**Quality gate.** P4.1 (5b68f18): 4 reviewers plus the scorer, 2 kept and fixed (K1: ledger L30
+said "no WCAG violations", but the axe test fails only on serious or critical ones, so it now says
+that, as SC6 does; K2: ledger rows the parser could not read were never checked). Also fixed below
+the threshold: B1 (a pipe or backslash in a prompt-set value was escaped twice), B2 (5 wording
+fixes so the pack matches the code), B3 (the FHDIC page names the pack as the judges' entry point),
+B4 (the host, link and copy checks now scan `sources/` too).
+
+**Release note.** Added: the FHDIC submission pack (`docs/daypart/submission/`) and
+`engine/tools/render_outcomes.py`. Changed: `docs/daypart/FHDIC.md` is the engine record and points
+judges at the pack.
 
 ## FHDIC P3 · UI and accessibility CI (HAC-38)
 
