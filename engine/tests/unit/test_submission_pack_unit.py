@@ -170,8 +170,11 @@ def test_t11_2_missing_fields_render_not_recorded_and_no_number(tmp_path: Path) 
     model_lines = [ln for ln in out.splitlines() if ln.startswith(("| base |", "| sft |", "| dpo |"))]
     assert len(model_lines) == 3
     for ln in model_lines:
+        # base has no run id ("not recorded"); sft/dpo have no training.json to match, so they are
+        # a provenance mismatch. Either way no number is shown ("sha256" is a label, not a value).
         assert NOT_RECORDED in ln
-        assert not re.search(r"\d", ln.split("|", 2)[2]), f"a number with no source: {ln}"
+        assert not re.search(r"\d", ln.split("|", 2)[2].replace("sha256", "")), f"a number with no source: {ln}"
+    assert sum(PROVENANCE_MISMATCH in ln for ln in model_lines) == 2
     grpo = next(ln for ln in out.splitlines() if ln.startswith("| grpo |"))
     assert PROPOSED in grpo
 
