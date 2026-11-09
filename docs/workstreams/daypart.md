@@ -1,5 +1,56 @@
 # daypart — dev doc
 
+## FHDIC P4 · Submission pack (HAC-38)
+
+**Overview.** P4 adds the FHDIC submission pack (A&D R11, §4.11) at `docs/daypart/submission/`. It
+is documentation plus one generator and one test. No engine or API code changed.
+
+**What changed.**
+- `docs/daypart/submission/`: `README.md` (demo URLs, the judge's path, the challenge framing, the
+  LOINC notice), `architecture.md`, `evidence-ledger.md` (41 claims), `outcomes.md` (generated),
+  `assumptions-limits.md` (A1–A9, D-A1–D-A9, O1–O4, dependencies, limitations), `organiser-rules.md`
+  (checklist with the 2026-11-20 18:29 UTC cutoff) and `real-input-pathway.md` (a pointer).
+- `docs/daypart/submission/sources/organiser-research-2026-11-06.md`: the HAC-34 organiser facts,
+  committed so the ledger can cite them.
+- `engine/tools/render_outcomes.py`: renders `outcomes.md` from `lab_rows()`.
+- `engine/tests/unit/test_submission_pack_unit.py`: T11.1, T11.2, the T5.6 README notice, link
+  resolution, a URL host allow-list and an overclaiming-copy check.
+- `docs/daypart/FHDIC.md`: links the pack; hosted step 1 now describes the shipped journey.
+
+**Key decisions** (addendum G30). Organiser facts trace to a committed snapshot, not a bare URL.
+Assumption ids must be defined in `assumptions-limits.md`. Challenges #4 and #5 use the organiser's
+own titles by position (HAC-34).
+
+**Run it**, from `engine/`: `uv run python tools/render_outcomes.py` (rewrite) or `--check`
+(exit 1 if `outcomes.md` is stale). Whenever `docs/daypart/results/` changes, regenerate
+`outcomes.md` in the same commit, or the pack test fails.
+
+**Known issues / residual risk.**
+- The organiser's IP, data and judging rules and the artefact formats are not published
+  (O1–O4); team registration (closes 2026-11-10 18:29 UTC) is not visible to agents.
+- The snapshot is from 2026-11-06. Fetch the event JSON again before submitting.
+- Ledger paths are checked to exist, not to say what the claim says. The claim-to-file reading is
+  the reviewer's.
+- No video or deck is in the repo.
+- Below the gate threshold, not fixed (scores in `workstreams/daypart/qg/p4.1-findings.md`): the URL
+  check is case-sensitive and http(s)-only, and the link check reads inline links only; the renderer
+  does not neutralise markdown in results strings (they are committed files); `--results` at a
+  missing directory renders "not recorded" rather than failing; the overclaiming check covers three
+  phrases; a few ledger claims (lapse handling, the gap inventory) have no row of their own.
+- Rollback: revert the P4 merge on `daypart/build`. P4 touches docs, one tool and one test only,
+  so nothing in the running app changes.
+
+**Quality gate.** P4.1 (5b68f18): 4 reviewers plus the scorer, 2 kept and fixed (K1: ledger L30
+said "no WCAG violations", but the axe test fails only on serious or critical ones, so it now says
+that, as SC6 does; K2: ledger rows the parser could not read were never checked). Also fixed below
+the threshold: B1 (a pipe or backslash in a prompt-set value was escaped twice), B2 (5 wording
+fixes so the pack matches the code), B3 (the FHDIC page names the pack as the judges' entry point),
+B4 (the host, link and copy checks now scan `sources/` too).
+
+**Release note.** Added: the FHDIC submission pack (`docs/daypart/submission/`) and
+`engine/tools/render_outcomes.py`. Changed: `docs/daypart/FHDIC.md` is the engine record and points
+judges at the pack.
+
 ## FHDIC P3 · UI and accessibility CI (HAC-38)
 
 **Overview.** P3 puts screens on the P1/P2 API (A&D R1, R10). The demo page is now the Clinical Human

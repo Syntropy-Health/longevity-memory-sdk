@@ -1,3 +1,3 @@
 # Workstream dev docs
 
-- [daypart](daypart.md) — Daypart Engine; latest: FHDIC P3 UI and accessibility CI (HAC-38)
+- [daypart](daypart.md) — Daypart Engine; latest: FHDIC P4 submission pack (HAC-38)

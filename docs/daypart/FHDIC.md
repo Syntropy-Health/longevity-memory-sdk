@@ -1,6 +1,6 @@
 # Daypart Engine — FHDIC Challenge 09 submission
 
-Daypart is an adherence-intelligence engine for health routines, trained on Meta's Muse Glimmer 30B and measured in a reproducible synthetic world. This page is the single entry point for the FHDIC Challenge 09 prototype submission.
+Daypart is an adherence-intelligence engine for health routines, trained on Meta's Muse Glimmer 30B and measured in a reproducible synthetic world. This page is the engine's record: its architecture, training record and tracks. The Clinical Human Clone submission pack, [`docs/daypart/submission/`](submission/README.md), is the judges' entry point.
 
 ## Index
 
@@ -9,14 +9,14 @@ This page was prepared by agents. The principal submits it; agents submit nothin
 | Deliverable | Link |
 |---|---|
 | **Prototype** | Repo: [`Syntropy-Health/longevity-memory-sdk`](https://github.com/Syntropy-Health/longevity-memory-sdk). Released: `main` @ [`0ae02e6`](https://github.com/Syntropy-Health/longevity-memory-sdk/commit/0ae02e6d2ff0a283399c1234379071ac20ef151e) (PR #3). Staging: branch [`daypart/build`](https://github.com/Syntropy-Health/longevity-memory-sdk/tree/daypart/build). Code: [`engine/`](../../engine/) |
-| **Demo access** | [Playground](https://supermomo668--daypart-demo-playground.us-east.modal.run) · [API explorer](https://supermomo668--daypart-demo-playground.us-east.modal.run/docs) · [Results dashboard](https://supermomo668--daypart-demo-dashboard.us-east.modal.run). See [How to run: hosted](#hosted-what-a-judge-clicks) |
+| **Demo access** | [Clinical Human Clone](https://supermomo668--daypart-demo-playground.us-east.modal.run) · [API explorer](https://supermomo668--daypart-demo-playground.us-east.modal.run/docs) · [Research view: full results](https://supermomo668--daypart-demo-dashboard.us-east.modal.run). See [How to run: hosted](#hosted-what-a-judge-clicks) |
 | **Technical documentation** | [Architecture](#architecture) · [How to run](#how-to-run) · [Build contracts](contracts/) · [A&D (Clinical Human Clone)](../../workstreams/daypart/AND.md) · [Dev doc](../workstreams/daypart.md) |
 | **Assumptions, dependencies, limitations** | [Section below](#assumptions-dependencies-limitations) |
 | **Training record** | [Section below](#training-record) · raw records in [`docs/daypart/results/`](results/) |
 | **Track B** (calibrated escalation) | Built; its calibration is no better than the base rate. [Section below](#track-b-calibrated-escalation-standalone-fallback) |
 | **Track C** (prevention passport) | Built. [Section below](#track-c-prevention-passport) |
 
-The HAC-38 submission pack (`docs/daypart/submission/`) is not on `daypart/build` yet, so this page holds the content itself. When the pack lands, this index links to it.
+The Clinical Human Clone submission pack is [`docs/daypart/submission/`](submission/README.md): demo URLs, architecture, the evidence and source ledger, generated outcomes, assumptions and limits, and the organiser-rules checklist. This page keeps the engine's training record and tracks.
 
 ## Architecture
 
@@ -105,11 +105,11 @@ uv run --with modal modal run daypart/train/modal_app.py::smoke --data-dir /tmp/
 
 ### Hosted: what a judge clicks
 
-Both apps run on Modal; CI redeploys them on every green push to `daypart/build` or `main`.
+Both apps run on Modal; CI redeploys them after every green push to `daypart/build` or `main` that changes the engine, `docs/daypart/` or the workflow.
 
-1. **Playground**: <https://supermomo668--daypart-demo-playground.us-east.modal.run>. Pick a generated member, seed and horizon, click **Start episode**, then choose an intent, edit the draft (try adding a dose to test the membrane) and click **Send draft**. Each step shows the membrane decision, the next state, adherence and reward. Set **As of day** and click **Show passport** for the member's Pattern passport.
+1. **Clinical Human Clone**: <https://supermomo668--daypart-demo-playground.us-east.modal.run>. The five-screen journey: check in, review before saving, Health Clone Passport, suggested next step, learning lab. The [submission pack README](submission/README.md#what-a-judge-clicks) walks through it. The earlier episode playground (pick a member, seed and horizon, send a draft through the membrane, show the Pattern passport) is under **Research view (optional)**.
 2. **API explorer**: <https://supermomo668--daypart-demo-playground.us-east.modal.run/docs>. Try the Clinical Human Clone routes in order: `POST /api/journals`, `POST /api/checkins`, `POST /api/checkins/{checkin_id}/review`, `GET /api/journals/{journal_id}/passport`, `GET /api/journals/{journal_id}/next-step`, `GET /api/lab`.
-3. **Results dashboard**: <https://supermomo668--daypart-demo-dashboard.us-east.modal.run>. The benchmark and training numbers below, read from the committed records.
+3. **Research view: full results** (the results dashboard): <https://supermomo668--daypart-demo-dashboard.us-east.modal.run>. The benchmark and training numbers below, read from the committed records.
 
 ## Training record
 
