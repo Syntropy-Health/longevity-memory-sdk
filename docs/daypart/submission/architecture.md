@@ -84,7 +84,7 @@ All paths are under [`engine/daypart/`](../../../engine/daypart/).
 |---|---|---|
 | Concept registry | `memory/registry.py`, `memory/registry_a4.json`, `memory/loinc_verify_v1.csv` | 20 concepts in 3 verticals: 18 LOINC 2.83 codes and 2 local codes. The ontology `core-v1+u1` adds the 11 LOINC codes not already in `core-v1` through the append-only update path. |
 | Governance gate | `governance/real_input.py`, `governance/real_input.yaml` | `REAL_INPUT_BUILD_ALLOWED = False` and a 12-gate checklist; every request to enable is refused. |
-| Crisis check | `checkin/crisis.py` | Reuses the `boundary-v1` crisis markers; runs before extraction. |
+| Crisis check | `checkin/crisis.py` | The `boundary-v1` crisis markers plus a member-language pattern list; runs before extraction. |
 | PII tripwire | `checkin/tripwire.py` | Refuses text that looks like an e-mail address, phone number, ID-like number, "my name is" or a date of birth. |
 | Text extractor | `checkin/extract_text.py` | Rules from free text to proposals, with flags for anything ambiguous. |
 | Fixture intake | `checkin/fixtures.py`, `demo/fixtures/` | 4 synthetic fixtures, allow-listed by sha256, with a 1 MiB cap and type checks. |
@@ -116,8 +116,9 @@ The OpenAPI page on the hosted app lists every route with its schemas.
 
 ## CI gates
 
-[`.github/workflows/engine.yml`](../../../.github/workflows/engine.yml) runs on every push. The
-hosted demo is redeployed only when all four jobs pass:
+[`.github/workflows/engine.yml`](../../../.github/workflows/engine.yml) runs on pull requests and on
+pushes to `main` and `daypart/**` that touch `engine/`, `docs/daypart/` or the workflow. The hosted
+demo is redeployed, from `daypart/build` or `main` only, when all four jobs pass:
 
 | Job | Checks |
 |---|---|

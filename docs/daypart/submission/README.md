@@ -34,7 +34,7 @@ for clinical use. Real-input mode is a gate that always refuses ([real-input pat
 
 Source: https://github.com/Syntropy-Health/longevity-memory-sdk (the engine is in `engine/`). CI
 redeploys both apps from `.github/workflows/engine.yml` after every green push to the staging branch
-(`daypart/build`) or `main`.
+(`daypart/build`) or `main` that changes the engine, these docs or the workflow.
 
 ### What a judge clicks
 

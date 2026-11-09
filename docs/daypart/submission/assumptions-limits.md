@@ -115,7 +115,7 @@ dashboard, where they most likely sit.
 **Safety and privacy**
 - The membrane's `boundary-v1` rules are measured on a sealed corpus, not proven. They do not
   guarantee that no unsafe text gets through.
-- The crisis check is lexical: wording outside its marker list is missed.
+- The crisis check is lexical: wording outside its marker and pattern lists is missed.
 - The PII tripwire is not a privacy control. A value the person confirms is saved to the demo
   journal for the session.
 - Real input stays off by design; the 12 governance gates are open and unassigned.

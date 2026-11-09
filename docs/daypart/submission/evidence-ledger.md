@@ -26,7 +26,7 @@ does not exist or any assumption id is not defined.
 | L7 | Only the bundled fixtures are accepted, allow-listed by sha256, with a 1 MiB cap; anything else is refused. | `engine/daypart/checkin/fixtures.py` · `engine/tests/unit/test_checkin_fixtures_unit.py` · ASSUMPTION A5 |
 | L8 | The fixtures are synthetic and reproducible from a committed generator. | `engine/tools/make_fixtures.py` |
 | L9 | Every extractor's output is revalidated as the `Proposal` schema before it reaches the journal; malformed output gets a 500 that repeats no input. | `engine/daypart/checkin/extractor.py` · `engine/tests/unit/test_extractor_contract_unit.py` |
-| L10 | Crisis language is checked before extraction, using the `boundary-v1` crisis markers, and answered with a fixed hand-off. | `engine/daypart/checkin/crisis.py` · `engine/tests/unit/test_checkin_extract_unit.py` |
+| L10 | Crisis language is checked before extraction, using the `boundary-v1` crisis markers plus a member-language pattern list, and answered with a fixed hand-off. | `engine/daypart/checkin/crisis.py` · `engine/tests/unit/test_checkin_extract_unit.py` |
 | L11 | Text that looks like personal data is refused whole; this is defence in depth, not a privacy control. | `engine/daypart/checkin/tripwire.py` · ASSUMPTION D-A7 |
 | L12 | Journals are per visitor, in memory only, evicted after 60 minutes idle or beyond 256 journals, in a single container. | `engine/daypart/checkin/journal.py` · `engine/deploy/modal_demo.py` · ASSUMPTION D-A3 |
 
@@ -35,11 +35,11 @@ does not exist or any assumption id is not defined.
 | id | claim | evidence |
 |---|---|---|
 | L13 | The registry holds 20 concepts in 3 verticals: 18 LOINC codes and 2 local codes. | `engine/daypart/memory/registry_a4.json` · `engine/tests/unit/test_registry_unit.py` |
-| L14 | Every LOINC code was verified against LOINC 2.83; 69725-0 failed and was dropped, not replaced. | `engine/daypart/memory/loinc_verify_v1.csv` · `workstreams/daypart/plan/BUILD-PLAN-fhdic.md` · ASSUMPTION D-A5 |
+| L14 | Every LOINC code was verified against LOINC 2.83; 69725-0 failed and was dropped, not replaced. | `engine/daypart/memory/loinc_verify_v1.csv` · `engine/daypart/memory/registry_a4.json` · `workstreams/daypart/plan/BUILD-PLAN-fhdic.md` · ASSUMPTION D-A5 |
 | L15 | The ontology `core-v1+u1` adds the 11 LOINC codes not in `core-v1` through the append-only update; `core-v1` is unchanged. | `engine/daypart/memory/registry.py` · `engine/tests/unit/test_registry_unit.py` |
 | L16 | LOINC is used under its licence; the notice is in ATTRIBUTION, the UI footer and this pack's README. | `ATTRIBUTION.md` · `engine/daypart/memory/registry.py` · `engine/tests/unit/test_registry_unit.py` |
 | L17 | The evidence registry holds 5 public NIH, MedlinePlus and WHO pages. | `engine/daypart/evidence/sources_v1.json` · `engine/tests/unit/test_evidence_unit.py` |
-| L18 | 7 concepts carry a reference range, each copied from a sentence on its source page; the loader refuses a range that does not match. Every other concept has none. | `engine/daypart/evidence/registry.py` · `engine/daypart/evidence/sources_v1.json` · `engine/tests/unit/test_evidence_unit.py` |
+| L18 | 7 concepts carry a reference range, each copied from a sentence on its source page; the loader refuses a range that does not match. Every other concept has none. | `engine/daypart/memory/registry_a4.json` · `engine/daypart/evidence/registry.py` · `engine/daypart/evidence/sources_v1.json` · `engine/tests/unit/test_evidence_unit.py` |
 | L19 | Content is labelled "reviewed: board sign-off 2026-11-07"; no clinician reviewed it. | `engine/daypart/memory/registry_a4.json` · `workstreams/daypart/AND.md` · ASSUMPTION A3 |
 | L20 | A reference range is shown beside a value and never interpreted: nothing is marked high, low or abnormal. | `engine/daypart/passport/view.py` · `engine/tests/unit/test_passport_view_unit.py` · ASSUMPTION A2 |
 
@@ -74,7 +74,7 @@ does not exist or any assumption id is not defined.
 
 | id | claim | evidence |
 |---|---|---|
-| L33 | Real input cannot be enabled from the UI, the API or the environment; every request gets 403 with the 12 open gates. | `engine/daypart/governance/real_input.py` · `engine/daypart/governance/real_input.yaml` · `engine/tests/unit/test_real_input_unit.py` · ASSUMPTION A6 |
+| L33 | Real input cannot be enabled from the UI, the API or the environment: the UI and `POST /api/mode` get 403 with the 12 open gates, and `DAYPART_REAL_INPUT=1` is logged and refused at startup. | `engine/daypart/governance/real_input.py` · `engine/daypart/demo/app.py` · `engine/daypart/governance/real_input.yaml` · `engine/tests/unit/test_real_input_unit.py` · ASSUMPTION A6 |
 | L34 | The pathway doc's gate table equals the YAML. | `docs/daypart/real-input-pathway.md` · `engine/tests/unit/test_real_input_unit.py` |
 
 ## Organiser and framing (SC7)
