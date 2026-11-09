@@ -103,11 +103,38 @@ def test_t11_1_every_pack_file_exists_and_is_not_empty(name: str) -> None:
     assert _text(name).strip(), f"{name} is empty"
 
 
-def test_t11_1_ledger_has_claims_with_unique_ids() -> None:
+def _ledger_table_body_lines(text: str) -> list[str]:
+    """Every table line except the header and separator rows (QG P4.1 K2)."""
+    out = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s.startswith("|") or re.fullmatch(r"\|[\s|:-]+\|?", s) or s.startswith("| id |"):
+            continue
+        out.append(s)
+    return out
+
+
+def test_t11_1_every_ledger_table_row_parses() -> None:
+    # A row the parser skips is a row nobody checks: no trailing pipe, "l8" or "L8a" must fail.
+    for line in _ledger_table_body_lines(_text("evidence-ledger.md")):
+        assert LEDGER_ROW_RE.match(line), f"unparseable ledger row: {line!r}"
+
+
+def test_t11_1_ledger_ids_are_contiguous() -> None:
     rows = _ledger_rows()
     assert len(rows) >= 20, "the ledger must trace the pack's claims, not a sample"
     ids = [r[0] for r in rows]
-    assert len(ids) == len(set(ids)), "duplicate ledger ids"
+    assert ids == [f"L{i}" for i in range(1, len(ids) + 1)], "ledger ids must run L1..Ln with no gap"
+
+
+@pytest.mark.parametrize("bad", [
+    "| L8 | claim | `ATTRIBUTION.md`",
+    "| l8 | claim | `ATTRIBUTION.md` |",
+    "| L8a | claim | `ATTRIBUTION.md` |",
+])
+def test_t11_1_malformed_rows_are_caught(bad: str) -> None:
+    assert _ledger_table_body_lines(bad) == [bad]
+    assert not LEDGER_ROW_RE.match(bad)
 
 
 def test_t11_1_every_ledger_row_resolves_or_is_an_assumption() -> None:
