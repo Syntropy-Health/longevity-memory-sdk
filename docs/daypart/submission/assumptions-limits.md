@@ -33,7 +33,8 @@ Made by the CEO without a human answer unless a status says otherwise.
   numbers.*
 - **A4.** The ontology slice covers three verticals: vitals and body measures; behaviour and
   function (activity, sleep, adherence); symptoms and wellbeing. Labs, conditions, medications and
-  care history are listed as gaps, not built. *Status: built with 18 LOINC codes and 2 local codes.*
+  care history are listed as gaps, not built. *Status: built with 18 LOINC codes and 2 local codes; the gap inventory also lists screenings and
+  check-ups.*
 - **A5.** The public demo is synthetic only. File and image check-in accept only the bundled demo
   fixtures; anything else is refused with a warning not to enter real data. *Status: holds.*
 - **A6.** Real-input mode ships as a design and a hard-off switch, not as a feature. *Status: holds.*
@@ -99,7 +100,8 @@ dashboard, where they most likely sit.
 
 **Scope**
 - Text, demo-file and demo-image check-in only. Voice and video show as unavailable.
-- Three verticals and 20 concepts. Labs, conditions, medications and care history are gaps.
+- Three verticals and 20 concepts. Labs, conditions, medications, care history, and screenings and
+  check-ups are gaps.
 - No accounts, no persistence, no EHR integration (no Malaffi or Sahatna).
 - #5 is supported only by the "ask a professional" option and the crisis hand-off. There is no case
   ownership, escalation workflow or documented closure.
