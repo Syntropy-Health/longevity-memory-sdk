@@ -238,7 +238,8 @@ def test_architecture_carries_the_blueprint_diagrams() -> None:
 def test_organiser_rules_checklist_states_the_cutoff_and_a_status_per_rule() -> None:
     text = _text("organiser-rules.md")
     assert "2026-11-20 18:29 UTC" in text
-    items = re.findall(r"^- \[( |x)\] (.+)$", text, re.M)
+    # An item is its "- [ ]" line plus any indented continuation lines.
+    items = re.findall(r"^- \[( |x)\] (.+(?:\n  .+)*)", text, re.M)
     assert len(items) >= 6
     for _, item in items:
         assert re.search(r"\*\*(met|unverified|not published|open)\*\*", item), item

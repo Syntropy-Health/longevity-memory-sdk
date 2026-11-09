@@ -16,7 +16,7 @@ This page was prepared by agents. The principal submits it; agents submit nothin
 | **Track B** (calibrated escalation) | Built; its calibration is no better than the base rate. [Section below](#track-b-calibrated-escalation-standalone-fallback) |
 | **Track C** (prevention passport) | Built. [Section below](#track-c-prevention-passport) |
 
-The HAC-38 submission pack (`docs/daypart/submission/`) is not on `daypart/build` yet, so this page holds the content itself. When the pack lands, this index links to it.
+The Clinical Human Clone submission pack is [`docs/daypart/submission/`](submission/README.md): demo URLs, architecture, the evidence and source ledger, generated outcomes, assumptions and limits, and the organiser-rules checklist. This page keeps the engine's training record and tracks.
 
 ## Architecture
 
@@ -107,7 +107,7 @@ uv run --with modal modal run daypart/train/modal_app.py::smoke --data-dir /tmp/
 
 Both apps run on Modal; CI redeploys them on every green push to `daypart/build` or `main`.
 
-1. **Playground**: <https://supermomo668--daypart-demo-playground.us-east.modal.run>. Pick a generated member, seed and horizon, click **Start episode**, then choose an intent, edit the draft (try adding a dose to test the membrane) and click **Send draft**. Each step shows the membrane decision, the next state, adherence and reward. Set **As of day** and click **Show passport** for the member's Pattern passport.
+1. **Clinical Human Clone**: <https://supermomo668--daypart-demo-playground.us-east.modal.run>. The five-screen journey: check in, review before saving, Health Clone Passport, suggested next step, learning lab. The [submission pack README](submission/README.md#what-a-judge-clicks) walks through it. The earlier episode playground (pick a member, seed and horizon, send a draft through the membrane, show the Pattern passport) is under **Research view (optional)**.
 2. **API explorer**: <https://supermomo668--daypart-demo-playground.us-east.modal.run/docs>. Try the Clinical Human Clone routes in order: `POST /api/journals`, `POST /api/checkins`, `POST /api/checkins/{checkin_id}/review`, `GET /api/journals/{journal_id}/passport`, `GET /api/journals/{journal_id}/next-step`, `GET /api/lab`.
 3. **Results dashboard**: <https://supermomo668--daypart-demo-dashboard.us-east.modal.run>. The benchmark and training numbers below, read from the committed records.
 
