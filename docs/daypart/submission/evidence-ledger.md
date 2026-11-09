@@ -66,7 +66,7 @@ does not exist or any assumption id is not defined.
 
 | id | claim | evidence |
 |---|---|---|
-| L30 | axe finds no WCAG 2.1 A/AA violations on any screen; the journey completes with a keyboard alone; 375 px shows no horizontal scroll; reduced motion is honoured. | `engine/tests/ui/test_journey_a11y.py` · `.github/workflows/engine.yml` |
+| L30 | axe finds no serious or critical violations of the WCAG 2.0/2.1 A and AA rules on any screen (SC6); the journey completes with a keyboard alone; 375 px shows no horizontal scroll; reduced motion is honoured. | `engine/tests/ui/test_journey_a11y.py` · `.github/workflows/engine.yml` |
 | L31 | axe-core is a vendored, sha-pinned copy used only in tests, never served. | `engine/tests/ui/vendor/axe.min.js` · `ATTRIBUTION.md` |
 | L32 | Pyright runs over `engine/daypart` and gates the deploy. | `engine/pyproject.toml` · `engine/tests/unit/test_typecheck_ci_unit.py` · `.github/workflows/engine.yml` |
 
