@@ -8,3 +8,4 @@
 - P3.3 — dashboard renamed Clinical Human Clone: research view (T1.4); import-safe; README/CLI/link say research view: full results (commit cf57d54)
 - P3 phase gate — deep QG over P3.1–P3.3 from 179d67d: R1 + K1–K7 + B1–B3 fixed (lab mismatch label, dashboard import guard test, radio ring check, review refusal tests, flagged-proposal tests, LOINC footer verbatim, G29 supersedes G27(8), review double-render)
 - P4.1 — submission pack docs/daypart/submission/ (7 files + organiser snapshot), engine/tools/render_outcomes.py, T11.1/T11.2/T5.6 pack test; QG K1 (L30 axe wording), K2 (ledger rows the parser skipped), B1-B4 fixed (commit 5b68f18)
+- P4 phase gate — deep QG over P4 from 5ced742: 2 fresh reviewers (accuracy, tests), P1-P6 fixed; phase commit f9cebb3, QGR Hash E f2d48c4
