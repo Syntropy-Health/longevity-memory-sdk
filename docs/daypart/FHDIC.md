@@ -105,7 +105,7 @@ uv run --with modal modal run daypart/train/modal_app.py::smoke --data-dir /tmp/
 
 ### Hosted: what a judge clicks
 
-Both apps run on Modal; CI redeploys them on every green push to `daypart/build` or `main`.
+Both apps run on Modal; CI redeploys them after every green push to `daypart/build` or `main` that changes the engine, `docs/daypart/` or the workflow.
 
 1. **Clinical Human Clone**: <https://supermomo668--daypart-demo-playground.us-east.modal.run>. The five-screen journey: check in, review before saving, Health Clone Passport, suggested next step, learning lab. The [submission pack README](submission/README.md#what-a-judge-clicks) walks through it. The earlier episode playground (pick a member, seed and horizon, send a draft through the membrane, show the Pattern passport) is under **Research view (optional)**.
 2. **API explorer**: <https://supermomo668--daypart-demo-playground.us-east.modal.run/docs>. Try the Clinical Human Clone routes in order: `POST /api/journals`, `POST /api/checkins`, `POST /api/checkins/{checkin_id}/review`, `GET /api/journals/{journal_id}/passport`, `GET /api/journals/{journal_id}/next-step`, `GET /api/lab`.
