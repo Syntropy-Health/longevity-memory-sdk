@@ -148,3 +148,19 @@ def test_results_redirects_to_hosted_dashboard_when_configured():
 
 def test_results_404_without_hosted_dashboard(client):
     assert client.get("/results", follow_redirects=False).status_code == 404
+
+
+def test_units_lists_each_concepts_allowed_units_canonical_first(client):
+    """GET /api/units (QG P3.1 C1): the review Correct select offers exactly the units review() accepts."""
+    from daypart.checkin.service import _allowed_units
+    from daypart.memory.registry import load_registry
+
+    r = client.get("/api/units")
+    assert r.status_code == 200
+    units = r.json()["units"]
+    reg = load_registry()
+    assert list(units) == [c.code for c in reg.concepts()]
+    for c in reg.concepts():
+        assert units[c.code][0] == c.unit
+        assert units[c.code] == list(_allowed_units(c))
+    assert len(units[reg.for_keyword("weight").code]) > 1  # an alt unit is offered where the registry has one

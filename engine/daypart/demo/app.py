@@ -1,4 +1,7 @@
-"""FastAPI playground (HAC-20). Offline, no secrets, synthetic members only (I1)."""
+"""Clinical Human Clone API: the check-in journey (HAC-38) and the research playground (HAC-20).
+
+Offline, no secrets, synthetic members only (I1).
+"""
 
 from __future__ import annotations
 
@@ -27,6 +30,7 @@ from daypart.demo.playground import (
 )
 from daypart.demo.safety import safe_text
 from daypart.governance import real_input
+from daypart.memory.registry import load_registry
 from daypart.passport import view as passport_view
 from daypart.simmember.dynamics import INTENTS
 
@@ -130,8 +134,11 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     pg = Playground(cohort_seed)
     results_url = results_url or os.environ.get("DAYPART_RESULTS_URL") or None
     app = FastAPI(
-        title="Daypart playground",
-        description="Synthetic SimMembers only. Not a consumer UI. Not medical advice.",
+        title="Clinical Human Clone API",
+        description=(
+            "Clinical Human Clone and Health Clone Passport demo. Synthetic data only: synthetic inputs "
+            "and simulated results, no real health data. Not for clinical use. Not medical advice."
+        ),
         version="0.1.0",
     )
     app.state.playground = pg
@@ -397,6 +404,12 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     def lab_table() -> dict:
         # A&D §4.8: read per request from the committed results, so a missing artefact never fails the app.
         return _safe(lab.lab_rows().model_dump(mode="json"))
+
+    @app.get("/api/units")
+    def units() -> dict:
+        # Read-only (QG P3.1 C1): each concept's allowed units, canonical first, then its alt units, so
+        # the review Correct select offers exactly what review() accepts (service._allowed_units).
+        return {"units": {c.code: [c.unit, *c.alt_units] for c in load_registry().concepts()}}
 
     @app.get("/api/inventory")
     def inventory() -> dict:
