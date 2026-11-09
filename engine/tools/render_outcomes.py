@@ -73,9 +73,10 @@ def _model_line(r: LabRow) -> str:
         # G25: a mismatch row keeps only the run id, prompt set and data sha; no number at all.
         data = _sha(sp.data_sha256 if sp else None)
         withheld = PROVENANCE_MISMATCH
-        return _row([r.row, r.status, r.run_id, f"{_cell(prompt_set)}; data sha256 {data}",
+        return _row([r.row, r.status, r.run_id, f"{prompt_set or NOT_RECORDED}; data sha256 {data}",
                      withheld, withheld, withheld, withheld, withheld])
-    split = f"{_cell(prompt_set)}; n {_num(sp.n if sp else None)}"
+    # The cell is escaped once, by _row; escaping prompt_set here too doubled it (QG P4.1 B1).
+    split = f"{prompt_set or NOT_RECORDED}; n {_num(sp.n if sp else None)}"
     if r.row == "base":
         split += f"; file sha256 {_sha(r.file_digest)}"
     else:

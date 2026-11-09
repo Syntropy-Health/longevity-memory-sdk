@@ -300,3 +300,15 @@ def test_no_overclaiming_copy(name: str) -> None:
         for m in re.finditer(re.escape(phrase), low):
             before = low[max(0, m.start() - 12):m.start()]
             assert re.search(r"\b(not|never|no)\b", before), f"{name}: unqualified '{phrase}'"
+
+
+@pytest.mark.parametrize("status", ["ok", PROVENANCE_MISMATCH])
+def test_prompt_set_is_escaped_exactly_once(status: str) -> None:
+    # QG P4.1 B1: a pipe or backslash in a recorded value is escaped once, so it renders as recorded.
+    ro = _load_renderer()
+    row = LabRow(row="sft", kind="model", status=status, run_id="r",  # type: ignore[arg-type]
+                 split=Split(prompt_set_version="p|q\\z"))
+    line = next(ln for ln in ro.render(LabTable(rows=(row,), member_failure_count=None, i1_passed=None))
+                .splitlines() if ln.startswith("| sft |"))
+    assert line.count("p\\|q\\\\z") == 1, line
+    assert "\\\\\\|" not in line, line
