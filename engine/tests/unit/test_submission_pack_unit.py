@@ -50,6 +50,8 @@ ALLOWED_HOSTS = {
 ASSUMPTION_RE = re.compile(r"\bASSUMPTION\s+((?:D-)?A\d+|O\d+)\b")
 LEDGER_ROW_RE = re.compile(r"^\|\s*(L\d+)\s*\|(.*)\|\s*$")
 CODE_SPAN_RE = re.compile(r"`([^`]+)`")
+# Every markdown file the pack publishes, the sources/ snapshot included (QG P4.1 B4).
+PACK_MD = tuple(sorted(str(p.relative_to(PACK)) for p in PACK.rglob("*.md")))
 LINK_RE = re.compile(r"\]\(([^)\s]+)\)")
 URL_RE = re.compile(r"https?://[^\s)>`\"']+")
 
@@ -276,23 +278,23 @@ def test_real_input_pathway_points_to_the_gated_doc() -> None:
     assert "](../real-input-pathway.md)" in _text("real-input-pathway.md")
 
 
-@pytest.mark.parametrize("name", PACK_FILES)
+@pytest.mark.parametrize("name", PACK_MD)
 def test_relative_links_resolve(name: str) -> None:
     for target in LINK_RE.findall(_text(name)):
         if target.startswith(("http://", "https://", "mailto:", "#")):
             continue
-        path = (PACK / target.split("#", 1)[0]).resolve()
+        path = ((PACK / name).parent / target.split("#", 1)[0]).resolve()  # relative to the linking file
         assert path.exists(), f"{name}: dead link {target}"
 
 
-@pytest.mark.parametrize("name", PACK_FILES)
+@pytest.mark.parametrize("name", PACK_MD)
 def test_no_url_outside_the_public_allow_list(name: str) -> None:
     for url in URL_RE.findall(_text(name)):
         host = urlparse(url.rstrip(".,;")).hostname
         assert host in ALLOWED_HOSTS, f"{name}: {url} names a host outside the allow-list"
 
 
-@pytest.mark.parametrize("name", PACK_FILES)
+@pytest.mark.parametrize("name", PACK_MD)
 def test_no_overclaiming_copy(name: str) -> None:
     low = _text(name).lower()
     # AM-1 / D-A6: nobody clinically reviewed anything; demo mode is on (R1).
@@ -312,3 +314,8 @@ def test_prompt_set_is_escaped_exactly_once(status: str) -> None:
                 .splitlines() if ln.startswith("| sft |"))
     assert line.count("p\\|q\\\\z") == 1, line
     assert "\\\\\\|" not in line, line
+
+
+def test_the_scanned_set_covers_the_pack_and_its_sources() -> None:
+    assert set(PACK_FILES) <= set(PACK_MD)
+    assert "sources/organiser-research-2026-11-06.md" in PACK_MD
