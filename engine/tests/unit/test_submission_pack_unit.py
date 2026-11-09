@@ -319,3 +319,30 @@ def test_prompt_set_is_escaped_exactly_once(status: str) -> None:
 def test_the_scanned_set_covers_the_pack_and_its_sources() -> None:
     assert set(PACK_FILES) <= set(PACK_MD)
     assert "sources/organiser-research-2026-11-06.md" in PACK_MD
+
+
+@pytest.mark.parametrize(("row", "gate", "expected"), [
+    ("sft", {"passed": True}, "passed"),
+    ("sft", {"passed": False}, "failed"),
+    ("dpo", {"passed": "yes"}, NOT_RECORDED),
+    ("dpo", None, NOT_RECORDED),
+    ("base", None, "n/a"),
+])
+def test_gate_column(row: str, gate: dict | None, expected: str) -> None:
+    ro = _load_renderer()
+    r = LabRow(row=row, kind="model", status="ok", run_id="r", gate=gate)
+    line = next(ln for ln in ro.render(LabTable(rows=(r,), member_failure_count=None, i1_passed=None))
+                .splitlines() if ln.startswith(f"| {row} |"))
+    assert line.rstrip(" |").rsplit("| ", 1)[1] == expected, line
+
+
+def test_mismatch_row_withholds_every_number() -> None:
+    ro = _load_renderer()
+    r = LabRow(row="dpo", kind="model", status=PROVENANCE_MISMATCH, run_id="run-x",  # type: ignore[arg-type]
+               split=Split(prompt_set_version="ps", n=141, training_rows=99, data_sha256="abcdef"),
+               seed=42, failures=7, degenerate=3, gate={"passed": True}, metrics={"m": 0.5})
+    line = next(ln for ln in ro.render(LabTable(rows=(r,), member_failure_count=None, i1_passed=None))
+                .splitlines() if ln.startswith("| dpo |"))
+    cells = [c.strip() for c in line.strip("|").split("|")]
+    assert cells[4:] == [PROVENANCE_MISMATCH] * 5, cells
+    assert "passed" not in line and not re.search(r"\d", " ".join(cells[4:]))
