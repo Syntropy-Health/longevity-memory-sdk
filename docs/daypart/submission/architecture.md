@@ -125,4 +125,4 @@ demo is redeployed, from `daypart/build` or `main` only, when all four jobs pass
 | `test` | The sealed and unit suites, and the I1 check that the curated-25 held-out profiles are in no training artefact. |
 | `typecheck` | Pyright in basic mode over `engine/daypart`. |
 | `demo-ui` | The browser suite: axe on every screen and state, the keyboard-only journey, 375 px with no horizontal scroll, reduced motion. |
-| `attribution-boundary` | The pinned LHM SDK baseline (`syntropy/`, its tests and lock) is unchanged since the initial commit. |
+| `attribution-boundary` | The pre-existing LHM SDK at the repo root (`syntropy/`, `tests/`, `pyproject.toml`, `uv.lock`) is unchanged since the initial commit. |
