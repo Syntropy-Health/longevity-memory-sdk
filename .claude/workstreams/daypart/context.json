@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "workstream": "daypart",
-  "updated_at": "2026-11-07T21:55:06.117994+00:00",
+  "updated_at": "2026-11-08T15:40:43.482369+00:00",
   "linear": {
     "initiative_url": "",
     "initiative_id": ""
@@ -113,6 +113,55 @@
       "summary": "learning lab rows + /api/lab (T8.1-T8.3)",
       "pr": "",
       "updated_at": "2026-11-07T21:55:06.117959+00:00"
+    },
+    "P2": {
+      "status": "complete",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "179d67d",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-phase-complete-20261107-2216-6717494.md",
+      "summary": "passport, next step, learning lab (P2.1-P2.4)",
+      "pr": "",
+      "updated_at": "2026-11-07T22:17:26.498200+00:00",
+      "iteration_count": 0
+    },
+    "P3.1": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "ada2950",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261107-2340-3410237.md",
+      "summary": "UI rebuild (HAC-35 + HAC-48 rev 2), /api/units",
+      "pr": "",
+      "updated_at": "2026-11-07T23:41:41.192992+00:00"
+    },
+    "P3.2": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "aaf5ad5",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261108-0034-f0bbc10.md",
+      "summary": "UI suite (Playwright + axe) and demo-ui CI gating deploy-demo; QG K1-K8",
+      "pr": "",
+      "updated_at": "2026-11-08T00:35:37.397787+00:00"
+    },
+    "P3.3": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "cf57d54",
+      "qgr": "workstreams/daypart/qgr/h2s_meta-unknown-worktree-agent-daypart-h2s_meta-qgr-iteration-complete-20261108-1534-34eb63d.md",
+      "summary": "Dashboard rename T1.4; import-safe dashboard; K1+B1/B2/B4 fixed",
+      "pr": "",
+      "updated_at": "2026-11-08T15:35:26.627390+00:00"
     }
   }
 }

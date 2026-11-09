@@ -2,3 +2,8 @@
 - P2.2 — Health Clone Passport view: observation + pattern cards, 5-step thread, suppression, sourced ranges, guard-safe inventory; routes passport + inventory (commit 7ec2509)
 - P2.3 — suggested next step: next_step.py + GET/POST /api/journals/{id}/next-step (T7.1-T7.4, G24); QG fixed save-order and same-day tie bugs (also in the passport pattern card); docs-ticket-align false no-ticket persists (filed) (commit 2110440)
 - P2.4 — learning lab rows: demo/lab.py + GET /api/lab (T8.1-T8.3, G25); QG fixed non-finite-number 500 (K1), nameless env arm (B1), pinned formulas at non-zero rates (commit 91f8875)
+- P2 phase complete — deep gate fixed A&D literal gaps (passport await, observation step shapes), passport RecursionError 500, day-back leak test, e2e journey test (commit 179d67d)
+- P3.1 — UI rebuild: hash-route journey to HAC-35 + HAC-48 rev 2 states, /api/units; QG 15 kept + 3 fixed (commit ada2950)
+- P3.2 — UI and a11y CI: Playwright + vendored axe suite (T1.2, T2.1, T3.3, T8.4, T9.4, T10.1-T10.4, rev 2 states), demo-ui job gates deploy-demo; QG K1-K8 fixed, each test red on a mutant (commit aaf5ad5)
+- P3.3 — dashboard renamed Clinical Human Clone: research view (T1.4); import-safe; README/CLI/link say research view: full results (commit cf57d54)
+- P3 phase gate — deep QG over P3.1–P3.3 from 179d67d: R1 + K1–K7 + B1–B3 fixed (lab mismatch label, dashboard import guard test, radio ring check, review refusal tests, flagged-proposal tests, LOINC footer verbatim, G29 supersedes G27(8), review double-render)

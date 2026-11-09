@@ -221,6 +221,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` ("choose" again on the same step returns the same id, no new event) | 404 `unknown_journal`; 409 `no_saved_checkin` (T7.4); 413 `too_large` (body over the cap); 422 `invalid_request` (malformed body) / `unknown_step` (not the current step) (G24) |
 | `GET /api/lab` | — | `200 LabTable` | — |
 | `GET /api/inventory` | — | `200 {"verticals":[{vertical,label,concepts:[{concept_id,code,display}]}],"gaps":[…],"gap_labels":[…],"loinc_version","reviewer_status"}` (`gaps` = registry ids; `gap_labels` = what the passport shows, G23) | — |
+| `GET /api/units` | — | `200 {"units":{"<code>":["<canonical unit>", …alt units]}}` (read-only, from the concept registry; the review Correct select offers exactly these, G27) | — |
 
 Every member-facing string in a response passes `demo.safety.safe_text` (layer 0, fail closed), as
 it does today.
@@ -263,7 +264,7 @@ correction clears a flag only if the re-run no longer raises it, so correcting o
 systolic ≤ diastolic contradiction clears both when they no longer conflict. Discarded and
 `save_unmapped` proposals stay in the re-run set (G17), so two values for one concept are resolved
 by discarding both (or saving them unmapped) and checking in again. `unit_assumed` clears when `correct`
-states a unit explicitly.
+states a unit explicitly; `ambiguous_date` clears when `correct` states a date inside the window.
 
 **Extractor contract (G21).** Every extractor returns `Proposal` models only. `create_checkin`
 passes each extractor's output through `validate_proposals`, which dumps and revalidates every item

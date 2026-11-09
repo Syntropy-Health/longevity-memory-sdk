@@ -1,5 +1,79 @@
 # daypart — dev doc
 
+## FHDIC P3 · UI and accessibility CI (HAC-38)
+
+**Overview.** P3 puts screens on the P1/P2 API (A&D R1, R10). The demo page is now the Clinical Human
+Clone journey: check in → review → passport → next step → learning lab, with the old playground kept
+as the optional research view. A browser + axe suite in CI gates the demo deploy.
+
+**What changed.**
+- P3.1 (ada2950): `index.html` rebuilt as the hash-route journey, built to the HAC-35 spec and the 6
+  HAC-48 rev 2 states (reference range, review label, crisis hand-off, `#next` 409 and 422, 5xx /
+  network / 15 s notices). New read-only route `GET /api/units`. API title "Clinical Human Clone API".
+- P3.2 (aaf5ad5): `engine/tests/ui/test_journey_a11y.py` (22 tests) and the `demo-ui` CI job.
+- P3.3 (cf57d54): the Streamlit dashboard is "Clinical Human Clone: research view" (T1.4) and is
+  import-safe; README, CLI help and the research-screen link call it "research view: full results".
+
+**User-facing impact.** A visitor can do the whole journey in the browser, by keyboard alone, at
+375 px wide, with 0 serious or critical axe violations (the UX pass also found 0 at any impact). No screen marks a value high or low.
+
+**Key decisions** (addendum G26–G29). Sections are found by `screen-<route>` ids (the bare route ids
+left focus on the body on a deep link). Every API string is set as text; links go through one
+allow-list. The axe file lives in `tests/ui/vendor/` and is never served. The `ui` group is not a
+default group, so the `test` job is unchanged (G10).
+
+`engine/daypart/demo/static/index.html` is the hash-route journey (`#checkin`, `#review`,
+`#passport`, `#next`, `#lab`, `#research`), built to the HAC-35 visual spec and the HAC-48 rev 2
+states (addendum G26, G27). Sections are found by their `screen-<route>` ids.
+
+**UI suite** (`engine/tests/ui/test_journey_a11y.py`, plan G10): Python Playwright drives the real app
+in headless Chromium and runs the vendored, sha-pinned axe-core in `tests/ui/vendor/` (never served).
+It covers T1.2, T2.1, T3.3, T8.4, T9.4 and T10.1–T10.4, plus the rev 2 states as behaviour. The `ui`
+dependency group is not a default group, so plain `uv run pytest -q` skips this module. Run it with:
+
+```bash
+cd engine
+uv sync --group ui
+uv run --group ui playwright install chromium   # or --with-deps on a host with root
+env -u MUSE_API_KEY -u META_MODEL_API_KEY DAYPART_UI_REQUIRED=1 uv run --group ui pytest -q tests/ui
+```
+
+- `DAYPART_UI_REQUIRED=1` turns a missing Playwright or browser into a failure instead of a skip.
+- `DAYPART_UI_CHROMIUM=<path>` uses a local Chromium binary when `playwright install` cannot run.
+
+**CI:** the `demo-ui` job in `.github/workflows/engine.yml` runs this suite with
+`DAYPART_UI_REQUIRED=1`, and `deploy-demo` now needs `demo-ui` (with `test`, `typecheck` and
+`attribution-boundary`), so a failing UI or axe check blocks the demo deploy.
+
+**Phase gate (QG P3, base 179d67d).** Reviewers for code, security, design, test and UX, plus the
+scorer: 44 raw findings, 7 kept and fixed, one commit each. K1: the lab mismatch row shows the API's
+"provenance mismatch" verbatim (T8.3). K2: the dashboard import test records Streamlit calls, so a
+bare `main()` fails it. K3: T10.2 reads a radio's focus ring from the visible span. K4: the review 422
+refusal flow is tested. K5: a flagged proposal cannot be confirmed, and an unedited Correct sends the shown
+unit or date (unit and browser tests). K6: the footer carries the ATTRIBUTION LOINC notice word for word.
+K7: G29 supersedes G27(8) and cites A&D §4.1. Also fixed below the threshold: B1 (usage doc), B2 (overlapping
+review loads drew each card twice) and B3 (`#research` in the reflow, axe and reduced-motion loops).
+R1 (fixed earlier in the gate, 016387f) is confirmed in a real browser.
+
+**Known issues / residual risk.**
+- Below the gate threshold, not fixed: the session-expiry path ("Start again") and the PII / check-in error
+  copy have no UI test; a replaced next step shows only "Ask a professional" and "Defer" with page copy
+  (HAC-48 rev 2), not the API's `options`; on `#passport` the values just saved sit below the withheld
+  cards; a reply that lands after the person moved to another review can write its notice under the
+  new one. Security (all Low): no CSP / `frame-ancestors` on `/`; the evidence link to an observation
+  record puts the journal id in the URL; `#review/__proto__` draws a blank review screen.
+- The UI suite needs Chromium system libraries; it skips locally without them (unless
+  `DAYPART_UI_REQUIRED=1`). `demo-ui` in CI is the referee.
+- The workflow has no `permissions:` block and pins actions by tag (pre-existing, workflow-wide).
+- No per-journal cap on check-ins (pre-P2, unchanged).
+- Rollback: revert the P3 merge on `daypart/build`; the P2 API is untouched by P3 except the additive
+  `GET /api/units` and the API title, so the previous page and dashboard come back as they were.
+
+**Release note.** Added: the Clinical Human Clone browser journey, `GET /api/units`, the `demo-ui`
+gate. Changed: the API title and the dashboard name ("Clinical Human Clone: research view").
+
+**Links.** Iteration receipts: P3.1 ada2950, P3.2 aaf5ad5, P3.3 cf57d54. Spec: HAC-35, HAC-48.
+
 ## FHDIC P2 · Passport, next step and learning lab (HAC-38)
 
 **Overview.** P2 builds the read side of A&D HAC-33 on top of the P1 journal: the Health Clone
