@@ -628,8 +628,10 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
   (unit test on the strings).
 
 **R2: text check-in**
-- T2.1 [ui] `#checkin` shows the heading "What matters today?", a labelled textarea and the
-  warning text "Do not enter real health data".
+- T2.1 [ui] (as amended by G32, G35) `#today` (`#checkin` is its alias) shows the h1 "What matters
+  today, <first name>?" ("What matters today?" on a fresh journal), a labelled textarea and the
+  `#ci-pii` hint "Leave out names, e-mail addresses, phone numbers and dates of birth." in the
+  textarea's `aria-describedby`; the PII refusal (422 `looks_like_personal_data`) is unchanged.
 - T2.2 [sealed] POST text "slept 6 hours and walked 8000 steps" → 201 with ≥2 proposals
   (`93832-4` value 6 `h`, `55423-8` value 8000). Immediately after, the journal's `EventLog` length
   is unchanged and `GET passport` has no observed card for either concept.
