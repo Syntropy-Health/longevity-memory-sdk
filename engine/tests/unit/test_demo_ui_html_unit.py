@@ -2183,6 +2183,36 @@ def test_rev3_real_input_screen_lists_gates_from_the_api(admin, client):
     assert ".gates{columns:1" in _style(admin) and "@media (min-width:48rem){.gates{columns:2}}" in _style(admin)
 
 
+@pytest.mark.parametrize("fail", [[500, {"error": "internal"}], "network"])
+def test_rev3_real_input_failure_notice_takes_focus_and_try_again_shows_the_gates(fail):
+    """QG P6.2 K6: a non-403 answer (5xx or no network) shows the §3.8 notice, which takes focus; its
+    Try again re-sends the request and, on the 403, opens the gate list with aria-expanded="true"."""
+    import json
+
+    got = _run_page(
+        ["$", "el", "attrs", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError", "showError", "riBusy", "realInput"],
+        """
+        var b = mk("ri-btn", "button"), panel = mk("ri-panel");
+        b.setAttribute("aria-expanded", "false");
+        RESP.push(FAIL);
+        await realInput();
+        var n = panel.children[0], out = { role: n.getAttribute("role"), text: n.textContent, focused: document.activeElement === n,
+          expanded: b.getAttribute("aria-expanded") };
+        RESP.push([403, { open_gates: [{ label: "Gate one", owner: "Owner" }, { label: "Gate two", owner: "Owner" }] }]);
+        panel.querySelector("button").click();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        out.after = [panel.querySelector("h2").textContent, panel.querySelectorAll("li").map(function (li) { return li.textContent; }),
+          b.getAttribute("aria-expanded"), CALLS.length];
+        return out;
+        """.replace("FAIL", json.dumps(fail)),
+    )
+    assert got["role"] == "alert" and got["focused"] and got["expanded"] == "true"
+    assert "Something went wrong" in got["text"] and "Try again" in got["text"]
+    assert ("error 500" in got["text"]) if fail != "network" else ("could not reach the server" in got["text"])
+    assert got["after"] == ["Real input is off and cannot be turned on in this build",
+                            ["Gate one · open · Owner", "Gate two · open · Owner"], "true", 2]
+
+
 def test_rev3_console_api_strings_never_reach_an_html_sink(admin):
     js = _script(admin)
     for start, end in (("/* ---------- #pipeline", "/* ---------- #input"), ("/* ---------- #input", "/* ---------- wiring")):
