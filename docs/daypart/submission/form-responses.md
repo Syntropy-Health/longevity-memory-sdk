@@ -55,10 +55,10 @@ A suggested next step, with its reason, can be chosen, deferred or handed to a p
 
 A separate research console reports a learning lab: a base language model and two fine-tuned versions evaluated on 141 held-out synthetic prompts, and scripted policies in a behaviour simulator, each with its run ID, seed and failure counts.
 
-The demo opens on a fictional member with 28 days of saved check-ins. Everything is synthetic. It is not medical advice, diagnosis or treatment, and it shows no evidence of improved health. Real health-data input is switched off in the build until consent, privacy, security and clinical oversight are in place.
+The demo opens on a fictional member with 28 days of saved check-ins. Everything is synthetic. It is not medical advice, diagnosis or treatment, and it shows no evidence of improved health. Real health-data input is switched off in the build; turning it on would first need consent, privacy, security and clinical oversight.
 ```
 
-**Characters:** 1673 / 2,000
+**Characters:** 1686 / 2,000
 **Ledger rows:** L5, L6, L7, L21, L22, L20, L24, L10, L45, L47, L49, L50, L51, L52, L53, L55, L25, L59, L66, L33, L56, L73
 **Notes:** "four bundled demo files" are two photos and two device files, all synthetic; no device or
 sensor is connected (L55). "Two fine-tuned versions" are the supervised and preference-tuned
@@ -83,7 +83,7 @@ field. The prototype works end to end on the hosted build (L44), but every resul
 **Form input:** free text.
 
 ```text
-Pre-existing, not challenge work: Syntropy Health's open-source health-metrics SDK, committed unchanged as this repository's first commit on 2026-11-02. Its own history ends on 2026-10-22.
+Pre-existing, not challenge work: Syntropy Health's open-source health-metrics SDK, committed unchanged as this repository's first commit on 2026-11-02. The pinned version is dated 2026-10-22.
 
 Built during the challenge, 2026-11-03 to 2026-11-10 (dates from git history):
 - 2026-11-03 to 2026-11-05: a seeded synthetic member simulator, fixed safety rules checked on a labelled corpus, a synthetic training-data pipeline, and one training run: supervised and preference fine-tuning of a base language model, evaluated on 141 held-out synthetic prompts.
@@ -93,7 +93,7 @@ Built during the challenge, 2026-11-03 to 2026-11-10 (dates from git history):
 Not built: a reinforcement-learning stage, a reward model, accounts, stored data, real health-data input.
 ```
 
-**Characters:** 1018 / 1,500
+**Characters:** 1022 / 1,500
 **Ledger rows:** L68, L69, L70, L57, L58, L59, L65, L13, L14, L21, L18, L24, L33, L52, L1, L12
 **Notes:** the SDK's history after the challenge opened (2026-10-15 to 2026-10-22) is still
 pre-existing work and is not claimed (L69, *reported*). The upstream dates were read from the
