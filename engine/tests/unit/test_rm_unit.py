@@ -213,6 +213,8 @@ def test_inclinations_every_member(cohort, rm):
         ids = {d.driver_id for d in out.drivers}
         assert all(i.driver in ids for i in out.insights)
         assert all(i.strength in ("clear", "moderate", "small") for i in out.insights)
+        assert all(i.estimated_lift_points > 0 for i in out.insights)
+        assert abs(sum(d.share for d in out.drivers) - 1.0) < 0.01
         order = ["strong", "moderate", "slight"]
         ranks = [order.index(d.weight) for d in out.drivers]
         assert ranks == sorted(ranks)  # drivers are listed heaviest first
@@ -242,16 +244,16 @@ def test_all_labels_safe():
 
 
 def test_inclinations_reject_unlinked_insight():
-    d = inc.Driver(driver_id="mood", label="Your recent mood", direction="helps", weight="strong", question_ids=("jev.mood",))
+    d = inc.Driver(driver_id="mood", label="Your recent mood", direction="helps", share=1.0, weight="strong", question_ids=("jev.mood",))
     i = inc.Insight(insight_id="insight:reminder", title="A reminder at the right moment", action="Set a reminder.",
-                    reason="Why: test.", driver="barrier.time", strength="clear")
+                    reason="Why: test.", driver="barrier.time", strength="clear", estimated_lift_points=9.0)
     with pytest.raises(pydantic.ValidationError, match="not linked"):
         inc.Inclinations(rm_version="rm-v1", jev_version="jev-v1", drivers=(d,), insights=(i,))
 
 
 def test_driver_rejects_unsafe_label():
     with pytest.raises(pydantic.ValidationError):
-        inc.Driver(driver_id="mood", label="This will cure you", direction="helps", weight="slight", question_ids=())
+        inc.Driver(driver_id="mood", label="This will cure you", direction="helps", share=0.1, weight="slight", question_ids=())
 
 
 def test_forgetful_answers_get_a_reminder_linked_to_forgetting(rm):
