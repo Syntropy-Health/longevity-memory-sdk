@@ -96,7 +96,7 @@ def test_journey_fails_when_mode_not_refused(client):
         smoke.run(mode_open)
 
 
-def test_main_exit_status(monkeypatch, client):
+def test_main_exit_status(monkeypatch, client, sleeps):
     monkeypatch.setattr(smoke, "http_transport", lambda base, timeout: _transport(client))
     assert smoke.main(["https://example.invalid"]) == 0
 
@@ -105,6 +105,7 @@ def test_main_exit_status(monkeypatch, client):
 
     monkeypatch.setattr(smoke, "http_transport", broken)
     assert smoke.main(["https://example.invalid"]) == 1
+    assert sleeps == [], "a 500 is never retried"
 
 
 def test_deploy_job_runs_the_journey_on_the_hosted_url():
