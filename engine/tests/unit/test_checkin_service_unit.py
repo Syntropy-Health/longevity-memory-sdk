@@ -1094,3 +1094,17 @@ def test_oversized_integer_correction_is_out_of_range_not_500(client, text, unit
     assert body["proposals"] == [{"proposal_id": "p-1", "reasons": ["value_out_of_range"]}]
     _assert_no_bounds(body)
     assert _snapshot(j)[:2] == snap[:2]
+
+
+# --- QG-plan K2: the only container outlives the journal idle window (D-A3, J4) ----------------------
+
+
+def test_playground_container_outlives_the_journal_idle_window():
+    from daypart.checkin.journal import IDLE_SECONDS
+
+    tree = ast.parse(MODAL_DEMO.read_text(encoding="utf-8"))
+    (fn,) = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "playground"]
+    calls = [d for d in fn.decorator_list if isinstance(d, ast.Call)]
+    function = calls[[ast.unparse(c.func) for c in calls].index("app.function")]
+    # A scale-down before IDLE_SECONDS would drop every in-memory journal early.
+    assert _kw(function, "scaledown_window") >= IDLE_SECONDS
