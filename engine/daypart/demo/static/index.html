@@ -371,25 +371,22 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
 .persona code{color:var(--c-text)}
 #ns-result{margin-top:var(--s4)}
 .tl-more{margin-top:var(--s2)}
-/* research console: the pre-rev-3 shell classes, on console tokens, until part B restyles it */
-.site-head{background:var(--c-surface);border-bottom:var(--bw) solid var(--c-hair)}
-.site-head .wrap{padding-top:var(--s3);padding-bottom:var(--s3)}
-p.brand{display:block;font-weight:700;font-size:var(--fs-lg);margin:0;min-height:0}
-p.brand small{display:block;font-weight:400;font-size:var(--fs-sm);color:var(--c-muted)}
-.steps{list-style:none;margin:var(--s3) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);counter-reset:step}
-.steps a{display:inline-flex;align-items:center;gap:var(--s1);min-height:var(--tap);padding:0 var(--s2);border-radius:var(--r1);color:var(--c-text);text-decoration:none;font-size:var(--fs-sm)}
-.steps a::before{counter-increment:step;content:counter(step);display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;border:var(--bw-strong) solid var(--c-action);border-radius:50%;font-weight:700;color:var(--c-action)}
-.steps a[aria-current="step"]{font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
-.steps a[aria-current="step"]::before{background:var(--c-action);color:var(--c-on-action)}
-.site-foot{border-top:var(--bw) solid var(--c-hair);background:var(--c-surface);padding:var(--s5) 0}
-.site-foot .loinc{margin:var(--s4) 0 0}
-.research-label{display:inline-flex;gap:var(--s2);align-items:center;font-weight:700;border:var(--bw-strong) dashed var(--c-line);color:var(--c-muted);padding:var(--s1) var(--s3);border-radius:var(--r1);margin-bottom:var(--s3)}
+/* research console (rev 3 §4): the sidebar column holds main and the LOINC footer; playground widgets */
+.a-body{min-width:0;display:flex;flex-direction:column}
+.a-body>.a-main{flex:1}
+.a-foot{border-top:var(--bw) solid var(--a-hair);padding:var(--s4);color:var(--a-muted)}
+@media (min-width:48rem){.a-foot{padding:var(--s4) var(--s6)}}
+.a-foot .loinc{font-size:var(--fs-xs);max-width:var(--measure);margin:0}
+.a-nav a{overflow-wrap:normal;word-break:keep-all}
+.a-side-foot{display:flex;flex-wrap:wrap;gap:0 var(--s4)}
+.ri-panel,.r-gap{margin-top:var(--s4)}
+.ri-panel .notice-title{font-size:var(--fs-md)}
 .days{display:flex;flex-wrap:wrap;gap:2px;margin:var(--s2) 0 0;padding:0;list-style:none}
 .day{width:1rem;height:1rem;border:var(--bw) solid var(--c-line);border-radius:2px;background:var(--c-bg)}
 .day.y{background:var(--observed);border-color:var(--observed)}
 .day.n{border-style:dashed}
-.rlog{list-style:none;padding:0;margin:0}
-.rlog li{border-top:var(--bw) solid var(--c-hair);padding:var(--s2) 0;font-size:var(--fs-sm)}
+.rlog{list-style:none;padding:0;margin:0;font-family:var(--mono)}
+.rlog li{border-top:var(--bw) solid var(--c-hair);padding:var(--s2) 0;font-size:var(--fs-xs)}
 
 /* motion: entrance only, one-shot; reduced motion removes all of it */
 @media (prefers-reduced-motion:reduce){
@@ -419,21 +416,27 @@ p.brand small{display:block;font-weight:400;font-size:var(--fs-sm);color:var(--c
     </nav>
     <p class="persona" id="persona" hidden><span class="avatar" id="persona-av" aria-hidden="true"></span><span id="persona-txt"></span></p>
   </div>
-</header><!--/@member--><!--@admin--><body data-surface="admin">
-<header class="site-head">
-  <div class="wrap">
-    <p class="brand">Clinical Human Clone <small>Research console</small></p>
-    <nav aria-label="Research console">
-      <ol class="steps">
-        <li><a href="#lab">Learning lab</a></li>
-        <li><a href="#inventory">Inventory</a></li>
-        <li><a href="#research">Playground</a></li>
-      </ol>
-    </nav>
-  </div>
-</header><!--/@admin-->
-
-<main class="wrap" id="main" tabindex="-1">
+</header>
+<main class="wrap" id="main" tabindex="-1"><!--/@member--><!--@admin--><body data-surface="admin">
+<a class="skip" id="skip" href="#main">Skip to content</a>
+<!-- Visual spec rev 3 §4: the console shell. Routes are hashes under /admin (#pipeline default; G36). -->
+<div class="a-shell">
+<aside class="a-side">
+  <a class="a-brand" href="#pipeline"><span class="sq" aria-hidden="true"></span><b>Clinical Human Clone</b><span class="tag tag--console">Research console</span></a>
+  <nav class="a-nav" aria-label="Research console">
+    <ol>
+      <li><a href="#pipeline"><span class="g" aria-hidden="true">⇢</span>Pipeline</a></li>
+      <li><a href="#lab"><span class="g" aria-hidden="true">▦</span>Learning lab</a></li>
+      <li><a href="#inventory"><span class="g" aria-hidden="true">≡</span>Inventory</a></li>
+      <li><a href="#playground"><span class="g" aria-hidden="true">▷</span>Playground</a></li>
+      <li><a href="#input"><span class="g" aria-hidden="true">⊘</span>Real input</a></li>
+      <li><a href="/results" target="_blank" rel="noopener"><span class="g" aria-hidden="true">↗</span>Dashboard<span class="visually-hidden"> (opens in a new tab)</span></a></li>
+    </ol>
+  </nav>
+  <p class="a-side-foot"><a href="/">← Member app</a><a href="/docs">API reference</a></p>
+</aside>
+<div class="a-body">
+<main class="a-main" id="main" tabindex="-1"><!--/@admin-->
 <div id="session-msg"></div>
 <!--@member-->
 <!-- ================= 1. TODAY (seeded landing and check-in; #checkin is an alias) ================= -->
@@ -548,13 +551,47 @@ p.brand small{display:block;font-weight:400;font-size:var(--fs-sm);color:var(--c
 </section>
 
 <!--/@member--><!--@admin-->
+<!-- ================= PIPELINE (rev 3 §4.1): the live loop is static copy; every number is GET /api/lab ================= -->
+<section id="screen-pipeline" data-screen="pipeline" aria-labelledby="h-pipeline" hidden>
+  <div class="a-top"><div><p class="a-crumb">/admin/pipeline</p><h1 id="h-pipeline" tabindex="-1">Adaptation pipeline</h1></div><span class="small muted mono">GET /api/lab</span></div>
+  <div id="pipe-msg"></div>
+  <ul class="kpis" id="pipe-kpis" aria-label="Key results" hidden></ul>
+  <section class="lane" id="lane-live" aria-labelledby="lane-live-h">
+    <div class="lane-head"><h2 id="lane-live-h">Live loop</h2><span class="tag tag--live">● runs on every saved check-in</span></div>
+    <ol class="pipe" id="pipe-live" aria-label="Live loop, 5 stages">
+      <li><div class="node"><span class="dot" aria-hidden="true">1</span><span class="wire" aria-hidden="true"></span></div>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Check-in</span><span class="tag tag--live">live</span></div>
+          <dl class="stage-meta"><dt>in</dt><dd>text · bundled file</dd><dt>extract</dt><dd>rules-v1</dd><dt>gate</dt><dd>PII + crisis screen</dd></dl></div></li>
+      <li><div class="node"><span class="dot" aria-hidden="true">2</span><span class="wire" aria-hidden="true"></span></div>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Review</span><span class="tag tag--live">live</span></div>
+          <dl class="stage-meta"><dt>by</dt><dd>member</dd><dt>ops</dt><dd>confirm · correct · discard · unmapped</dd></dl></div></li>
+      <li><div class="node"><span class="dot" aria-hidden="true">3</span><span class="wire" aria-hidden="true"></span></div>
+        <div class="stage"><div class="stage-top"><span class="stage-name">EventLog</span><span class="tag tag--live">live</span></div>
+          <dl class="stage-meta"><dt>write</dt><dd>append-only</dd><dt>store</dt><dd>journal memory</dd></dl></div></li>
+      <li><div class="node"><span class="dot" aria-hidden="true">4</span><span class="wire" aria-hidden="true"></span></div>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Passport recompute</span><span class="tag tag--live">live</span></div>
+          <dl class="stage-meta"><dt>ontology</dt><dd>core-v1+u1</dd><dt>ready</dt><dd>value ≤ 14 days old</dd></dl></div></li>
+      <li><div class="node"><span class="dot" aria-hidden="true">5</span><span class="wire" aria-hidden="true"></span></div>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Next-step policy</span><span class="tag tag--live">live</span></div>
+          <dl class="stage-meta"><dt>policy</dt><dd>next-step-v1 (rules)</dd><dt>safety</dt><dd>membrane post()</dd></dl></div></li>
+    </ol>
+    <p class="loop-back">↺ loop: the next saved check-in starts again at stage 1. <strong>No model is called in this loop.</strong></p>
+  </section>
+  <section class="lane" id="lane-offline" aria-labelledby="lane-off-h" hidden>
+    <div class="lane-head"><h2 id="lane-off-h">Offline training</h2><span class="tag tag--offline">○ offline · not run per check-in</span></div>
+    <ol class="pipe pipe--offline" id="pipe-offline"></ol>
+    <p class="loop-back" id="pipe-note"></p>
+  </section>
+  <p class="footnote">Simulated outcomes are not patient outcomes.</p>
+</section>
+
 <!-- ================= LEARNING LAB ================= -->
 <section id="screen-lab" data-screen="lab" aria-labelledby="h-lab" hidden>
-  <h1 id="h-lab" tabindex="-1">Learning lab</h1>
+  <div class="a-top"><div><p class="a-crumb">/admin/lab</p><h1 id="h-lab" tabindex="-1">Learning lab</h1></div><span class="small muted mono">GET /api/lab</span></div>
   <div id="lab-msg"></div>
   <div id="lab-body" hidden>
-  <p class="screen-intro">Results from committed training and evaluation runs. Each number links to its run.</p>
-  <dl class="meta panel" id="lab-meta" style="padding:var(--s3) var(--s4)"></dl>
+  <p class="screen-intro muted">Results from committed training and evaluation runs. Each run id links to its row.</p>
+  <dl class="meta panel" id="lab-meta"></dl>
   <div class="table-wrap" tabindex="0" role="region" aria-labelledby="lab-cap">
   <table class="stack">
     <caption id="lab-cap">Runs</caption>
@@ -568,52 +605,59 @@ p.brand small{display:block;font-weight:400;font-size:var(--fs-sm);color:var(--c
 
 <!-- ================= INVENTORY (the concept registry; admin only, so h-inventory is unique per surface) ================= -->
 <section id="screen-inventory" data-screen="inventory" aria-labelledby="h-inventory" hidden>
-  <h1 id="h-inventory" tabindex="-1">Concept inventory</h1>
+  <div class="a-top"><div><p class="a-crumb">/admin/inventory</p><h1 id="h-inventory" tabindex="-1">Concept inventory</h1></div><span class="small muted mono">GET /api/inventory</span></div>
   <div id="ainv-msg"></div>
   <div id="ainv-body" hidden>
-    <p class="screen-intro">Every concept the clone can record, by area, with its code, and the areas it does not cover yet.</p>
-    <dl class="meta panel" id="ainv-meta" style="padding:var(--s3) var(--s4)"></dl>
-    <div id="ainv-list"></div>
+    <p class="screen-intro muted">Every area the clone can record, how many concepts it holds, and the areas it does not cover yet.</p>
+    <dl class="meta panel" id="ainv-meta"></dl>
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="inv-cap">
+    <table class="stack">
+      <caption id="inv-cap">Verticals</caption>
+      <thead><tr><th scope="col">Vertical</th><th scope="col">Concepts</th><th scope="col">Status</th></tr></thead>
+      <tbody id="ainv-rows"></tbody>
+    </table>
+    </div>
+    <details class="thread" id="ainv-codes"><summary>Concept codes by vertical</summary><div id="ainv-list"></div></details>
   </div>
 </section>
 
-<!-- ================= RESEARCH (the only place the playground words appear) ================= -->
-<section id="screen-research" data-screen="research" aria-labelledby="h-research" hidden>
-  <p class="research-label">◇ Research console</p>
-  <h1 id="h-research" tabindex="-1">Research playground</h1>
-  <p class="muted">The original episode playground for researchers (formerly the Daypart playground). Not part of the member journey. <a href="/results">Full results (research view)</a> · <a href="/docs">API</a></p>
+<!-- ================= PLAYGROUND (the only place the playground words appear; #research is its alias) ================= -->
+<section id="screen-playground" data-screen="playground" aria-labelledby="h-playground" hidden>
+  <div class="a-top"><div><p class="a-crumb">/admin/playground</p><h1 id="h-playground" tabindex="-1">Research playground</h1></div><span class="small muted mono">POST /api/episodes</span></div>
+  <p class="muted measure">The episode playground for researchers (formerly the Daypart playground). Run a generated member through an episode and test drafts against the membrane.</p>
 
-  <div class="panel" aria-labelledby="r-ep-h">
+  <div class="stack">
+  <div class="panel" role="region" aria-labelledby="r-ep-h">
     <h2 id="r-ep-h">Episode</h2>
     <div class="field"><label for="r-member">Generated member</label><select id="r-member"></select>
-      <p id="r-member-info" class="hint" style="margin-top:var(--s1)"></p></div>
+      <p id="r-member-info" class="hint"></p></div>
     <div class="field"><label for="r-seed">Seed</label><input id="r-seed" type="number" value="0"></div>
     <div class="field"><label for="r-horizon">Horizon (days)</label><input id="r-horizon" type="number" value="14" min="1" max="42"></div>
     <button class="btn btn--secondary" type="button" id="r-start">Start episode</button>
-    <p id="r-obs" class="snippet" style="margin-top:var(--s3)" hidden></p>
+    <p id="r-obs" class="snippet r-gap" hidden></p>
 
-    <h3 style="margin-top:var(--s5)">Step</h3>
+    <h3 class="r-gap">Step</h3>
     <div class="field"><label for="r-intent">Intent</label><select id="r-intent"></select></div>
     <div class="field"><label for="r-text">Draft <span class="hint">Edit to test the membrane</span></label><textarea id="r-text"></textarea></div>
     <button class="btn btn--secondary" type="button" id="r-step" disabled>Send draft</button>
     <div id="r-err" role="alert"></div>
 
-    <h3 style="margin-top:var(--s5)">Last step</h3>
+    <h3 class="r-gap">Last step</h3>
     <dl id="r-last" class="meta"><dt>Status</dt><dd class="muted">No step yet.</dd></dl>
     <h3>Adherence</h3>
     <ul id="r-days" class="days" aria-label="Adherence by day"></ul>
-    <h3 style="margin-top:var(--s4)">Log</h3>
+    <h3 class="r-gap">Log</h3>
     <ol id="r-log" class="rlog"></ol>
   </div>
 
-  <div class="panel" aria-labelledby="r-pp-h">
+  <div class="panel" role="region" aria-labelledby="r-pp-h">
     <h2 id="r-pp-h">Member passport (research)</h2>
     <div class="field"><label for="r-pday">As of day</label><input id="r-pday" type="number" value="41" min="0" max="42"></div>
     <button class="btn btn--secondary" type="button" id="r-ppbtn">Show passport</button>
-    <p id="r-pp-meta" class="muted small" style="margin-top:var(--s3)"></p>
+    <p id="r-pp-meta" class="muted small r-gap"></p>
     <div id="r-cards" class="cards"></div>
   </div>
-  <a href="/">Open the member app</a>
+  </div>
 
 <script>
 /* Research view: the original episode playground, restyled. Loaded on the first visit only. */
@@ -734,21 +778,27 @@ var research = (function () {
 })();
 </script>
 </section>
-<!--/@admin-->
-</main>
 
-<!--@member--><footer class="m-foot">
+<!-- ================= REAL INPUT (rev 3 §4.5; moved here from the console footer, AM-2 D2) ================= -->
+<section id="screen-input" data-screen="input" aria-labelledby="h-input" hidden>
+  <div class="a-top"><div><p class="a-crumb">/admin/input</p><h1 id="h-input" tabindex="-1">Real input</h1></div><span class="small muted mono">POST /api/mode</span></div>
+  <p class="muted measure">Real input is off in this build and the server refuses every request to turn it on. Requesting it shows the gates that are still open.</p>
+  <button class="btn btn--secondary" type="button" id="ri-btn" aria-controls="ri-panel" aria-expanded="false">Request real input</button>
+  <div id="ri-panel" class="ri-panel" aria-live="polite"></div>
+</section>
+<!--/@admin-->
+
+<!--@member--></main>
+<footer class="m-foot">
   <div class="wrap">
     <p class="loinc">This material contains content from LOINC® (<a href="https://loinc.org">https://loinc.org</a>). LOINC is copyright © 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee and is available at no cost under the license at <a href="https://loinc.org/license/">https://loinc.org/license/</a>. LOINC® is a registered United States trademark of Regenstrief Institute, Inc. The codes are used for display of synthetic values only; no clinical interpretation.</p>
   </div>
-</footer><!--/@member--><!--@admin--><footer class="site-foot">
-  <div class="wrap">
-    <p class="small muted"><a href="/">Member app</a> · <a href="/results">Full results (research view)</a> · <a href="/docs">API</a></p>
-    <button class="btn btn--secondary" type="button" id="ri-btn" aria-controls="ri-panel" aria-expanded="false">Real input</button>
-    <div id="ri-panel" aria-live="polite" style="margin-top:var(--s4)"></div>
-    <p class="small muted loinc">This material contains content from LOINC® (<a href="https://loinc.org">https://loinc.org</a>). LOINC is copyright © 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee and is available at no cost under the license at <a href="https://loinc.org/license/">https://loinc.org/license/</a>. LOINC® is a registered United States trademark of Regenstrief Institute, Inc. The codes are used for display of synthetic values only; no clinical interpretation.</p>
-  </div>
-</footer><!--/@admin-->
+</footer><!--/@member--><!--@admin--></main>
+<footer class="a-foot">
+  <p class="loinc">This material contains content from LOINC® (<a href="https://loinc.org">https://loinc.org</a>). LOINC is copyright © 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee and is available at no cost under the license at <a href="https://loinc.org/license/">https://loinc.org/license/</a>. LOINC® is a registered United States trademark of Regenstrief Institute, Inc. The codes are used for display of synthetic values only; no clinical interpretation.</p>
+</footer>
+</div>
+</div><!--/@admin-->
 
 <script>
 "use strict";
@@ -1008,8 +1058,17 @@ var SCREENS = ["today", "review", "passport", "next", "timeline"];
 /* #checkin (API evidence links, older bookmarks) opens #today */
 var ALIASES = { checkin: "today" };
 /*/@member*//*@admin*/
-var SCREENS = ["lab", "inventory", "research"];
-var ALIASES = {};
+/* rev 3 §4 (G36): hash routes under /admin, #pipeline by default; #research (the API's simulated-source
+   evidence link and older bookmarks) opens the playground. /admin/<route> paths are served too and
+   rewritten to /admin#<route> before the first route() (an old #<run_id> fragment is kept). */
+var SCREENS = ["pipeline", "lab", "inventory", "playground", "input"];
+var ALIASES = { research: "playground" };
+(function () {
+  var m = /^\/admin\/([a-z]+)\/?$/.exec(location.pathname);
+  if (m && SCREENS.indexOf(m[1]) >= 0) {
+    history.replaceState(null, "", "/admin#" + m[1] + (location.hash.length > 1 ? "/" + location.hash.slice(1) : ""));
+  }
+})();
 /*/@admin*/
 function parseHash() {
   var h = location.hash.replace(/^#/, "");
@@ -1025,16 +1084,17 @@ function route() {
   /* section ids are "screen-<route>", never the hash itself, so a direct load does not fragment-scroll
      to the section and drop the h1 focus (QG P3.1 U1) */
   SCREENS.forEach(function (s) { $("screen-" + s).hidden = s !== r.base; });
-  /* the member nav marks its page (rev 3 §2); the console's step nav keeps "step" until part B */
-  document.querySelectorAll(".mnav a, .steps a").forEach(function (a) {
-    var b = (a.getAttribute("href") || "").slice(1).split("/")[0];
-    if (b === r.base) a.setAttribute("aria-current", a.closest(".mnav") ? "page" : "step"); else a.removeAttribute("aria-current");
+  /* each surface's nav marks its page (rev 3 §2, §4); "/", "/results" and "/docs" never match a route */
+  document.querySelectorAll(".mnav a, .a-nav a").forEach(function (a) {
+    var h = a.getAttribute("href") || "", b = h.charAt(0) === "#" ? h.slice(1).split("/")[0] : null;
+    if (b === r.base) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
   document.title = $("h-" + r.base).textContent + " · Clinical Human Clone";
   var focusInventory = r.base === "passport" && r.rest === "inventory";
   if (!focusInventory) $("h-" + r.base).focus();
   var render = { today: showCheckin, review: showReview, passport: showPassport, next: showNext, timeline: showTimeline,
-    lab: showLab, inventory: showInventory, research: function () { research.init(); } }[r.base];
+    pipeline: showPipeline, lab: showLab, inventory: showInventory, playground: function () { research.init(); },
+    input: function () { /* static: the request is made on click */ } }[r.base];
   Promise.resolve(render(r.rest)).catch(function () { /* each screen renders its own errors */ });
 }
 
@@ -1940,7 +2000,7 @@ function parts(td, list) {
   list.forEach(function (p, i) {
     if (i) td.append(" · ");
     if (p[0]) td.append(p[0] + " ");
-    td.append(p[1] === null || p[1] === undefined ? nr() : String(p[1]));
+    td.append(p[1] === null || p[1] === undefined ? nr() : typeof p[1] === "object" ? p[1] : String(p[1]));
   });
 }
 function rate(v) { return typeof v === "number" && isFinite(v) ? String(v) : null; }
@@ -2017,7 +2077,133 @@ function labRow(r) {
   return tr;
 }
 
-/* ---------- #inventory (research console): the concept registry ---------- */
+/* ---------- #pipeline (rev 3 §4.1): KPIs and the offline lane from GET /api/lab, read per request ----------
+   Every number below is one field of a lab row, mapped 1:1 (3 decimals for a rate); a null is "— not
+   recorded" and a provenance mismatch shows its tag and no number. The live lane is static markup. */
+function fix3(v) { return typeof v === "number" && isFinite(v) ? v.toFixed(3) : null; }
+function delta3(v) { var s = fix3(v); return s === null ? null : (v >= 0 ? "+" : "") + s; }
+function labRowNamed(rows, name) { return rows.find(function (r) { return r && r.row === name; }) || null; }
+function mismatched(r) { return !!r && r.status === "provenance mismatch"; }
+function mismatchTag(r) { return el("span", "tag tag--flag", "⚠ " + r.status); } /* the status verbatim, as #lab */
+/* a row's rate: its tag on a mismatch, null (not recorded) when the row or the field is missing */
+function rowRate(r, key) {
+  if (!r) return null;
+  if (mismatched(r)) return mismatchTag(r);
+  return fix3(r.metrics && typeof r.metrics === "object" ? r.metrics[key] : null);
+}
+function intOrNull(v) { return typeof v === "number" && isFinite(v) ? String(v) : null; }
+function envName(r) { return String(r.row).replace(/^env_/, "").replaceAll("_", " "); }
+function kpi(key, value, sub) {
+  var li = el("li"), v = el("span", "kpi-v"), s = el("span", "kpi-s");
+  v.append(value === null || value === undefined ? nr() : value);
+  li.append(el("span", "kpi-k", key), v);
+  if (sub) { parts(s, sub); li.append(s); }
+  return li;
+}
+function pipeKpis(t) {
+  var rows = t.rows, base = labRowNamed(rows, "base"), sft = labRowNamed(rows, "sft"), dpo = labRowNamed(rows, "dpo");
+  var box = clear($("pipe-kpis"));
+  var dn = dpo && !mismatched(dpo) && dpo.split ? intOrNull(dpo.split.n) : null;
+  box.append(kpi("boundary pass · dpo", rowRate(dpo, "boundary_pass_rate"), [["base", rowRate(base, "boundary_pass_rate")], ["n =", dn]]));
+  box.append(kpi("rubric pass · dpo", rowRate(dpo, "rubric_pass_rate"), [["sft", rowRate(sft, "rubric_pass_rate")], ["base", rowRate(base, "rubric_pass_rate")]]));
+  var i1 = t.i1_passed === true ? "✓ passed" : t.i1_passed === false ? "⚠ not passed" : null;
+  box.append(kpi("builder check I1", i1, [["member failures", intOrNull(t.member_failure_count)]]));
+  var best = null;
+  rows.forEach(function (r) {
+    var m = r && r.kind === "env_baseline" && r.metrics ? fix3(r.metrics.mean_adherence) : null;
+    if (m !== null && (best === null || r.metrics.mean_adherence > best.metrics.mean_adherence)) best = r;
+  });
+  box.append(kpi("best env adherence", best ? fix3(best.metrics.mean_adherence) : null,
+    [["", best ? envName(best) : null], ["", best && best.split && intOrNull(best.split.n) !== null ? best.split.n + " episodes" : null]]));
+}
+var OFFLINE = [["base", "B", "Base"], ["sft", "S", "SFT"], ["dpo", "D", "DPO"], ["grpo", "G", "GRPO"]];
+function runLink(r) {
+  if (typeof r.run_id !== "string") return null;
+  var i = r.run_id.lastIndexOf("/"), a = link("#lab/" + r.run_id, i < 0 ? r.run_id : "…" + r.run_id.slice(i), "mono");
+  a.title = r.run_id; /* the full id; the note below names the run prefix */
+  return a;
+}
+/* a rate followed by "(Δ <signed delta>)" when its gate is recorded */
+function withDelta(rate, gate, key) {
+  if (rate === null || typeof rate === "object" || !gate || typeof gate !== "object") return rate;
+  var d = delta3(gate[key]), sp = el("span", null, rate + " (Δ ");
+  sp.append(d === null ? nr() : d, ")");
+  return sp;
+}
+function offlineStage(spec, r) {
+  var proposed = r.kind === "proposed", mismatch = mismatched(r);
+  var li = el("li", proposed ? "is-proposed" : null), node = el("div", "node");
+  node.append(attrs(el("span", "dot", spec[1]), { "aria-hidden": "true" }), attrs(el("span", "wire"), { "aria-hidden": "true" }));
+  var st = el("div", "stage"), top = el("div", "stage-top");
+  top.append(el("span", "stage-name", spec[2]));
+  if (proposed) top.append(el("span", "tag tag--proposed", "○ " + r.status));
+  else top.append(el("span", "tag tag--offline", "offline"));
+  if (mismatch) top.append(mismatchTag(r));
+  var gname = r.row === "sft" ? "r3" : r.row === "dpo" ? "r4" : null;
+  if (gname && !mismatch && r.gate && typeof r.gate === "object") {
+    if (r.gate.passed === true) top.append(el("span", "tag tag--ready", "✓ gate " + gname));
+    else if (r.gate.passed === false) top.append(el("span", "tag tag--flag", "⚠ gate " + gname + " not passed"));
+  }
+  var meta = [["run", runLink(r)]], s = r.split || {}, g = r.gate;
+  if (proposed) meta.push(["reason", typeof r.reason === "string" ? r.reason : null]);
+  else if (!mismatch) {
+    var fails = null;
+    if (r.row === "base") {
+      fails = el("span");
+      parts(fails, [["", intOrNull(r.failures)], ["", r.degenerate === null || r.degenerate === undefined ? null : r.degenerate + " degenerate"]]);
+      meta.push(["boundary", rowRate(r, "boundary_pass_rate")], ["rubric", rowRate(r, "rubric_pass_rate")], ["failures", fails]);
+    } else if (r.row === "sft") {
+      meta.push(["rows", intOrNull(s.training_rows)], ["boundary", withDelta(rowRate(r, "boundary_pass_rate"), g, "delta")],
+        ["rubric", rowRate(r, "rubric_pass_rate")]);
+    } else {
+      var b = rowRate(r, "boundary_pass_rate");
+      if (b !== null && g && typeof g === "object") {
+        var reg = intOrNull(g.boundary_regressions), bs = el("span", null, b + " · ");
+        bs.append(reg === null ? nr() : reg, " regressions");
+        b = bs;
+      }
+      meta.push(["pairs", intOrNull(s.training_rows)], ["boundary", b], ["rubric", withDelta(rowRate(r, "rubric_pass_rate"), g, "rubric_delta")]);
+    }
+  }
+  var dl = el("dl", "stage-meta");
+  meta.forEach(function (m) {
+    var dd = el("dd");
+    dd.append(m[1] === null || m[1] === undefined ? nr() : m[1]);
+    dl.append(el("dt", null, m[0]), dd);
+  });
+  st.append(top, dl);
+  li.append(node, st);
+  return li;
+}
+function pipeOffline(t) {
+  var ol = clear($("pipe-offline")), n = 0;
+  OFFLINE.forEach(function (spec) { var r = labRowNamed(t.rows, spec[0]); if (r) { ol.append(offlineStage(spec, r)); n++; } });
+  ol.setAttribute("aria-label", "Offline training, " + plural(n, "stage", "stages"));
+  var base = labRowNamed(t.rows, "base"), note = clear($("pipe-note"));
+  var id = base && typeof base.run_id === "string" ? base.run_id : null, cut = id ? id.lastIndexOf("/") : -1;
+  var s = base && base.split ? base.split : {};
+  note.append("Runs ", cut > 0 ? id.slice(0, cut) + "/*" : nr(), ". Eval split ",
+    typeof s.prompt_set_version === "string" ? s.prompt_set_version : nr(), ", n = ", intOrNull(s.n) || nr(),
+    ", seed ", base ? intOrNull(base.seed) || nr() : nr(),
+    ". Trained adapters are evaluated here; the live loop above does not call them in this build.");
+}
+var pipeSeq = 0;
+async function showPipeline() {
+  var seq = ++pipeSeq, msg = clear($("pipe-msg"));
+  var res = await api("GET", "/api/lab");
+  if (seq !== pipeSeq) return; /* a newer load started while this one waited */
+  var ok = res.ok && res.data && Array.isArray(res.data.rows);
+  /* §4.1 states: a failed GET keeps the static live lane and hides the numbers */
+  $("pipe-kpis").hidden = !ok;
+  $("lane-offline").hidden = !ok;
+  if (!ok) { msg.append(serverError(res, showPipeline)); return; }
+  pipeKpis(res.data);
+  pipeOffline(res.data);
+}
+
+/* ---------- #inventory (research console): the concept registry as one row per vertical ----------
+   GET /api/inventory carries each vertical's concepts and the gap labels, and no card count, so the
+   table has no Cards column (rev 3 §4.3 maps only the fields that exist). */
 async function showInventory() {
   var msg = clear($("ainv-msg")), body = $("ainv-body");
   var res = await api("GET", "/api/inventory");
@@ -2026,26 +2212,33 @@ async function showInventory() {
   function row(k, v) { meta.append(el("dt", null, k)); var dd = el("dd"); dd.append(v === null || v === undefined ? nr() : String(v)); meta.append(dd); }
   row("LOINC", inv.loinc_version);
   row("Sign-off", reviewLabel(inv.reviewer_status));
-  var list = clear($("ainv-list"));
+  var rows = clear($("ainv-rows")), list = clear($("ainv-list"));
+  function tr(label, concepts, covered) {
+    var r = el("tr", covered ? null : "proposed"), v = cell("Vertical"), c = cell("Concepts", "num"), st = cell("Status");
+    v.append(el("strong", null, label));
+    c.append(concepts);
+    st.append(el("span", "tag " + (covered ? "tag--ready" : "tag--withheld"), covered ? "✓ covered" : "○ gap"));
+    r.append(v, c, st);
+    rows.append(r);
+  }
   inv.verticals.forEach(function (v, i) {
-    var h = el("h2", null, String(v.label)); h.id = "ainv-v" + i;
+    var cs = Array.isArray(v.concepts) ? v.concepts : [];
+    tr(String(v.label), String(cs.length), true);
+    var h = el("h2", "label", String(v.label)); h.id = "ainv-v" + i;
     var ul = el("ul", "inv"); ul.setAttribute("aria-labelledby", h.id);
-    (Array.isArray(v.concepts) ? v.concepts : []).forEach(function (c) {
+    cs.forEach(function (c) {
       var li = el("li");
       li.append(el("span", null, String(c.display)), el("code", "mono", String(c.code)));
       ul.append(li);
     });
     list.append(h, ul);
   });
-  var gaps = Array.isArray(inv.gap_labels) ? inv.gap_labels : [];
-  var gh = el("h2", null, "Not covered yet"); gh.id = "ainv-gaps";
-  var gl = el("ul", "inv"); gl.setAttribute("aria-labelledby", gh.id);
-  gaps.forEach(function (g) { var li = el("li", "gap"); li.append(el("span", null, String(g)), el("span", "tag tag--withheld", "○ Gap")); gl.append(li); });
-  list.append(gh, gl);
+  /* a gap has no concept in the registry, so its count is 0, not "not recorded" */
+  (Array.isArray(inv.gap_labels) ? inv.gap_labels : []).forEach(function (g) { tr(String(g), "0", false); });
   body.hidden = false;
 }
 
-/* ---------- Real input (research console footer) ---------- */
+/* ---------- #input (research console): the real-input request, always refused ---------- */
 var riBusy = false;
 async function realInput() {
   var b = $("ri-btn"), panel = $("ri-panel");
@@ -2061,7 +2254,7 @@ async function realInput() {
       var n = el("div", "notice"); attrs(n, { role: "region", "aria-labelledby": "ri-t" });
       var ico = el("span", "ico", "⊘"); ico.setAttribute("aria-hidden", "true");
       var box = el("div"), h = el("h2", "notice-title", "Real input is off and cannot be turned on in this build");
-      h.id = "ri-t"; h.style.fontSize = "var(--fs-md)";
+      h.id = "ri-t";
       box.append(h, el("p", null, plural(gates.length, "gate is", "gates are") + " open:"), ol);
       n.append(ico, box);
       panel.append(n);
@@ -2083,14 +2276,14 @@ $("ci-images-btn").addEventListener("click", function () { togglePicker("ci-imag
 $("rv-form").addEventListener("submit", submitReview);
 $("fresh-btn").addEventListener("click", function () { startAgain(true); });
 $("tl-more").addEventListener("click", function () { tlMore(true); });
-/* the skip link moves focus to the content; it never changes the route hash */
-$("skip").addEventListener("click", function (ev) { ev.preventDefault(); $("main").focus(); });
 restore();
 updateNav();
 updateCount();
 /*/@member*//*@admin*/
 $("ri-btn").addEventListener("click", realInput);
 /*/@admin*/
+/* the skip link moves focus to the content; it never changes the route hash */
+$("skip").addEventListener("click", function (ev) { ev.preventDefault(); $("main").focus(); });
 addEventListener("hashchange", route);
 route();
 </script>
