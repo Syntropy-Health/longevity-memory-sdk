@@ -152,7 +152,8 @@ def test_built_during_challenge_separates_foundation_from_challenge_work_with_da
 
 @pytest.mark.parametrize("name", ("form-responses.md", "deck-outline.md"))
 def test_framework_names_appear_only_in_the_appendix(name: str) -> None:
-    low = _text(name).lower()
+    # A URL is an address, not exposition: the hosted demo's host name contains "modal".
+    low = re.sub(r"https?://\S+", " ", _text(name)).lower()
     for fw in FRAMEWORKS:
         assert not re.search(rf"\b{re.escape(fw)}\b", low), f"{name}: names '{fw}'"
 
