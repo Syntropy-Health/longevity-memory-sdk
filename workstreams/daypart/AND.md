@@ -189,7 +189,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 
 | Unit | Path | Does | Used by | Depends on |
 |---|---|---|---|---|
-| Concept registry | `memory/registry.py` + `memory/registry_a4.json` + `memory/loinc_verify_v1.csv` | The A4 slice: one `Concept` per observable (§4.3). `slice_ontology()` = `apply_update(core(), …)` adding only the 12 LOINC nodes not already in `core()`; version `core-v1+u1` (the name `apply_update` assigns). | extractor, journal, evidence registry, passport | `ontology` |
+| Concept registry | `memory/registry.py` + `memory/registry_a4.json` + `memory/loinc_verify_v1.csv` | The A4 slice: one `Concept` per observable (§4.3). `slice_ontology()` = `apply_update(core(), …)` adding only the 11 LOINC nodes not already in `core()` (plan G3/G4, addendum G16); version `core-v1+u1` (the name `apply_update` assigns). | extractor, journal, evidence registry, passport | `ontology` |
 | Governance gate | `governance/real_input.py` + `governance/real_input.yaml` | Checklist load, `status()`, `request_enable()` → always `Refused` | app (mode endpoint, startup), UI | — |
 | PII tripwire | `checkin/tripwire.py` | `scan(text) -> list[str]` (reason codes) | check-in service | — |
 | Text extractor | `checkin/extract_text.py` | `extract(text, today) -> list[Proposal]` | check-in service | registry |
@@ -202,7 +202,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | Next step | `checkin/next_step.py` | `await suggest(journal) -> NextStep` through `membrane.post`/`dsl.check`; `await record_choice` (G24) | app | membrane, journal, `eval.policies`, registry, `demo.safety`, `memory.events`, `memory.lhm` |
 | Lab rows | `demo/lab.py` | `lab_rows(results_dir) -> LabTable` from the committed JSON (§4.8) | app, submission pack | `dashboard_data.results_dir` + `default_metrics_path` (path only); its own tolerant readers, no `MetricsDoc` validation (G25) |
 | App routes | `demo/app.py` (extended) | the endpoints below | UI | all of the above |
-| UI | `demo/static/index.html` (rebuilt) + `demo/static/axe.min.js` (test only, not served) | 5 screens + research view | judges | API |
+| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | 5 screens + research view | judges | API |
 | UI CI | `tests/ui/test_journey_a11y.py`, job `demo-ui` in `engine.yml` | axe, keyboard, 375 px, reduced motion | CI | Playwright |
 | Submission pack | `docs/daypart/submission/` + `tests/unit/test_submission_pack_unit.py` | layout §4.11 and the claim-ledger check | judges | — |
 
@@ -327,8 +327,10 @@ Concept
   allowed_use: "demo display of self-reported or simulated values; no interpretation"
 ```
 
-Candidate slice (19 LOINC + 2 local). Seven are already in `core()` (72514-3, 44261-6, 70274-6, 8867-4,
-29463-7, 55423-8, 93832-4) and only get registry metadata; the other 12 are `add_nodes` in the one
+Shipped slice (18 LOINC + 2 local; amended at build, plan G3/G4 and addendum G16: 69725-0 failed the
+LOINC 2.83 lookup, because it is the single GAD item "Feeling nervous, anxious or on edge", not the
+GAD-2 total, so under D-A5 it was dropped, not replaced). Seven are already in `core()` (72514-3, 44261-6, 70274-6, 8867-4,
+29463-7, 55423-8, 93832-4) and only get registry metadata; the other 11 are `add_nodes` in the one
 `OntologyUpdate`. Each LOINC code is verified at build (D-A5) against `loinc_verify_v1.csv`
 (code, long common name, LOINC version, copied from the LOINC release by the builder):
 
@@ -336,7 +338,7 @@ Candidate slice (19 LOINC + 2 local). Seven are already in `core()` (72514-3, 44
 |---|---|
 | Vitals and body measures (10) | 8867-4 heart rate `/min` · 8480-6 systolic BP `mm[Hg]` · 8462-4 diastolic BP `mm[Hg]` · 29463-7 body weight `kg` · 8302-2 body height `cm` · 39156-5 BMI `kg/m2` · 8310-5 body temperature `Cel` · 9279-1 respiratory rate `/min` · 59408-5 SpO2 (pulse oximetry) `%` · 8280-0 waist circumference `cm` |
 | Behaviour and function (4 + 1 local) | 55423-8 steps `{steps}` · 41950-7 steps in 24 h `{steps}/(24.h)` · 55411-3 exercise duration `min` · 93832-4 sleep duration `h` · local `dp:adherence.protocol` (unchanged) |
-| Symptoms and wellbeing (5 + 1 local) | 72514-3 pain 0–10 `{score}` · 44261-6 PHQ-9 total `{score}` · 70274-6 GAD-7 total `{score}` · 55758-7 PHQ-2 total `{score}` · 69725-0 GAD-2 total `{score}` · local `dp:symptom.severity` (unchanged) |
+| Symptoms and wellbeing (4 + 1 local) | 72514-3 pain 0–10 `{score}` · 44261-6 PHQ-9 total `{score}` · 70274-6 GAD-7 total `{score}` · 55758-7 PHQ-2 total `{score}` · ~~69725-0~~ (dropped at build, G3) · local `dp:symptom.severity` (unchanged) |
 
 PHQ and GAD totals carry `allowed_use` "display of a synthetic self-report score; no severity
 band, no screening interpretation". The UI never shows bands. Gaps listed by `/api/inventory`:
@@ -614,7 +616,7 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
 **R5: registry**
 - T5.1 [sealed] `slice_ontology()` = `apply_update(core(), …)`; `core()` is unchanged (equal digest);
   `slice_ontology().version == "core-v1+u1"`; the history has 1 record; the update's `add_nodes` are
-  exactly the 12 codes not in `core()`.
+  exactly the 11 codes not in `core()` (amended at build, G3/G4).
 - T5.6 [unit] every LOINC concept's code, display and `loinc_version` equal a row of
   `loinc_verify_v1.csv`. `ATTRIBUTION.md`, the UI footer and `submission/README.md` carry the LOINC
   copyright notice and licence link.
