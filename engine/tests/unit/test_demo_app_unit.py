@@ -30,7 +30,10 @@ def test_health_and_index(client):
     assert client.get("/api/health").json() == {"status": "ok", "cohort_seed": 0}
     r = client.get("/")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
-    assert "Daypart playground" in r.text
+    # AM-2 D1 (G31): the playground is on the research console at /admin, never in the member app
+    assert "Daypart playground" not in r.text
+    a = client.get("/admin")
+    assert a.status_code == 200 and "Daypart playground" in a.text
 
 
 def test_intents_lists_every_intent_with_safe_default_text(client):

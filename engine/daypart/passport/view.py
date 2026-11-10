@@ -65,9 +65,11 @@ GAP_LABELS: Mapping[str, str] = {
 _SOURCE_LABELS = {"text": "Your text check-in", "file_fixture": "Demo fixture file", "image_fixture": "Demo fixture image"}
 _SIMULATED_SOURCE = "Simulated cohort series"
 _NO_SOURCE = "No record yet"
-_OBSERVED_LIMIT = "Self-reported in this demo journal; not checked against a device or a record."
+_OBSERVED_LIMIT = "Self-reported in your journal; not checked against a device or a record."
 _SIMULATED_LIMIT = "Simulated outcomes are not patient outcomes."
-_DEMO_LIMIT = "Demo data only: a synthetic member, not a patient record."
+# AM-2 D2 (G32): production copy for the board's demo; the synthetic-data disclosure is in
+# docs/daypart/submission/assumptions-limits.md. Still a limit: this is not a medical record.
+_DEMO_LIMIT = "A personal tracking record, not a medical record."
 _PATTERN_LIMIT = "A pattern score comes from simulated cohort data and this journal."
 _WHY_EMPTY = {
     "source": "nothing has been recorded for this measure yet",

@@ -29,6 +29,7 @@ from daypart.demo.playground import (
     UnknownMember,
 )
 from daypart.demo.safety import safe_text
+from daypart.demo.surfaces import render_surface
 from daypart.governance import real_input
 from daypart.memory.registry import load_registry
 from daypart.passport import timeline as passport_timeline
@@ -154,14 +155,20 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             refused.reason,
             ", ".join(g.id for g in refused.open_gates),
         )
-    index_html = files("daypart.demo").joinpath("static/index.html").read_text(encoding="utf-8")
+    # AM-2 D1 (G31): one page source, two shells, rendered once here so bad markers fail at startup.
+    page_src = files("daypart.demo").joinpath("static/index.html").read_text(encoding="utf-8")
+    member_html, admin_html = render_surface(page_src, "member"), render_surface(page_src, "admin")
 
     def _404(what: str, key: str) -> HTTPException:
         return HTTPException(status_code=404, detail=f"unknown {what}: {key}")
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def index() -> str:
-        return index_html
+        return member_html  # the member app (consumer)
+
+    @app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
+    def admin() -> str:
+        return admin_html  # the research console (admin)
 
     @app.get("/results", include_in_schema=False)
     def results() -> RedirectResponse:

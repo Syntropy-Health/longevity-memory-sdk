@@ -605,10 +605,10 @@ def test_rev2_generic_server_and_network_errors(html):
     assert not re.search(r"\bdetail\b", js)
 
 
-def test_rev2_get_failure_notice_sits_directly_under_h1(html):
-    root = _tree(html)
-    for s in ("passport", "next", "lab"):
-        sec = _by_id(root, "screen-" + s)
+def test_rev2_get_failure_notice_sits_directly_under_h1(html, admin):
+    # AM-2 D1: the lab is on the research console now; the inventory screen joins it there.
+    for page, s in ((html, "passport"), (html, "next"), (admin, "lab"), (admin, "inventory")):
+        sec = _by_id(_tree(page), "screen-" + s)
         kids = [c for c in sec.children if isinstance(c, _Node)]
         assert kids[0].tag == "h1", s
         assert kids[1].tag == "div" and (kids[1].attrs.get("id") or "").endswith("-msg"), s
@@ -888,7 +888,7 @@ def test_d4_stale_step_refetch_failure_takes_focus(second):
     assert got["role"] == "alert" and got["tabindex"] == "-1" and got["focused"]
 
 
-_CHECKIN = ["persist", "updateNav", "journalPending", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
+_CHECKIN = ["persist", "updateNav", "journalPending", "adoptJournal", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
             "loadFixtures", "submitCheckin"]
 _CI_DOM = """
 mk("ci-load-msg"); var body = mk("ci-body"); ["ci-files", "ci-images"].forEach(function (i) { var b = mk(i); b.append(el("ul")); });
@@ -907,15 +907,18 @@ def test_d5_checkin_journal_failure_shows_the_generic_notice_and_try_again_reloa
         RESP.push([503, null]);
         await showCheckin();
         var failed = state();
-        RESP.push([200, [{ member_id: "syn-001" }]], [201, { journal_id: "j9", today: "2026-11-07" }], [200, []]);
+        // AM-2 D2 (G32): the journal is the seeded persona's (GET /api/personas, then POST {persona})
+        RESP.push([200, [{ persona_id: "persona-v1", display_name: "Rowan Ellis" }]],
+                  [201, { journal_id: "j9", today: "2026-11-07", persona_id: "persona-v1", display_name: "Rowan Ellis" }], [200, []]);
         $("ci-load-msg").querySelector("button").click();
         await new Promise(function (r) { setTimeout(r, 50); });
-        return [failed, state(), S.journal];
+        return [failed, state(), S.journal, S.displayName, CALLS.map(function (c) { return [c[0], c[1], c[2]]; })];
         """,
     )
     assert got[0]["title"] == "Something went wrong" and got[0]["role"] == "alert" and got[0]["bodyHidden"]
     assert "(error 503)" in got[0]["text"]
-    assert got[1]["title"] is None and not got[1]["bodyHidden"] and got[2] == "j9"
+    assert got[1]["title"] is None and not got[1]["bodyHidden"] and got[2] == "j9" and got[3] == "Rowan Ellis"
+    assert got[4][1:3] == [["GET", "/api/personas", None], ["POST", "/api/journals", {"persona": "persona-v1"}]]
 
 
 @pytest.mark.parametrize("resp", ['[500, null]', '"network"'])
