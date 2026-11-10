@@ -200,6 +200,11 @@ class JournalStore:
             if self._checkin_journal.get(cid) == journal.journal_id:
                 del self._checkin_journal[cid]
 
+    def discard(self, journal: Journal) -> None:
+        """Drop ``journal`` now (a persona seed that failed part-way, G32)."""
+        if self._journals.get(journal.journal_id) is journal:
+            self._drop(journal)
+
     def _evict_idle(self, now: float) -> None:
         for j in [j for j in self._journals.values() if now - j.last_seen > self.idle_seconds]:
             self._drop(j)

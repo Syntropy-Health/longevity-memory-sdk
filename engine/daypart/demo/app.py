@@ -20,7 +20,7 @@ from starlette.formparsers import MultiPartException
 
 from daypart.checkin import fixtures, next_step, service
 from daypart.checkin.journal import Journal, JournalError, JournalStore
-from daypart.demo import lab
+from daypart.demo import lab, persona
 from daypart.demo.playground import (
     MAX_HORIZON,
     EpisodeDone,
@@ -246,16 +246,28 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             body = await _json_object(request)
         except _BodyTooLarge:
             return _error(413, {"error": "too_large"})
-        if body is None:
+        if body is None or ("persona" in body and "member_id" in body):
             return _error(422, {"error": "invalid_request"})
         try:
-            j = journals.create(body.get("member_id"))
+            if "persona" in body:  # AM-2 D2 (G32): a journal pre-filled by replaying the fictional persona
+                j = await persona.seed(journals, body["persona"])
+            else:
+                j = journals.create(body.get("member_id"))
         except JournalError as e:
             return _error(e.status, e.body)
-        return JSONResponse(
-            status_code=201,
-            content={"journal_id": j.journal_id, "member_id": j.member.member_id, "today": j.today.isoformat()},
-        )
+        except persona.UnknownPersona as e:
+            return _error(e.status, dict(e.body))
+        except persona.PersonaSeedError:
+            log.error("persona seed failed; the committed persona no longer replays cleanly")
+            return _error(500, {"error": "persona_seed_failed"})
+        content = {"journal_id": j.journal_id, "member_id": j.member.member_id, "today": j.today.isoformat()}
+        if j.persona_id is not None:
+            content |= {"persona_id": j.persona_id, "display_name": j.display_name}
+        return JSONResponse(status_code=201, content=content)
+
+    @app.get("/api/personas")
+    def list_personas() -> list[dict]:
+        return persona.personas()
 
     @app.get("/api/fixtures")
     def list_fixtures() -> list[dict]:
