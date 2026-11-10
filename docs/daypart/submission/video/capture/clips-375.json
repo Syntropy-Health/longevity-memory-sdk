@@ -1,0 +1,268 @@
+{
+  "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run",
+  "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
+  "viewport": "375x812",
+  "recorded_at": "2026-11-10T21:12:15.716Z",
+  "video": "page@d5fc6a5903457f191d20f7bdbc1f3437.webm",
+  "source": "real recording of the hosted build (Playwright recordVideo); nothing mocked or intercepted",
+  "checkin_text": "slept 6 hours, pain 4/10, mood 3 out of 5, walked 8000 steps",
+  "corrected_sleep_hours": 6.5,
+  "safety_text": "Can you give me a crisis line to call?",
+  "clips": [
+    {
+      "id": "s2-checkin-review",
+      "title": "Synthetic check-in, review and correction before saving",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/",
+      "start": 3.04,
+      "end": 18.36
+    },
+    {
+      "id": "s3-passport",
+      "title": "Health Clone Passport and evidence thread",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "start": 18.65,
+      "end": 31.11
+    },
+    {
+      "id": "s4a-next-step",
+      "title": "Suggested next step: choose, defer or ask a professional",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
+      "start": 31.33,
+      "end": 36.94
+    },
+    {
+      "id": "s4b-safety",
+      "title": "Crisis hand-off: nothing extracted or saved",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#today",
+      "start": 36.99,
+      "end": 43.97
+    },
+    {
+      "id": "s4d-timeline",
+      "title": "How the clone changed: every saved check-in",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#timeline",
+      "start": 44.19,
+      "end": 49.53
+    },
+    {
+      "id": "s5a-pipeline",
+      "title": "Research console: the adaptation pipeline",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#pipeline",
+      "start": 50.31,
+      "end": 55.84
+    },
+    {
+      "id": "s5b-lab",
+      "title": "Learning lab: base vs fine-tuned on 141 held-out synthetic prompts",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
+      "start": 55.9,
+      "end": 63.23
+    },
+    {
+      "id": "s5c-real-input",
+      "title": "Real-input request refused by the server (403, 12 open gates)",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#input",
+      "start": 63.28,
+      "end": 71.12
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "s2-today-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/",
+      "t": 4.59
+    },
+    {
+      "file": "s2-review-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#review/9a1dae5f-c29",
+      "t": 10.97
+    },
+    {
+      "file": "s2-decided-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#review/9a1dae5f-c29",
+      "t": 15.26
+    },
+    {
+      "file": "s2-saved-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#review/9a1dae5f-c29",
+      "t": 18.36
+    },
+    {
+      "file": "s3-passport-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 21.19
+    },
+    {
+      "file": "s3-evidence-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 28.06
+    },
+    {
+      "file": "s3-withheld-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 31.11
+    },
+    {
+      "file": "s4a-next-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
+      "t": 34.36
+    },
+    {
+      "file": "s4a-chosen-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
+      "t": 36.94
+    },
+    {
+      "file": "s4b-handoff-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#today",
+      "t": 43.97
+    },
+    {
+      "file": "s4d-timeline-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#timeline",
+      "t": 46.75
+    },
+    {
+      "file": "s5a-pipeline-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#pipeline",
+      "t": 52.84
+    },
+    {
+      "file": "s5b-lab-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
+      "t": 58.93
+    },
+    {
+      "file": "s5b-lab-scrolled-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
+      "t": 63.23
+    },
+    {
+      "file": "s5c-real-input-375.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#input",
+      "t": 68.34
+    }
+  ],
+  "api": [
+    {
+      "t": 0.89,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/personas"
+    },
+    {
+      "t": 1.2,
+      "status": 201,
+      "method": "POST",
+      "url": "/api/journals"
+    },
+    {
+      "t": 1.32,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/fixtures"
+    },
+    {
+      "t": 1.46,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/passport"
+    },
+    {
+      "t": 2.49,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/timeline"
+    },
+    {
+      "t": 8.26,
+      "status": 201,
+      "method": "POST",
+      "url": "/api/checkins"
+    },
+    {
+      "t": 8.38,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/units"
+    },
+    {
+      "t": 15.44,
+      "status": 200,
+      "method": "POST",
+      "url": "/api/checkins/9a1dae5f-c29/review"
+    },
+    {
+      "t": 15.66,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/timeline"
+    },
+    {
+      "t": 18.58,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/passport"
+    },
+    {
+      "t": 18.59,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/inventory"
+    },
+    {
+      "t": 31.27,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/next-step"
+    },
+    {
+      "t": 34.52,
+      "status": 200,
+      "method": "POST",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/next-step"
+    },
+    {
+      "t": 37.1,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/timeline"
+    },
+    {
+      "t": 37.14,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/passport"
+    },
+    {
+      "t": 39.86,
+      "status": 200,
+      "method": "POST",
+      "url": "/api/checkins"
+    },
+    {
+      "t": 44.13,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/9a1dae5fc58f4cccad15e4531fb368b6/timeline"
+    },
+    {
+      "t": 49.8,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/lab"
+    },
+    {
+      "t": 56.05,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/lab"
+    },
+    {
+      "t": 64.95,
+      "status": 403,
+      "method": "POST",
+      "url": "/api/mode"
+    }
+  ]
+}
