@@ -719,11 +719,14 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
   YAML.
 
 **R10: accessibility**
-- T10.1 [ui] axe-core (tags wcag2a, wcag2aa, wcag21a, wcag21aa) on each of the 5 routes with a
-  realistic state → 0 violations with impact serious or critical.
-- T10.2 [ui] a keyboard-only journey (Tab, Shift+Tab, Enter, Space, arrow keys only; no mouse)
-  completes check-in (fixture) → review → passport → open a thread → choose → lab. Each focused
-  element has a computed outline or box-shadow different from its unfocused state.
+- T10.1 [ui] (as amended by G38) axe-core (tags wcag2a, wcag2aa, wcag21a, wcag21aa) on each of the
+  10 routes with a realistic state, the 5 member routes at `/` (today, review, passport, next,
+  timeline) and the 5 console routes at `/admin` (pipeline, lab, inventory, playground, input) →
+  0 violations with impact serious or critical.
+- T10.2 [ui] (as amended by G38) a keyboard-only journey (Tab, Shift+Tab, Enter, Space, arrow keys
+  only; no mouse) completes check-in (fixture) → review → passport → open a thread → choose → View
+  timeline (Enter toggles an entry), then the learning lab on the console at `/admin#lab`. Each
+  focused element has a computed outline or box-shadow different from its unfocused state.
 - T10.3 [ui] at a 375×812 viewport, on every route, `scrollWidth <= clientWidth`.
 - T10.4 [ui] with `prefers-reduced-motion: reduce` emulated, every element has a computed
   `animation-duration` and `transition-duration` of 0s.
