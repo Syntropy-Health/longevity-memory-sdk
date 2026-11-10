@@ -1518,7 +1518,7 @@ def test_rev3_timeline_entry_maps_each_api_field_once():
         return {{ title: tlTitle(e), firstTitle: tlTitle(first), quietTitle: tlTitle(q),
           chips: tlChips(e).children.map(function (c) {{ return [c.className, c.textContent]; }}),
           firstChip: tlChips(first).children.map(function (c) {{ return c.textContent; }}).pop(),
-          quietChips: tlChips(q), sentences: tlSentences(e), quiet: tlSentences(q) }};
+          quietChips: tlChips(q), sentences: tlSentences(e), quiet: tlSentences(q), firstSentences: tlSentences(first) }};
         """,
     )
     assert got["title"] == "Check-in saved · 2 observations"
@@ -1536,6 +1536,7 @@ def test_rev3_timeline_entry_maps_each_api_field_once():
     assert got["sentences"][0] == "Added: Sleep duration 7.5 h, Steps 9360 steps."
     assert got["sentences"][-1] == "Next step changed to “Would you like to walk after lunch?”"
     assert got["quiet"] == ["No passport card changed.", "Next step unchanged."]
+    assert got["firstSentences"][-1] == "First next step: “First.”"  # QG P6.2 K8: no step before this save
     banned = re.compile(r"\b(high|low|normal|abnormal|better|worse|improv\w*|up|down|increas\w*|decreas\w*)\b", re.I)
     for s in got["sentences"]:
         assert not banned.search(s), s  # a value change states that it changed, never its direction
