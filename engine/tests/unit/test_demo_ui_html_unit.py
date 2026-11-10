@@ -1578,6 +1578,22 @@ def test_rev3_clone_updated_panel_is_built_from_the_entry():
                             ["#timeline", "View timeline", "btn btn--secondary"]]
 
 
+_SHUFFLED = """{ index: 4, checkin_id: "c4", as_of: "2026-09-29T12:00:00Z", appends: [],
+  passport_changes: [{ title: "Pulse", change: "withheld" }, { title: "Body weight", change: "now_observed" },
+    { title: "Heart rate", change: "became_ready" }, { title: "Sleep duration (hours)", change: "value_changed" }],
+  next_step: { before: { text: "a" }, after: { text: "a" }, changed: false } }"""
+
+
+def test_rev3_clone_updated_rows_follow_the_kind_order_not_the_api_order():
+    """QG P6.2 K9: the API lists the changes in any order; the delta rows always run Card ready,
+    Updated, Now observed, Withheld (rev 3 §3.3). The timeline chips keep the API's order."""
+    got = _clone_updated(_SHUFFLED, written=1, records=1)
+    assert [r[0] for r in got["rows"]] == ["Card ready", "Updated", "Now observed", "Withheld"]
+    chips = _run_page(_BASE + _TL, f"return tlChips({_SHUFFLED}).children.map(function (c) {{ return c.textContent; }});")
+    assert chips == ["○ Withheld: Pulse", "● Now observed: Body weight", "✓ Card ready: Heart rate",
+                     "↻ Updated: Sleep duration (hours)"]
+
+
 def test_rev3_clone_updated_omits_empty_kinds_and_never_says_zero():
     got = _clone_updated(_QUIET, written=1, records=1)
     assert got["rows"] is None and got["label"] is None
