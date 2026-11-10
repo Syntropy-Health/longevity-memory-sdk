@@ -31,6 +31,7 @@ from daypart.demo.playground import (
 from daypart.demo.safety import safe_text
 from daypart.governance import real_input
 from daypart.memory.registry import load_registry
+from daypart.passport import timeline as passport_timeline
 from daypart.passport import view as passport_view
 from daypart.simmember.dynamics import INTENTS
 
@@ -399,6 +400,17 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             except (next_step.NoSavedCheckin, next_step.UnknownStep) as e:
                 return _error(e.status, dict(e.body))
         return JSONResponse(status_code=200, content=_safe(out))
+
+    @app.get("/api/journals/{journal_id}/timeline")
+    async def journal_timeline(journal_id: str) -> Response:
+        # Read-only (AM-2 D3, G33): per saved check-in, its appends and the passport / next-step change.
+        try:
+            j = _journal(journal_id)
+        except JournalError as e:
+            return _error(e.status, e.body)
+        async with j.lock:
+            tl = await passport_timeline.timeline(j)
+        return JSONResponse(status_code=200, content=_safe(tl.model_dump(mode="json")))
 
     @app.get("/api/lab")
     def lab_table() -> dict:
