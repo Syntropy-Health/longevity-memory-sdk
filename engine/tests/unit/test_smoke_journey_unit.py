@@ -341,14 +341,27 @@ def test_persistent_rollover_gives_up_after_5_tries(sleeps):
     assert sleeps == [10.0, 20.0, 30.0, 40.0], "back-off grows 10/20/30/40 s"
 
 
-def test_retry_stops_when_the_time_budget_is_spent(monkeypatch, sleeps):
-    # Each try costs 70 s of (fake) wall clock; a 180 s budget leaves room for 2 tries, not 5.
+@pytest.mark.parametrize(
+    ("try_cost", "expected_sleeps", "tries"),
+    [
+        # 70 s a try: ends at 70 (+10 = 80 ok), 150 (+20 = 170 ok), 240 (over): 3 tries, 2 sleeps.
+        pytest.param(70.0, [10.0, 20.0], 3, id="70s-tries"),
+        # The next try would start exactly at the budget: allowed (the budget is inclusive).
+        pytest.param(170.0, [10.0], 2, id="lands-on-budget"),
+        # Only the coming delay pushes it over the budget: no retry.
+        pytest.param(175.0, [], 1, id="delay-crosses-budget"),
+    ],
+)
+def test_retry_stops_when_the_time_budget_is_spent(monkeypatch, sleeps, try_cost, expected_sleeps, tries):
     now = [0.0]
     monkeypatch.setattr(smoke, "_clock", lambda: now[0])
+    creates = []
 
     def slow_gone(method, path, body):
-        now[0] += 35.0
+        # Two calls a try (create journal, next step), each half the try's cost.
+        now[0] += try_cost / 2
         if path == "/api/journals":
+            creates.append(1)
             return 201, {"journal_id": "j"}
         return 404, {"error": "unknown_journal"}
 
@@ -357,10 +370,10 @@ def test_retry_stops_when_the_time_budget_is_spent(monkeypatch, sleeps):
         now[0] += seconds
 
     monkeypatch.setattr(smoke, "_sleep", tick)
-    with pytest.raises(smoke.SmokeFailure, match="unknown_journal"):
+    with pytest.raises(smoke.SmokeFailure, match=f"unknown_journal.*after {tries} tries"):
         smoke.run_with_retry(slow_gone, budget=180.0)
-    assert len(sleeps) < 4
-    assert now[0] <= 180.0 + 70.0, "no sleep may start a try past the budget"
+    assert sleeps == expected_sleeps
+    assert len(creates) == tries
 
 
 def test_main_retries_a_network_error_then_reports_fail_line(monkeypatch, sleeps, capsys):
