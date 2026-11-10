@@ -133,7 +133,7 @@ def test_deploy_job_runs_the_journey_on_the_hosted_url():
         pytest.param(lambda m, p, b: (201, []), id="list-body"),
     ],
 )
-def test_main_reports_fail_line_on_transport_errors(monkeypatch, capsys, transport):
+def test_main_reports_fail_line_on_transport_errors(monkeypatch, capsys, sleeps, transport):
     monkeypatch.setattr(smoke, "http_transport", lambda base, timeout: transport)
     assert smoke.main(["https://example.invalid"]) == 1
     err = capsys.readouterr().err
@@ -194,3 +194,181 @@ def test_http_transport_sends_json_and_strips_trailing_slash(stub_url):
     assert (m1, p1, ct1) == ("POST", "/api/journals", "application/json")
     assert json.loads(b1) == {"member_id": "syn-001"}
     assert (m2, p2, ct2, b2) == ("GET", "/api/lab", None, b"")
+
+
+# --- P5.2: the smoke tolerates a Modal rollover (CTO hand-back 83506a31) -------------------------
+# Right after `modal deploy` the old and new containers both serve, and journals live in memory per
+# container (D-A3), so a call can land on the container that never saw the journal: 404
+# unknown_journal. The whole journey is retried with a fresh journal, only for that kind of miss or
+# a network error; a real 500 or a wrong value still fails on the first try.
+
+
+class _Sleeps(list):
+    def __call__(self, seconds):
+        self.append(seconds)
+
+
+@pytest.fixture
+def sleeps(monkeypatch):
+    s = _Sleeps()
+    monkeypatch.setattr(smoke, "_sleep", s)
+    return s
+
+
+def _count_creates(call):
+    creates = []
+
+    def wrapped(method, path, body):
+        if path == "/api/journals":
+            creates.append(1)
+        return call(method, path, body)
+
+    return wrapped, creates
+
+
+def test_unknown_journal_on_try_1_passes_on_try_2(client, sleeps, capsys):
+    call = _transport(client)
+    misses = []
+
+    def rollover(method, path, body):
+        if path.endswith("/next-step") and not misses:
+            misses.append(path)
+            return 404, {"error": "unknown_journal"}
+        return call(method, path, body)
+
+    wrapped, creates = _count_creates(rollover)
+    smoke.run_with_retry(wrapped)
+    assert len(creates) == 2, "the retry must start over with a fresh journal"
+    assert len(sleeps) == 1
+    out = capsys.readouterr().out
+    assert "retry" in out and "unknown_journal" in out
+    assert "ok  passport: 200" in out
+
+
+def test_unknown_checkin_is_the_same_rollover(client, sleeps):
+    call = _transport(client)
+    misses = []
+
+    def rollover(method, path, body):
+        if path.endswith("/review") and not misses:
+            misses.append(path)
+            return 404, {"error": "unknown_checkin"}
+        return call(method, path, body)
+
+    smoke.run_with_retry(rollover)
+    assert len(sleeps) == 1
+
+
+def test_network_error_on_try_1_passes_on_try_2(client, sleeps):
+    call = _transport(client)
+    misses = []
+
+    def flaky(method, path, body):
+        if not misses:
+            misses.append(path)
+            raise urllib.error.URLError("connection reset")
+        return call(method, path, body)
+
+    smoke.run_with_retry(flaky)
+    assert len(sleeps) == 1
+
+
+def test_passport_500_fails_without_retry(client, sleeps):
+    call = _transport(client)
+
+    def passport_500(method, path, body):
+        return (500, None) if path.endswith("/passport") else call(method, path, body)
+
+    wrapped, creates = _count_creates(passport_500)
+    with pytest.raises(smoke.SmokeFailure, match="passport: expected 200, got 500"):
+        smoke.run_with_retry(wrapped)
+    assert len(creates) == 1 and sleeps == []
+
+
+def test_wrong_value_fails_without_retry(client, sleeps):
+    call = _transport(client)
+
+    def drop_observed(method, path, body):
+        status, data = call(method, path, body)
+        if path.endswith("/passport") and isinstance(data, dict):
+            data = {**data, "cards": [c for c in data["cards"] if c.get("origin") != "observed"]}
+        return status, data
+
+    with pytest.raises(smoke.SmokeFailure, match="passport: expected observed values"):
+        smoke.run_with_retry(drop_observed)
+    assert sleeps == []
+
+
+@pytest.mark.parametrize("body", [{"error": "unknown_step"}, {"error": "not_found"}, None])
+def test_other_404s_fail_without_retry(client, sleeps, body):
+    call = _transport(client)
+
+    def other_404(method, path, b):
+        return (404, body) if path.endswith("/passport") else call(method, path, b)
+
+    with pytest.raises(smoke.SmokeFailure, match="passport: expected 200, got 404"):
+        smoke.run_with_retry(other_404)
+    assert sleeps == []
+
+
+def test_persistent_rollover_gives_up_after_5_tries(sleeps):
+    calls = []
+
+    def always_gone(method, path, body):
+        calls.append(path)
+        if path == "/api/journals":
+            return 201, {"journal_id": f"j{len(calls)}"}
+        return 404, {"error": "unknown_journal"}
+
+    with pytest.raises(smoke.SmokeFailure, match=r"next step before any save: expected 409, got 404.*after 5 tries"):
+        smoke.run_with_retry(always_gone)
+    assert calls.count("/api/journals") == 5
+    assert len(sleeps) == 4
+    assert sleeps == sorted(sleeps) and sleeps[0] > 0, "backoff grows"
+
+
+def test_retry_stops_when_the_time_budget_is_spent(monkeypatch, sleeps):
+    # Each try costs 70 s of (fake) wall clock; a 180 s budget leaves room for 2 tries, not 5.
+    now = [0.0]
+    monkeypatch.setattr(smoke, "_clock", lambda: now[0])
+
+    def slow_gone(method, path, body):
+        now[0] += 35.0
+        if path == "/api/journals":
+            return 201, {"journal_id": "j"}
+        return 404, {"error": "unknown_journal"}
+
+    def tick(seconds):
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr(smoke, "_sleep", tick)
+    with pytest.raises(smoke.SmokeFailure, match="unknown_journal"):
+        smoke.run_with_retry(slow_gone, budget=180.0)
+    assert len(sleeps) < 4
+    assert now[0] <= 180.0 + 70.0, "no sleep may start a try past the budget"
+
+
+def test_main_retries_a_network_error_then_reports_fail_line(monkeypatch, sleeps, capsys):
+    def refused(m, p, b):
+        raise urllib.error.URLError("refused")
+
+    monkeypatch.setattr(smoke, "http_transport", lambda base, timeout: refused)
+    assert smoke.main(["https://example.invalid"]) == 1
+    assert len(sleeps) == 4
+    assert capsys.readouterr().err.startswith("FAIL create journal:")
+
+
+def test_main_passes_after_a_rollover(monkeypatch, sleeps, client):
+    call = _transport(client)
+    misses = []
+
+    def rollover(method, path, body):
+        if path.endswith("/next-step") and not misses:
+            misses.append(path)
+            return 404, {"error": "unknown_journal"}
+        return call(method, path, body)
+
+    monkeypatch.setattr(smoke, "http_transport", lambda base, timeout: rollover)
+    assert smoke.main(["https://example.invalid"]) == 0
+    assert len(sleeps) == 1
