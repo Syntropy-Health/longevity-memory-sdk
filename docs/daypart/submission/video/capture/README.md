@@ -2,7 +2,7 @@
 
 `capture.js` records the judge journey from the **hosted** build as one real Playwright take and
 writes `clips-<width>.json`: URL, deployed commit (`BUILD_SHA`), viewport, each segment's offsets
-and every API call's status.
+and URL, the screenshots taken, and every API call's status.
 
 ```sh
 npm i playwright@1                       # in a scratch dir, not in the repo
@@ -19,5 +19,8 @@ libasound2, libatspi2.0, libatomic1, fonts-liberation) into a user directory and
 The demo-video edit needs a full ffmpeg with libx264, xfade, drawtext and subtitles. Playwright's
 own ffmpeg is too minimal; `imageio-ffmpeg`'s static binary works.
 
-Dry run 2026-11-10 ~01:45 UTC on the hosted build: check-in, review, next step, crisis hand-off,
-real-input refusal (403) and lab all work. The passport returns **500** (HAC-38 fix pending).
+Takes used (2026-11-10, hosted build `e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98`):
+[`clips-1280.json`](clips-1280.json) (the video's footage) and [`clips-375.json`](clips-375.json)
+(the judge-path check at phone width). The only status of 400 or above in either take is the
+expected 403 refusal of real input. The `.webm` recordings are not committed; the MP4 cut from the
+1280 take is attached to HAC-65.

@@ -1,81 +1,67 @@
-# FHDIC demo video: shot list, narration draft and edit plan (HAC-65)
+# FHDIC demo video: shot list and edit (HAC-65)
 
-**Status: draft. The video has not been made.** Two inputs are still missing:
-- the HAC-38 fix for the hosted passport. `GET /api/journals/{id}/passport` returns 500 on the
-  hosted build as of 2026-11-10 01:45 UTC, so segment 3 can't be filmed yet.
-- the HAC-64 claim ledger. The narration below uses only what the screen shows. Any figure stays
-  out until the ledger traces it.
+**Status: made.** `clinical-human-clone-demo.mp4` is 2:37 long, 1920×1080, 30 fps, H.264 and
+10.8 MB. It is attached to HAC-65 and is not in git. Captions are burned in and also provided as
+[`captions.srt`](captions.srt). The full text and timing are in [`transcript.md`](transcript.md).
 
-Target length: 2:40, within the brief's 2:30–3:00 (a proposal, not an organiser rule; HAC-63
-found no published video rule).
+**No presenter and no voice-over.** HeyGen was not used. A read-only check on 2026-11-10 found no
+subscription: the account is a pay-as-you-go wallet with USD 0.97 left and auto-reload turned on
+(it tops up USD 10 when the balance falls below USD 5). Any render would have triggered new spend,
+which the brief rules out. Nothing was sent to HeyGen and nothing was rendered there. If a person
+later adds a voice track, the narration is the caption text in `captions.srt`, and its timing
+already fits.
 
-Every UI shot is a **real recording of the hosted build**:
-https://supermomo668--daypart-demo-playground.us-east.modal.run, 1280×720, made with Playwright
-`recordVideo` by [`capture/capture.js`](capture/capture.js). One take records the whole journey.
-`clips-1280.json` records each segment's offsets, the URL, the deployed commit and every API status.
-Nothing is mocked or intercepted.
+**Timeline.** 9 of the 14 segments are real footage and 5 are deck slides. The footage is cut
+from one real Playwright recording of the hosted build, made by
+[`capture/capture.js`](capture/capture.js) at 1280×720:
+https://supermomo668--daypart-demo-playground.us-east.modal.run, deployed commit
+`e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98`, recorded 2026-11-10 21:10 UTC.
+[`capture/clips-1280.json`](capture/clips-1280.json) records each clip's offsets, URL and every
+API status. Nothing is mocked, intercepted, re-staged or sped up.
 
-## Timeline
+| # | time | source | shot |
+|---|---|---|---|
+| 1 | 0:00–0:12 | slide 1 | Problem and user |
+| 2 | 0:11–0:29 | **real footage** `/` → `/#review` | Type a four-part sentence → 3 proposals with their words → correct sleep to 6.5 h, confirm 2 → save |
+| 3 | 0:29–0:43 | **real footage** `/#passport` | Passport cards → evidence thread opened → a withheld card |
+| 4 | 0:43–0:50 | **real footage** `/#next` | Next step after a pain report routes to a person → Choose |
+| 5 | 0:50–0:59 | **real footage** `/#today` | Crisis check-in → fixed hand-off, nothing saved |
+| 6 | 0:59–1:08 | **real footage** `/admin#input` | Request real input → server refuses (403), 12 gates open |
+| 7 | 1:08–1:14 | **real footage** `/#timeline` | What each saved check-in changed |
+| 8 | 1:14–1:24 | **real footage** `/admin#lab` | Learning lab rows with run ID, split, seed and failures |
+| 9 | 1:24–1:40 | slide 5 | Learning and evidence (synthetic / simulated results) |
+| 10 | 1:40–1:46 | **real footage** `/admin#pipeline` | Live loop, then the offline training stages (RL stage marked "proposed, not built") |
+| 11 | 1:46–2:00 | slide 3 | How it works |
+| 12 | 1:59–2:13 | slide 6 | Responsible AI and limits |
+| 13 | 2:13–2:25 | slide 7 | Feasibility and path to deployment |
+| 14 | 2:25–2:37 | slide 8 | Impact and next steps, with the prototype and source links |
 
-| # | Time | Source | Shot | On-screen caption |
-|---|---|---|---|---|
-| 1 | 0:00–0:20 | Title card (deck slide 1) + presenter* | Problem: goals and barriers change; generic reminders don't say what they know | "Synthetic demo · simulated results · not medical advice" |
-| 2 | 0:20–0:50 | **Real footage** `s2-checkin-review` | Type "slept 6 hours and walked 8000 steps" → Check in → review rows with source snippet, date, method → Confirm → Save | "Nothing is saved until you review it" |
-| 3 | 0:50–1:20 | **Real footage** `s3-passport` | Passport cards (observed/simulated, data age, source) → open **Evidence thread** | "Every value shows where it came from" |
-| 4a | 1:20–1:32 | **Real footage** `s4a-next-step` | Suggested next step and its reason: Choose / Defer / Ask a professional | "The person chooses. Nothing is imposed." |
-| 4b | 1:32–1:40 | **Real footage** `s4b-safety` | Check-in "Can you give me a crisis line to call?" → hand-off notice; nothing extracted or saved | "A real refusal: crisis language goes to a person" |
-| 4c | 1:40–1:45 | **Real footage** `s4c-real-input` | Footer **Real input** → server refuses (HTTP 403) and lists the open gates | "Real health data is switched off" |
-| 5 | 1:45–2:15 | **Real footage** `s5-lab` | Learning lab: base vs SFT vs DPO and scripted baselines, each with run ID, split, seed, failures | "Synthetic episodes · simulated results · not patient outcomes" |
-| 6 | 2:15–2:40 | Deck slide 3/5 (system + validation) + presenter* | How it works; what was tested and how | footer "synthetic / simulated results" |
-| 7 | 2:40–3:00 | Deck slide 6/8 (limits, access) + presenter* | Limits; demo link; not for clinical use | demo URL as text |
+The order follows the brief: problem → check-in and correction → passport provenance → bounded
+step and real refusals → learning lab → system and validation → limits.
 
-\* Presenter and voice: HeyGen if the existing plan covers the render. HeyGen gets only the
-narration text below: no health data, no screenshots, no claims beyond the script. If a render
-needs new spend or a plan upgrade, the presenter is dropped and the video ships as captions over
-footage and slides.
+## Edit
 
-## Narration draft (≈ 360 words, ≈ 2:40 at 135 wpm)
+[`make_video.py`](make_video.py) holds the whole edit as one segment plan, which writes the MP4,
+`captions.srt`, `transcript.md` and `edit-plan.json` together.
 
-> Reconcile against the HAC-64 ledger before any voice render. Lines marked ⟦ledger⟧ wait for a traced figure.
+- Footage and slides are each scaled to 1600×900 on a dark 1920×1080 frame.
+- A top band labels every segment ("Real recording · hosted build · …" or "Slide N · …").
+- Every frame carries the tag "Synthetic demo · simulated results · not medical advice".
+- Segments join with a 0.4 s cross-fade.
+- A footage segment may end on a 1–3 s hold of its own last frame, so the captions can be read.
+- Captions are single lines, white on near-black, burned in at the bottom.
+- The audio track is silent (AAC), for player compatibility.
 
-1. People's goals and barriers change from week to week. Most reminders can't tell you what they
-   know about you, or why they suggest what they do.
-2. Clinical Human Clone is a synthetic-first prototype. Everything you'll see uses made-up input
-   and simulated results. It is not medical advice.
-3. A check-in starts as a plain sentence. The clone proposes what it found: each value with its
-   source text, date and method. Nothing is saved until the person confirms, corrects or discards it.
-4. Confirmed values become the Health Clone Passport. Each card says whether it was observed or
-   simulated, how old the data is, and where it came from. Open the evidence thread to follow one
-   value from the check-in to the card. Cards without enough evidence say so instead of showing a number.
-5. The suggested next step comes with its reason. The person can choose it, defer it or ask a
-   professional.
-6. Some things it will not do. Crisis language is not processed: the person is pointed to a human,
-   and nothing is saved. Real health data is switched off, and the server refuses to turn it on.
-7. Separately, a learning lab compares a base model with fine-tuned candidates and scripted
-   baselines on synthetic episodes. Every number links to its run, split and seed. These are
-   simulated results, not patient outcomes. ⟦ledger: which figure, if any, is spoken⟧
-8. ⟦ledger: system and validation sentence from the deck outline, slide 3/5⟧
-9. This is a prototype. It gives no diagnosis or treatment, it has not been clinically validated,
-   and real input needs consent, privacy and clinical oversight first. The demo link is in our
-   submission.
+Rebuild:
 
-## Edit plan
+```sh
+BUILD_SHA=<deployed sha> node capture/capture.js <cap_dir> 1280
+DSF=1.25 node ../deck/deck_pdf.js ../deck <slides_dir>
+python make_video.py --footage <cap_dir> --slides <slides_dir> --out clinical-human-clone-demo.mp4 \
+  --ffmpeg <full ffmpeg> --font LiberationSans-Regular.ttf --bold LiberationSans-Bold.ttf
+```
 
-- Cut the single take at the `clips-1280.json` offsets. Trim dead waits and never speed up typing
-  beyond 2×. A speed-up gets a "sped up" tag.
-- Transitions: 0.4 s cross-fade between segments (ffmpeg `xfade`), and a cut inside a segment.
-- Captions: burned-in segment labels (top band, ≥ 32 px, ink on white, contrast ≥ 7:1) plus the
-  narration as `captions.srt` (side-car, ≤ 2 lines, ≤ 42 chars per line).
-- Zoom: 1.25× crop on the review rows (seg 2) and the evidence thread (seg 3). Crop only, no
-  re-rendered UI.
-- Persistent corner tag on every frame: "Synthetic demo · simulated results".
-- Export: H.264 1280×720 30 fps, AAC, target < 50 MB. The MP4 goes on HAC-65 as an attachment,
-  not into git.
-- Committed alongside: `captions.srt`, `transcript.md`, `clips-1280.json`, the ffmpeg edit script,
-  and this file.
+A new capture is a new take, so its offsets differ, and the plan's captions were timed to this
+take. Re-check `clips-1280.json` before re-cutting.
 
-## Known UI issue seen in the dry run (not fixed here)
-
-At 1280 px the learning-lab table's **Failures** and **Metric** columns wrap mid-word
-("Fail/ure/s", "bou/ndar/y"), because the page is capped at a 44rem measure. That reads badly on
-camera. It belongs to the HAC-38 owner. The cut will crop around it if it's not fixed first.
+The judge-path check is in [judge-path.md](judge-path.md).
