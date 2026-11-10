@@ -500,7 +500,7 @@
       "metrics": {
         "attribution_recovery": {
           "lift_pearson": 0.86138,
-          "lift_spearman": 0.741053,
+          "lift_spearman": 0.749376,
           "top_message_agreement": 0.827586,
           "top_message_chance": 0.166667
         },

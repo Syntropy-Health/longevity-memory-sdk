@@ -128,7 +128,7 @@ curated-25 never enter (the I1 check covers the training fold, builder `rm.train
   dynamics under random messages. Held out: AUC 0.833 and log loss 0.408 (base rate 0.597); a
   status-only comparator does as well on prediction, so the answers add attribution rather than
   accuracy [L77]. The answer-by-message terms recover the simulator's true effects: rank
-  correlation 0.74, and the top message type matches for 83% of held-out members (chance 17%) [L78].
+  correlation 0.75, and the top message type matches for 83% of held-out members (chance 17%) [L78].
   For example, the model learns on its own that a reminder helps most when forgetting is the main
   barrier.
 - **GRPO (`engine/daypart/rm/grpo.py`).** A linear softmax policy over the 7 message types, given a

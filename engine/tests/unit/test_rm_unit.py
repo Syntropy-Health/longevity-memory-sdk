@@ -262,3 +262,13 @@ def test_forgetful_answers_get_a_reminder_linked_to_forgetting(rm):
     out = inc.inclinations(rm, answers)
     rem = [i for i in out.insights if i.insight_id == "insight:reminder"]
     assert rem and rem[0].driver == "barrier.forgetfulness"
+
+
+def test_spearman_averages_ties_and_constant_is_zero():  # QG C1
+    assert model._spearman(np.ones(5), np.arange(5.0)) == 0.0
+    a = np.array([1.0, 1.0, 2.0, 3.0])
+    b = np.array([4.0, 3.0, 2.0, 1.0])
+    perm = np.array([1, 0, 3, 2])
+    assert abs(model._spearman(a, b) - model._spearman(a[perm], b[perm])) < 1e-12
+    # scipy.stats.spearmanr([1, 1, 2, 3], [4, 3, 2, 1]) == -0.9486832980505138
+    assert abs(model._spearman(a, b) - (-0.9486832980505138)) < 1e-9

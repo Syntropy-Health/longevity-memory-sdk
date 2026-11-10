@@ -214,21 +214,28 @@ def _log_loss(p: np.ndarray, y: np.ndarray) -> float:
     return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
 
 
+def _rankdata(x: np.ndarray) -> np.ndarray:
+    """1-based ranks with ties averaged (as scipy.stats.rankdata, method="average")."""
+    x = np.asarray(x, dtype=float)
+    order = np.argsort(x, kind="mergesort")
+    ranks = np.empty(len(x))
+    xs = x[order]
+    i = 0
+    while i < len(x):
+        j = i
+        while j + 1 < len(x) and xs[j + 1] == xs[i]:
+            j += 1
+        ranks[order[i : j + 1]] = (i + j) / 2.0 + 1.0
+        i = j + 1
+    return ranks
+
+
 def auc(scores: np.ndarray, y: np.ndarray) -> float | None:
     """Area under the ROC curve (rank form, ties averaged); None with one class only."""
     pos, neg = int(y.sum()), int(len(y) - y.sum())
     if pos == 0 or neg == 0:
         return None
-    order = np.argsort(scores, kind="mergesort")
-    ranks = np.empty(len(scores))
-    sorted_scores = scores[order]
-    i = 0
-    while i < len(scores):
-        j = i
-        while j + 1 < len(scores) and sorted_scores[j + 1] == sorted_scores[i]:
-            j += 1
-        ranks[order[i : j + 1]] = (i + j) / 2.0 + 1.0
-        i = j + 1
+    ranks = _rankdata(scores)
     return float((ranks[y == 1].sum() - pos * (pos + 1) / 2.0) / (pos * neg))
 
 
@@ -243,8 +250,8 @@ def true_adherence(profile: Profile, state: str, intent: str) -> float:
 
 
 def _spearman(a: np.ndarray, b: np.ndarray) -> float:
-    ra = np.argsort(np.argsort(a, kind="mergesort"), kind="mergesort").astype(float)
-    rb = np.argsort(np.argsort(b, kind="mergesort"), kind="mergesort").astype(float)
+    """Spearman rank correlation with tie-averaged ranks; 0.0 when either side is constant."""
+    ra, rb = _rankdata(a), _rankdata(b)
     if ra.std() == 0 or rb.std() == 0:
         return 0.0
     return float(np.corrcoef(ra, rb)[0, 1])
