@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "workstream": "daypart",
-  "updated_at": "2026-11-10T01:53:54.269943+00:00",
+  "updated_at": "2026-11-10T02:55:13.758817+00:00",
   "linear": {
     "initiative_url": "",
     "initiative_id": ""
@@ -200,6 +200,18 @@
       "summary": "hosted passport fix: evidence package-data + post-deploy SC1 journey smoke",
       "pr": "",
       "updated_at": "2026-11-10T01:53:54.269903+00:00"
+    },
+    "P5.2": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "1e08074",
+      "qgr": "workstreams/daypart/qgr/longevity-memory-sdk-matt-mo-worktree-agent-daypart-longevity-memory-sdk-qgr-iteration-complete-20261110-0253-28b0fb8.md",
+      "summary": "deploy smoke retries the SC1 journey on a Modal rollover miss",
+      "pr": "",
+      "updated_at": "2026-11-10T02:55:13.758763+00:00"
     }
   }
 }
