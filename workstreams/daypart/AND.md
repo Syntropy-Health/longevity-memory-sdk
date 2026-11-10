@@ -82,15 +82,19 @@ sequenceDiagram
    professional.
 5. *Learning lab*: a results table with run ID, split, seed and failures. The GRPO row reads
    "proposed, not built". Footnote: "Simulated outcomes are not patient outcomes."
-   A persistent banner on every screen reads "Demo mode: synthetic inputs and simulated results".
+   ~~A persistent banner on every screen reads "Demo mode: synthetic inputs and simulated results".~~
+   Removed by AM-2 D2 (board, 2026-11-10): no banner or synthetic-data tag on either surface; the
+   disclosure lives in `docs/daypart/submission/assumptions-limits.md`. The learning lab moved to
+   the research console at `/admin` (AM-2 D1).
 
 **In scope:** R1–R11 as specified below. **Out of scope:** real data collection, enabling
 real-input mode, clinical decision support or interpretation of ranges (AM-1), EHR integration, GRPO or any new training, a
 new eval environment (HAC-16), ontology beyond the A4 slice, voice and video, and accounts.
 
 **Success criteria** (carried from the PVR; `/human-qa` checks against these):
-1. SC1 (G1): a judge completes check in → review → passport → next step → lab on the hosted URL
-   with synthetic data and no dead ends.
+1. SC1 (G1): a judge completes check in → review → passport → next step on the hosted URL, and
+   opens the learning lab on the research console (`/admin`, AM-2 D1), with synthetic data and no
+   dead ends.
 2. SC2 (G2): 100% of passport cards show source, time, provenance and observed/simulated status,
    and either evidence or "not enough evidence".
 3. SC3 (G3, AM-1): automated tests find 0 *unsourced* ranges, 0 fabricated numbers and 0 real-input
@@ -126,6 +130,17 @@ new eval environment (HAC-16), ontology beyond the A4 slice, voice and video, an
   a concept may carry `reference_range` only where a source in `sources_v1.json` states the numbers,
   otherwise `null` ("no reference range"); a range is shown beside the value with its population and
   source and is never interpreted (A2 holds); `plausible` stays validation-only and is never rendered.
+- 2026-11-10 (board, L2 delivery review HAC-66 "Request changes"; applied by the CTO as AM-2 on
+  HAC-38, comment 6004ad68): D1 the member app (`/`: check-in, review, passport, next step,
+  adaptation timeline) and the research console (`/admin`: lab, inventory, research playground,
+  pipeline internals, dashboard link) are separate shells and the member nav never links admin
+  routes; D2 the "Demo mode…" banner and the "Synthetic data only. Not for clinical use. Research
+  view (optional)" tags are removed from both surfaces, a committed fictional persona with 28 days of
+  saved check-ins opens the member app populated (a fresh journal stays available), the real-input
+  gate, AM-1 label, crisis hand-off, range rule and LOINC notice are unchanged, and the
+  synthetic-data disclosure moves to the submission pack; D3 a read-only
+  `GET /api/journals/{id}/timeline` shows each save's appends and passport / next-step change; D4
+  visual spec rev 3 (UIUX, HAC-68) in P6.2. Plan addendum G31–G34.
 - 2026-11-07 (CTO, HAC-38 comment 859317b9, from a board question on HAC-33 about typesafe AI):
   a pyright job (basic mode, `engine/daypart`) runs in CI and gates the demo deploy; the extractor
   boundary is typed (§4.1 "Extractor contract"). No live model in this build. Plan addendum G20, G21.
@@ -207,8 +222,11 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | Passport view | `passport/view.py` | `await health_clone_passport(journal, as_of) -> HealthClonePassport` (async: the series is read through the async LHM adapter; observation cards + existing LHM flags + inventory) (G23) | app | `passport.render`, registry, evidence, journal, `memory.lhm`, `membrane.dsl`, `demo.safety`, `demo.dashboard_data` (results path) |
 | Next step | `checkin/next_step.py` | `await suggest(journal) -> NextStep` through `membrane.post`/`dsl.check`; `await record_choice` (G24) | app | membrane, journal, `eval.policies`, registry, `demo.safety`, `memory.events`, `memory.lhm` |
 | Lab rows | `demo/lab.py` | `lab_rows(results_dir) -> LabTable` from the committed JSON (§4.8) | app, submission pack | `dashboard_data.results_dir` + `default_metrics_path` (path only); its own tolerant readers, no `MetricsDoc` validation (G25) |
+| Persona (AM-2 D2, G32) | `demo/persona.py` + `demo/persona_v1.json` (written by `tools/make_persona.py`) | `load_persona()`, `personas()`, `await seed(store, persona_id) -> Journal` (replays every check-in through `create_checkin` + `review`; `PersonaSeedError` on drift) | app | check-in service, journal |
+| Timeline (AM-2 D3, G33) | `passport/timeline.py` | `await timeline(journal) -> Timeline` (read-only; prefix views; newest `MAX_ENTRIES` = 60) | app | passport view, next step, journal |
+| Surfaces (AM-2 D1, G31) | `demo/surfaces.py` | `render_surface(source, "member"\|"admin") -> str`; `SurfaceMarkupError` at startup | app | — |
 | App routes | `demo/app.py` (extended) | the endpoints below | UI | all of the above |
-| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | 5 screens + research view | judges | API |
+| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | member app at `/` (4 screens) + research console at `/admin` (3 screens), one source, two shells (AM-2 D1, G31) | judges | API |
 | UI CI | `tests/ui/test_journey_a11y.py`, job `demo-ui` in `engine.yml` | axe, keyboard, 375 px, reduced motion | CI | Playwright |
 | Submission pack | `docs/daypart/submission/` + `tests/unit/test_submission_pack_unit.py` | layout §4.11 and the claim-ledger check | judges | — |
 
@@ -218,13 +236,15 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 |---|---|---|---|
 | `GET /api/mode` | — | `{"mode":"demo","real_input":{"enabled":false,"requested":bool,"open_gates":[{id,label,owner}]}}` | — |
 | `POST /api/mode` | `{"real_input": true}` | never | `403 {"error":"real_input_refused","open_gates":[…],"reason":"build_disallowed"}` (always) |
-| `POST /api/journals` | `{"member_id": "syn-NNN"}` | `201 {"journal_id", "member_id", "today"}` | 404 unknown or curated member |
+| `POST /api/journals` | `{"member_id": "syn-NNN"}`, or `{"persona": "persona-v1"}` (AM-2 D2, G32: the journal is pre-filled by replaying the fictional persona through create + review) | `201 {"journal_id", "member_id", "today"}`; a persona journal adds `"persona_id", "display_name", "saved_checkins"` (its saved check-in ids, in save order) | 404 unknown or curated member; 404 `unknown_persona`; 422 `invalid_request` (both keys); 500 `persona_seed_failed` (the committed persona no longer replays; the journal is dropped) |
+| `GET /api/personas` | — | `200 [{"persona_id","display_name"}]` (G32) | — |
 | `POST /api/checkins` | `{"journal_id", "text"?: ≤500 chars, "fixture_id"?}`, or multipart `file` + `journal_id` | `201 {"checkin_id","status":"pending_review","proposals":[Proposal]}` | 404 journal; 413 `too_large`; 415 `unsupported_type`; 422 `not_a_demo_fixture` / `looks_like_personal_data` (reasons listed) / `empty_checkin` / `nothing_extracted`; 500 `extractor_output_invalid` (G21) |
 | `POST /api/checkins/{id}/review` | `{"decisions":[{"proposal_id","action":"confirm\|correct\|discard\|save_unmapped","value"?,"unit"?,"date"?}]}` | `200 {"status":"saved","written":[event_id],"discarded":[proposal_id]}` | 404; 409 `already_saved`; 422 `unresolved_flags` (per proposal) / `missing_decision` / `invalid_correction` |
 | `GET /api/journals/{id}/observations/{record_id}` | — | `200 ObservationRecord` (mapped or unmapped) | 404 unknown journal or record |
 | `GET /api/journals/{id}/passport` | `?day=` (whole days from the cohort start, 0 to the journal's today; default today) | `200 HealthClonePassport` | 404 `unknown_journal`; 422 `invalid_day` (with `max_day`) for any other `day` (G23) |
 | `GET /api/journals/{id}/next-step` | — | `200 NextStep` | 404 `unknown_journal`; 409 `no_saved_checkin` |
 | `POST /api/journals/{id}/next-step` | `{"step_id","choice":"choose\|defer\|ask_professional"}` | `200 {"recorded": event_id \| null}` ("choose" again on the same step returns the same id, no new event) | 404 `unknown_journal`; 409 `no_saved_checkin` (T7.4); 413 `too_large` (body over the cap); 422 `invalid_request` (malformed body) / `unknown_step` (not the current step) (G24) |
+| `GET /api/journals/{id}/timeline` | — | `200 {"version":"timeline-v1","journal_id","member_id","policy_version","omitted","entries":[{index, checkin_id, as_of, appends:[{event_id, record_id, concept_id, code, display, value, unit, observed_at}], passport_changes:[{card_id, title, change: became_ready\|withheld\|value_changed\|now_observed, before, after}], next_step:{before, after, changed}}]}` (read-only; one entry per saved check-in in save order, the newest 60, older ones counted in `omitted`; AM-2 D3, G33) | 404 `unknown_journal` |
 | `GET /api/lab` | — | `200 LabTable` | — |
 | `GET /api/inventory` | — | `200 {"verticals":[{vertical,label,concepts:[{concept_id,code,display}]}],"gaps":[…],"gap_labels":[…],"loinc_version","reviewer_status"}` (`gaps` = registry ids; `gap_labels` = what the passport shows, G23) | — |
 | `GET /api/units` | — | `200 {"units":{"<code>":["<canonical unit>", …alt units]}}` (read-only, from the concept registry; the review Correct select offers exactly these, G27) | — |
@@ -514,12 +534,21 @@ The app still starts in demo mode, logs one refusal line listing the open gate i
 
 ### 4.10 UI routes
 
-Hash routes `#checkin` (default), `#review/<id>`, `#passport`, `#next`, `#lab`, and `#research`
-(the old episode/intent/draft playground, visibly labelled "Research view (optional)"; the only
-place "Intent"/"Draft" may appear). There is one `<main>`, one `<h1>` per screen, and focus moves
-to the screen `<h1>` on route change. The banner is a `role="status"` region outside `<main>`. A
-"Real input" control in the footer calls `POST /api/mode` and shows the refusal and gate list in
-an `aria-live` region.
+*As amended by AM-2 D1/D2 (2026-11-10, G31/G32).* Two surfaces, served from one page source
+(`static/index.html`, member- and admin-marked blocks; `demo/surfaces.py` keeps one side):
+
+- **Member app** at `/`: hash routes `#checkin` (default), `#review/<id>`, `#passport`, `#next`
+  (P6.2 adds the adaptation timeline). The nav and every link stay on the member app: an
+  evidence-thread link the API points at a research route (`#research`, `#lab/<run>`) is shown as
+  text. It opens on the seeded persona's journal; "Start a fresh journal" makes an empty one.
+- **Research console** at `/admin`: `#lab` (default), `#inventory` (the concept registry from
+  `/api/inventory`), `#research` (the old episode/intent/draft playground, labelled "Research
+  playground"; the only place "Intent"/"Draft" may appear), links to the member app, `/results`
+  and `/docs`. The "Real input" control is in its footer only: it calls `POST /api/mode` and shows
+  the refusal and gate list in an `aria-live` region.
+
+On each surface there is one `<main>`, one `<h1>` per screen, and focus moves to the screen `<h1>`
+on route change. There is no banner (AM-2 D2).
 
 ### 4.11 Submission pack (`docs/daypart/submission/`)
 
@@ -581,9 +610,11 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
 **R1: renamed, honest surfaces**
 - T1.1 [sealed] `GET /` HTML contains "Clinical Human Clone" and "Health Clone Passport". With the
   `#research` section's DOM removed, it contains none of "Daypart playground", "Pattern Passport"
-  (case-insensitive), "Intent" or "Draft" (whole word, case-sensitive).
-- T1.2 [ui] on each of the 5 routes, the visible text contains "Demo mode: synthetic inputs and
-  simulated results" and does not contain "Your real input, evaluation from vetted sources".
+  (case-insensitive), "Intent" or "Draft" (whole word, case-sensitive). (AM-2 D1: `GET /` has no
+  `#research` section at all; it is served at `/admin`.)
+- T1.2 [ui] (as amended by AM-2 D2) on every route of both surfaces, the visible text contains none
+  of "Demo mode", "Synthetic data only", "Not for clinical use", "Research view (optional)" and
+  does not contain "Your real input, evaluation from vetted sources".
 - T1.3 [sealed] no JSON response from the new endpoints contains the real-input phrase.
 - T1.5 [sealed] `/openapi.json` `info.title` == "Clinical Human Clone API" (the FastAPI `title` is
   renamed; the description says synthetic only, not medical advice).

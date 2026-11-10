@@ -20,7 +20,7 @@ from starlette.formparsers import MultiPartException
 
 from daypart.checkin import fixtures, next_step, service
 from daypart.checkin.journal import Journal, JournalError, JournalStore
-from daypart.demo import lab
+from daypart.demo import lab, persona
 from daypart.demo.playground import (
     MAX_HORIZON,
     EpisodeDone,
@@ -29,8 +29,10 @@ from daypart.demo.playground import (
     UnknownMember,
 )
 from daypart.demo.safety import safe_text
+from daypart.demo.surfaces import render_surface
 from daypart.governance import real_input
 from daypart.memory.registry import load_registry
+from daypart.passport import timeline as passport_timeline
 from daypart.passport import view as passport_view
 from daypart.simmember.dynamics import INTENTS
 
@@ -153,14 +155,20 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             refused.reason,
             ", ".join(g.id for g in refused.open_gates),
         )
-    index_html = files("daypart.demo").joinpath("static/index.html").read_text(encoding="utf-8")
+    # AM-2 D1 (G31): one page source, two shells, rendered once here so bad markers fail at startup.
+    page_src = files("daypart.demo").joinpath("static/index.html").read_text(encoding="utf-8")
+    member_html, admin_html = render_surface(page_src, "member"), render_surface(page_src, "admin")
 
     def _404(what: str, key: str) -> HTTPException:
         return HTTPException(status_code=404, detail=f"unknown {what}: {key}")
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def index() -> str:
-        return index_html
+        return member_html  # the member app (consumer)
+
+    @app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
+    def admin() -> str:
+        return admin_html  # the research console (admin)
 
     @app.get("/results", include_in_schema=False)
     def results() -> RedirectResponse:
@@ -245,16 +253,29 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             body = await _json_object(request)
         except _BodyTooLarge:
             return _error(413, {"error": "too_large"})
-        if body is None:
+        if body is None or ("persona" in body and "member_id" in body):
             return _error(422, {"error": "invalid_request"})
         try:
-            j = journals.create(body.get("member_id"))
+            if "persona" in body:  # AM-2 D2 (G32): a journal pre-filled by replaying the fictional persona
+                j = await persona.seed(journals, body["persona"])
+            else:
+                j = journals.create(body.get("member_id"))
         except JournalError as e:
             return _error(e.status, e.body)
-        return JSONResponse(
-            status_code=201,
-            content={"journal_id": j.journal_id, "member_id": j.member.member_id, "today": j.today.isoformat()},
-        )
+        except persona.UnknownPersona as e:
+            return _error(e.status, dict(e.body))
+        except persona.PersonaSeedError:
+            log.error("persona seed failed; the committed persona no longer replays cleanly")
+            return _error(500, {"error": "persona_seed_failed"})
+        content = {"journal_id": j.journal_id, "member_id": j.member.member_id, "today": j.today.isoformat()}
+        if j.persona_id is not None:
+            # QG P6.1 C1: the saved check-in ids, so the member app's #review/<id> links say "Already saved"
+            content |= {"persona_id": j.persona_id, "display_name": j.display_name, "saved_checkins": list(j.saved_order)}
+        return JSONResponse(status_code=201, content=content)
+
+    @app.get("/api/personas")
+    def list_personas() -> list[dict]:
+        return persona.personas()
 
     @app.get("/api/fixtures")
     def list_fixtures() -> list[dict]:
@@ -399,6 +420,17 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             except (next_step.NoSavedCheckin, next_step.UnknownStep) as e:
                 return _error(e.status, dict(e.body))
         return JSONResponse(status_code=200, content=_safe(out))
+
+    @app.get("/api/journals/{journal_id}/timeline")
+    async def journal_timeline(journal_id: str) -> Response:
+        # Read-only (AM-2 D3, G33): per saved check-in, its appends and the passport / next-step change.
+        try:
+            j = _journal(journal_id)
+        except JournalError as e:
+            return _error(e.status, e.body)
+        async with j.lock:
+            tl = await passport_timeline.timeline(j)
+        return JSONResponse(status_code=200, content=_safe(tl.model_dump(mode="json")))
 
     @app.get("/api/lab")
     def lab_table() -> dict:

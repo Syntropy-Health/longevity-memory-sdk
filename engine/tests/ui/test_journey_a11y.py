@@ -45,8 +45,12 @@ from daypart.governance.real_input import load_checklist
 VENDOR = Path(__file__).parent / "vendor"
 AXE_SHA256 = "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1"
 AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
-ROUTES = ["checkin", "review", "passport", "next", "lab"]
-BANNER = "Demo mode: synthetic inputs and simulated results"
+# AM-2 D1 (G31): the member app is served at "/", the research console at "/admin".
+ROUTES = ["checkin", "review", "passport", "next"]
+ADMIN_ROUTES = ["lab", "inventory", "research"]
+# AM-2 D2 (G32): the board removed the demo banner and these tags (HAC-66); T1.2 now checks they are absent.
+REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
+                "Research view (optional)")
 REAL_PHRASE = "Your real input, evaluation from vetted sources"
 TEXT_CHECKIN = "slept 6 hours and walked 8000 steps"
 CRISIS_TEXT = "slept 3 hours, I want to end my life"
@@ -130,9 +134,25 @@ def screen(page: Page, route: str):
     return page.locator(f"#screen-{route}")
 
 
+def url(base_url: str, route: str) -> str:
+    """The route's URL on its surface: the research console's routes live under /admin."""
+    return f"{base_url}admin#{route}" if route.split("/")[0] in ADMIN_ROUTES else f"{base_url}#{route}"
+
+
 def goto(page: Page, base_url: str, route: str) -> None:
-    page.goto(f"{base_url}#{route}")
+    page.goto(url(base_url, route))
     expect(screen(page, route)).to_be_visible()
+
+
+def fresh_journal(page: Page, base_url: str) -> None:
+    """An empty journal ("Start a fresh journal") instead of the seeded persona's (AM-2 D2)."""
+    goto(page, base_url, "checkin")
+    wait_route_ready(page, "checkin")
+    page.click("#fresh-btn")  # even while the first (persona) journal is still being created
+    page.wait_for_function(
+        "(() => { const v = JSON.parse(sessionStorage.getItem('chc.session.v1') || 'null');"
+        " return !!v && typeof v.journal === 'string' && v.displayName === null; })()"
+    )
 
 
 def axe_violations(page: Page, axe_source: str) -> list[dict[str, Any]]:
@@ -158,10 +178,11 @@ def assert_no_hscroll(page: Page, where: str) -> None:
     assert sw <= cw, f"{where}: scrollWidth {sw} > clientWidth {cw}"
 
 
-def assert_banner(page: Page, where: str) -> None:
-    """T1.2: the visible text has the demo banner and never the real-input phrase."""
+def assert_no_tags(page: Page, where: str) -> None:
+    """T1.2 as amended by AM-2 D2: no demo banner or removed tag, and never the real-input phrase."""
     text = page.inner_text("body")
-    assert BANNER in text, where
+    for tag in REMOVED_TAGS:
+        assert tag not in text, (where, tag)
     assert REAL_PHRASE not in text, where
 
 
@@ -197,6 +218,7 @@ def wait_route_ready(page: Page, route: str) -> None:
         "passport": "#pp-cards article",
         "next": "#ns-panel button",
         "lab": "#lab-rows tr",
+        "inventory": "#ainv-list li",
     }[route]
     expect(page.locator(ready).first).to_be_visible()
 
@@ -215,14 +237,15 @@ def research_episode(page: Page) -> None:
 
 
 @pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
-def test_every_route_banner_axe_and_reflow(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
-    """T1.2, T10.1, T10.3 on the 5 journey routes, walked in journey order with real data, then #research."""
+def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
+    """T1.2, T10.1, T10.3 on the 4 member routes, walked in journey order on the seeded persona's journal
+    with one more check-in, then every research-console route (AM-2 D1)."""
     page = _new_page(browser, page_errors, viewport=viewport)
     seen: list[str] = []
 
     def check(route: str) -> None:
         where = f"#{route} @ {viewport['width']}px"
-        assert_banner(page, where)
+        assert_no_tags(page, where)
         assert_axe_clean(page, axe_source, where)
         assert_no_hscroll(page, where)
         seen.append(route)
@@ -251,23 +274,27 @@ def test_every_route_banner_axe_and_reflow(browser: Browser, page_errors, base_u
     wait_route_ready(page, "lab")
     check("lab")
 
-    goto(page, base_url, "research")  # A&D §4.10 has six routes; T10.3 says every route (QG P3 B3)
+    goto(page, base_url, "inventory")
+    wait_route_ready(page, "inventory")
+    check("inventory")
+
+    goto(page, base_url, "research")  # T10.3 says every route (QG P3 B3)
     research_episode(page)
     check("research")
 
-    assert seen == ROUTES + ["research"]
+    assert seen == ROUTES + ADMIN_ROUTES
     page.context.close()
 
 
 def test_direct_load_focuses_each_h1(browser: Browser, page_errors, base_url: str):
     """G27 (9): a direct load or reload of a route URL leaves focus on that screen's h1."""
-    for route in ROUTES + ["research"]:
+    for route in ROUTES + ADMIN_ROUTES:
         page = _new_page(browser, page_errors, viewport=DESKTOP)
         for _ in range(2):  # the first load, then a reload of the same URL
             if _:
                 page.reload()
             else:
-                page.goto(f"{base_url}#{route}")
+                page.goto(url(base_url, route))
             expect(screen(page, route)).to_be_visible()
             focused = page.evaluate("document.activeElement && document.activeElement.id")
             assert focused == f"h-{route}", f"#{route}: focus on {focused!r}"
@@ -285,7 +312,7 @@ def test_t2_1_checkin_heading_label_and_warning(page: Page, base_url: str):
     expect(box).to_have_count(1)
     assert box.evaluate("e => e.tagName") == "TEXTAREA"
     expect(page.locator("#real-data-warning")).to_be_visible()
-    expect(page.locator("#real-data-warning")).to_contain_text("Do not enter real health data")
+    expect(page.locator("#real-data-warning")).to_contain_text("Keep personal details out")  # AM-2 D2
 
 
 def test_t3_3_voice_and_video_disabled(page: Page, base_url: str):
@@ -304,7 +331,8 @@ def test_t8_4_lab_says_simulated_not_patient_outcomes(page: Page, base_url: str)
 
 
 def test_t9_4_real_input_refusal_lists_every_gate(page: Page, base_url: str, axe_source: str):
-    goto(page, base_url, "checkin")
+    goto(page, base_url, "lab")  # AM-2 D2: the real-input control is on the research console only
+    expect(page.locator("#ri-btn")).to_be_visible()
     page.click("#ri-btn")
     panel = page.locator("#ri-panel")
     expect(panel).to_contain_text("Real input is off and cannot be turned on in this build")
@@ -399,7 +427,8 @@ class Keyboard:
 
 
 def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
-    """check-in (fixture) → review → passport → open a thread → choose → lab, with no mouse."""
+    """check-in (fixture) → review → passport → open a thread → choose → back to the passport, with no
+    mouse; then the learning lab on the research console (AM-2 D1: its own page)."""
     goto(page, base_url, "checkin")
     wait_route_ready(page, "checkin")
     kb = Keyboard(page)
@@ -446,8 +475,14 @@ def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
     kb.press("Space")
     expect(page.locator("#ns-result")).to_contain_text("Goal set")
 
-    kb.to("#ns-result a[href='#lab']")
+    kb.to("#ns-result a[href='#passport']")
     kb.press("Enter")
+    wait_route_ready(page, "passport")
+    expect(page.locator("#h-passport")).to_be_focused()
+    kb.to("details.thread > summary")
+    kb.press("Tab")  # focus leaves the summary, so its ring is settled before the page changes
+
+    goto(page, base_url, "lab")
     wait_route_ready(page, "lab")
     expect(page.locator("#h-lab")).to_be_focused()
     expect(page.locator("#screen-lab")).to_contain_text("Simulated outcomes are not patient outcomes")
@@ -490,7 +525,7 @@ MOTION_JS = """() => {
 def test_t10_4_reduced_motion_zeroes_every_duration(browser: Browser, page_errors, base_url: str):
     page = _new_page(browser, page_errors, viewport=DESKTOP, reduced_motion="reduce")
     saved_journal(page, base_url)
-    for route in ROUTES + ["research"]:  # every route (QG P3 B3)
+    for route in ROUTES + ADMIN_ROUTES:  # every route on both surfaces (QG P3 B3, AM-2 D1)
         goto(page, base_url, route)
         if route == "research":
             research_episode(page)
@@ -527,6 +562,7 @@ def test_crisis_handoff_replaces_review(page: Page, base_url: str, axe_source: s
 
 
 def test_next_before_any_saved_checkin_says_check_in_first(page: Page, base_url: str, axe_source: str):
+    fresh_journal(page, base_url)  # the seeded persona already has saved check-ins
     goto(page, base_url, "next")
     msg = page.locator("#ns-msg")
     expect(msg).to_contain_text("Check in first")
@@ -589,7 +625,7 @@ def test_server_or_network_error_shows_notice_and_retries(page: Page, base_url: 
     goto(page, base_url, "lab")
     msg = page.locator("#lab-msg")
     expect(msg).to_contain_text("Something went wrong")
-    expect(msg).to_contain_text("error 500" if failure == "500" else "could not reach the demo server")
+    expect(msg).to_contain_text("error 500" if failure == "500" else "could not reach the server")
     expect(page.locator("#lab-body")).to_be_hidden()
     assert_axe_clean(page, axe_source, f"lab {failure}")
     msg.get_by_role("button", name="Try again").click()
@@ -664,7 +700,7 @@ def test_lab_request_times_out_at_15_s(page: Page, base_url: str):
 
     page.clock.install()
     page.route(re.compile(r".*/api/lab$"), hang)
-    page.goto(f"{base_url}#lab")
+    page.goto(url(base_url, "lab"))
     expect(screen(page, "lab")).to_be_visible()
     for _ in range(100):  # the route handler runs while Playwright waits
         if held:
@@ -675,7 +711,7 @@ def test_lab_request_times_out_at_15_s(page: Page, base_url: str):
     page.clock.run_for(14_000)
     expect(msg.locator(".notice")).to_have_count(0)
     page.clock.run_for(1_500)
-    expect(msg).to_contain_text("could not reach the demo server")
+    expect(msg).to_contain_text("could not reach the server")
     msg.get_by_role("button", name="Try again").click()
     wait_route_ready(page, "lab")
     assert calls["n"] == 2
@@ -695,7 +731,7 @@ def test_extractor_fault_says_nothing_was_saved_and_keeps_the_form(page: Page, b
     check_in_text(page, base_url)
     msg = page.locator("#ci-msg")
     expect(msg).to_contain_text("Something went wrong reading your check-in, so nothing was saved")
-    expect(msg).to_contain_text("This is a fault in the demo, not in what you wrote")
+    expect(msg).to_contain_text("This is a fault on our side, not in what you wrote")
     expect(msg.locator("[role=alert]")).to_have_count(1)
     expect(msg).not_to_contain_text("error 500")
     expect(page.locator("#ci-form")).to_be_visible()
@@ -711,7 +747,7 @@ def test_lab_failure_after_a_good_load_hides_the_table(page: Page, base_url: str
         re.compile(r".*/api/lab$"),
         lambda route: route.fulfill(status=503, content_type="application/json", body='{"error": "unavailable"}'),
     )
-    goto(page, base_url, "checkin")
+    goto(page, base_url, "inventory")
     goto(page, base_url, "lab")
     expect(page.locator("#lab-msg")).to_contain_text("error 503")
     expect(page.locator("#lab-body")).to_be_hidden()
@@ -765,7 +801,7 @@ def test_next_choice_post_failure(page: Page, base_url: str, axe_source: str, fa
         expect(msg.locator("a[href='#checkin']")).to_have_count(1)
         assert_axe_clean(page, axe_source, "#next POST 409")
         return
-    expect(alert).to_contain_text("error 500" if failure == "500" else "could not reach the demo server")
+    expect(alert).to_contain_text("error 500" if failure == "500" else "could not reach the server")
     expect(page.locator("#ns-panel button.btn--primary")).to_be_visible()
     assert_axe_clean(page, axe_source, f"#next POST {failure}")
     msg.get_by_role("button", name="Try again").click()

@@ -386,6 +386,7 @@ async def review(
         journal.event_count, journal.record_count = n_event, n_record
         journal.checkins[checkin_id] = saved
         journal.last_saved_checkin_id = checkin_id
+        journal.saved_order.append(checkin_id)
         return {
             "status": "saved",
             "written": [e.event_id for e in events],
