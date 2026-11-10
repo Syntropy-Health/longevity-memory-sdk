@@ -109,10 +109,13 @@ One training run, `hac28-20261105T081951Z`, on 2026-11-05 [L57]:
 - **Baseline and candidate.** Base (frozen) against SFT and DPO (frozen after training), on the
   same 141 prompts with greedy decoding and up to 512 new tokens [L59, L60]. For the simulator:
   three scripted policies (no support, always problem-solving, random) [L66].
-- **Splits.** The training cohort is synthetic members; the held-out set is built from the fixed
-  Curated-25 profiles, which appear in no training builder's output. The I1 check passed on 7 of 7
-  builders and runs in CI on every push [L28, L64].
-- **Leakage prevention.** 3,239 training turns were excluded from the held-out prompts [L64]. No
+- **Splits.** Training data and held-out prompts both come from synthetic `syn-` members. The
+  held-out prompts are built from separate evaluation scenarios, and a prompt whose user turn
+  appears in the training data is dropped; building a prompt from a curated profile raises an
+  error. The fixed Curated-25 profiles are kept out of every training and evaluation builder: the
+  I1 check passed on 7 of 7 builders and runs in CI on every push [L28, L64].
+- **Leakage prevention.** The held-out prompts were filtered against 3,239 training user turns;
+  how many prompts that filter dropped is not recorded [L64]. No
   tuning was repeated on the held-out set: the prompt set and the gates were fixed before the run,
   and the run is recorded once.
 - **Cohort sizes.** 175 synthetic members requested for training data, 0 generation failures,
