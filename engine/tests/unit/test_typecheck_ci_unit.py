@@ -30,3 +30,24 @@ def test_typecheck_job_runs_pinned_pyright_in_engine():
 
 def test_deploy_needs_typecheck():
     assert "typecheck" in _jobs()["deploy-demo"]["needs"]
+
+
+# --- QG-plan K4: T8.5 / SC5, the I1 builder check runs in CI and gates the deploy ------------------
+
+
+def test_t8_5_i1_check_runs_in_the_test_job_and_gates_deploy():
+    runs = [s.get("run", "") for s in _jobs()["test"]["steps"]]
+    assert "uv run python -m daypart.ci.i1_check" in runs
+    assert "test" in _jobs()["deploy-demo"]["needs"]
+
+
+# --- QG-plan K5: SC6, the UI suite is required to run and gates the deploy ---------------------------
+
+
+def test_demo_ui_runs_with_a_required_browser_and_gates_deploy():
+    job = _jobs()["demo-ui"]
+    runs = " ".join(s.get("run", "") for s in job["steps"])
+    assert "playwright install --with-deps chromium" in runs
+    (suite,) = [s for s in job["steps"] if "pytest" in s.get("run", "") and "tests/ui" in s["run"]]
+    assert suite["env"]["DAYPART_UI_REQUIRED"] == "1"
+    assert "demo-ui" in _jobs()["deploy-demo"]["needs"]

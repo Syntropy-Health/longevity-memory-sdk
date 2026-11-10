@@ -136,3 +136,31 @@ already in `engine.yml` is the public Modal URL. The real-input gate stays hard 
 - 2026-11-06 (CTO, HAC-38 description): lock autonomously, record each decision, do not ask the
   board; branch from efb3f65; hand each phase to the CTO and never land it yourself.
 - G1–G12 above: Agent decisions (assumed or delegated, as marked). No human answer was sought.
+
+## Plan completion (2026-11-10)
+
+**Status: all four phases complete and landed on `daypart/build`, staging deployed.**
+
+| Phase | Status | Phase QGR (Hash E) | Landed on `daypart/build` |
+|---|---|---|---|
+| P1 data core (tasks 1–5, plus P1.6 AM-1 and P1.7 typed extractor / pyright) | Complete | 23af1bb | 0564ef6 |
+| P2 passport, next step and lab (tasks 6–9) | Complete | 6717494 | 38bda41 (PR via HAC-49) |
+| P3 UI and accessibility (tasks 10–13) | Complete | 76ca22f | ee99e82 (PR #8) |
+| P4 submission pack (task 14) | Complete | f2d48c4 | 3c12c67 (PR #9) |
+| Plan-complete gate (whole build) | Complete | see the plan-complete QGR in `workstreams/daypart/qgr/` | pending CTO land |
+
+- **Tests at plan completion:** engine suite 2823 passed, 26 skipped (the browser module, which
+  runs in `demo-ui`); browser suite 26 passed; repo-root command 352 passed, 3 skipped; pyright 0
+  errors; I1 ok; `render_outcomes.py --check` ok.
+- **Findings fixed at the phase gates (kept, at score ≥ 80):** P1 4, P2 4, P3 7 (+ R1), P4 6.
+  Each phase also fixed its below-threshold findings it could; see each QGR.
+- **Plan-complete gate:** 5 reviewers (code, security, design, test, UX) plus the scorer, 25
+  unique findings, 8 kept and fixed one commit each (K1 registration row, K2 Modal idle window,
+  K3 unmapped-value passport test, K4 T8.5 CI test, K5 `demo-ui` gate test, K6 oversized
+  correction 500, K7 A&D slice counts, K8 README), plus B4 (usage doc). UX pass: 0 findings.
+- **Decisions during the build:** G13–G30 in `ADDENDUM-fhdic.md` (AM-1 is G19).
+- **Open items (deferred, below threshold):** listed in the plan-complete Known issues block of
+  `docs/workstreams/daypart.md`. Chief among them: no per-journal check-in cap, the research
+  playground routes have no body cap, CI actions are tag-pinned with no `permissions:` block, and
+  no committed run proves the journey on the hosted URL (the L2 delivery review checks SC1 there).
+- **Reference:** `docs/daypart/reference.md`.

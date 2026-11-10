@@ -88,3 +88,4 @@ does not exist or any assumption id is not defined.
 | L39 | The hosted prototype, repository and pack cover the requested artefacts. | ASSUMPTION O2 |
 | L40 | The repository is licensed Apache-2.0. | `LICENSE` · ASSUMPTION O3 |
 | L41 | The framing follows the challenge statements; no judging rubric is published. | `docs/daypart/submission/sources/organiser-research-2026-11-06.md` · ASSUMPTION O4 |
+| L42 | The team registered before registration closed on 2026-11-10 18:29 UTC. | `docs/daypart/submission/organiser-rules.md` · ASSUMPTION O5 |

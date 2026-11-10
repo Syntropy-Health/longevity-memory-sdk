@@ -1,7 +1,7 @@
 # daypart — usage
 
-What you can do with the demo API (synthetic data only; not medical advice). These go live on the
-hosted demo once the CTO deploys each phase to staging; until then, run the demo locally.
+What you can do with the demo API (synthetic data only; not medical advice). Everything below is
+live on the hosted demo (P1–P4 are deployed); you can also run it locally with `uv run daypart-demo serve`.
 
 ## Clinical Human Clone: check in and review (FHDIC P1)
 
@@ -21,6 +21,19 @@ hosted demo once the CTO deploys each phase to staging; until then, run the demo
    discarded or saved as unmapped. The review saves everything or nothing.
 4. **Inspect** a saved value: `GET /api/journals/{journal_id}/observations/{record_id}` shows its
    code, LOINC version, source, method, quality and allowed use.
+
+## Clinical Human Clone: passport, next step and lab (FHDIC P2)
+
+5. **Passport**: `GET /api/journals/{journal_id}/passport?day=` lists one card per concept with its
+   source, time, provenance, observed-or-simulated status and a five-step evidence thread. A sourced
+   reference range sits beside a ready value, with its population and source; nothing is called high
+   or low. `GET /api/inventory` lists the concepts and the gaps the passport does not cover.
+6. **Next step**: `GET /api/journals/{journal_id}/next-step` suggests one step after a saved check-in
+   (409 `no_saved_checkin` before any). `POST` the same path with `{"step_id", "choice"}`, where the
+   choice is `choose`, `defer` or `ask_professional`; a stale step gets 422 `unknown_step`.
+7. **Learning lab**: `GET /api/lab` returns the committed training and evaluation rows, each with
+   its run ID, split, seed and failure count; GRPO is "proposed, not built".
+8. `GET /api/units` lists the units a correction may use for each concept.
 
 ## Clinical Human Clone in the browser (FHDIC P3)
 

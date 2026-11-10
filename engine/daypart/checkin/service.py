@@ -220,11 +220,15 @@ def _correction_reasons(journal: Journal, p: Proposal, d: Decision) -> list[str]
     if d.unit is not None and d.unit not in allowed:
         reasons.append("unit_not_allowed")
     if d.value is not None:
-        if concept.value_type in ("integer", "ordinal") and math.isfinite(d.value) and not float(d.value).is_integer():
+        try:
+            value = float(d.value)
+        except OverflowError:  # a JSON integer too long for a float is out of range, never a 500
+            value = math.inf
+        if concept.value_type in ("integer", "ordinal") and math.isfinite(value) and not value.is_integer():
             reasons.append("not_a_whole_number")
         factor = allowed.get(unit, 1.0) if unit is not None else 1.0
         lo, hi = concept.plausible
-        if not (math.isfinite(d.value) and lo <= d.value * factor <= hi):
+        if not (math.isfinite(value) and lo <= value * factor <= hi):
             reasons.append("value_out_of_range")
     if d.date is not None and not (journal.today - dt.timedelta(days=WINDOW_DAYS) <= d.date <= journal.today):
         reasons.append("date_outside_window")

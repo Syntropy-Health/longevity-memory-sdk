@@ -1075,3 +1075,36 @@ def test_ordinal_concept_rejects_fractional_correction(cohort):
         asyncio.run(service.review(j, "c-x", [{"proposal_id": "p-1", "action": "correct", "value": 1.5}]))
     assert e.value.body == {"error": "invalid_correction",
                             "proposals": [{"proposal_id": "p-1", "reasons": ["not_a_whole_number"]}]}
+
+
+# --- QG-plan K6: an integer too large for a float is out of range, never a 500 -----------------------
+
+
+@pytest.mark.parametrize("text,unit", [("weighed 160", "kg"), ("phq-2 score 3", "{score}")])
+def test_oversized_integer_correction_is_out_of_range_not_500(client, text, unit):
+    jid, ck = _pending(client, text)
+    j = _j(client, jid)
+    snap = _snapshot(j)
+    r = _review(client, ck["checkin_id"], [
+        {"proposal_id": "p-1", "action": "correct", "value": 10**400, "unit": unit},
+    ])
+    assert r.status_code == 422, r.text
+    body = r.json()
+    assert body["error"] == "invalid_correction"
+    assert body["proposals"] == [{"proposal_id": "p-1", "reasons": ["value_out_of_range"]}]
+    _assert_no_bounds(body)
+    assert _snapshot(j)[:2] == snap[:2]
+
+
+# --- QG-plan K2: the only container outlives the journal idle window (D-A3, J4) ----------------------
+
+
+def test_playground_container_outlives_the_journal_idle_window():
+    from daypart.checkin.journal import IDLE_SECONDS
+
+    tree = ast.parse(MODAL_DEMO.read_text(encoding="utf-8"))
+    (fn,) = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "playground"]
+    calls = [d for d in fn.decorator_list if isinstance(d, ast.Call)]
+    function = calls[[ast.unparse(c.func) for c in calls].index("app.function")]
+    # A scale-down before IDLE_SECONDS would drop every in-memory journal early.
+    assert _kw(function, "scaledown_window") >= IDLE_SECONDS
