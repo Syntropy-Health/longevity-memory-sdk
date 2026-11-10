@@ -1,5 +1,29 @@
 # daypart — dev doc
 
+## FHDIC deploy smoke tolerates the rollover (HAC-38 P5.2)
+
+**Overview.** After the P5.1 land, the new `deploy-demo` smoke failed (run 42740065688): `create
+journal` returned 201, then the next call returned 404 `unknown_journal`. Right after `modal
+deploy` the old and new containers both serve, and journals live in memory per container (D-A3),
+so the two calls reached different containers. Run again on the settled deploy, the journey passed
+twice (CTO hand-back 83506a31).
+
+**What changed.**
+- `engine/tools/smoke_journey.py`: `run_with_retry` restarts the whole journey with a fresh journal
+  on a rollover miss: a 404 `unknown_journal` or `unknown_checkin` (same per-container cause), or a
+  network error (`OSError`, `http.client.HTTPException`). Up to 5 tries, back-off 10/20/30/40 s,
+  and no retry starts past 180 s from the first try. A 500 (whatever its body), any other wrong
+  status, a wrong value, a malformed body or a bad URL fails on the first try. Requests are capped
+  at 60 s (`--timeout`); the CI step has `timeout-minutes: 10`.
+- `engine/tests/unit/test_smoke_journey_unit.py`: a 404 `unknown_journal` on try 1 passes on try
+  2 with a fresh journal; a passport 500 fails with no retry; the back-off schedule, the budget
+  edges, the 5-try limit and each retry/no-retry class are pinned.
+
+**Known issues (below the gate threshold, not fixed).**
+- A pass right after a deploy may have been served by the old build; there is no build id to check.
+- 502/503 from Modal's proxy during the swap are not retried (by spec); if they appear, the job
+  fails and a re-run settles it.
+
 ## FHDIC hosted passport fix (HAC-38, after plan complete)
 
 **Overview.** On the hosted demo, `GET /api/journals/{id}/passport` returned 500 from the P2 land
@@ -28,8 +52,8 @@ the hosted SC1 run before the L2 delivery review.
 **Known issues (below the gate threshold, not fixed).**
 - The package-data test approximates setuptools: it ignores `packages.find`, the `"*"` key and
   recursive `**` globs. A mismatch shows as a false red, not a false green, for today's config.
-- The smoke may reach a still-warm old container right after a deploy; there is no build id to
-  check. Its stdlib-only import rule is a convention, not a test.
+- The smoke's stdlib-only import rule is a convention, not a test. (The old-container rollover is
+  handled in P5.2 above.)
 - `MODAL_TOKEN_*` stay job-level in `deploy-demo`, so the smoke step can see them (it never reads
   the environment).
 

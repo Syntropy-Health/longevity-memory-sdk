@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "workstream": "daypart",
-  "updated_at": "2026-11-09T22:22:47.869090+00:00",
+  "updated_at": "2026-11-10T01:53:54.269943+00:00",
   "linear": {
     "initiative_url": "",
     "initiative_id": ""
@@ -188,6 +188,18 @@
       "pr": "",
       "updated_at": "2026-11-09T22:22:47.869071+00:00",
       "iteration_count": 0
+    },
+    "P5.1": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "607bc1d",
+      "qgr": "workstreams/daypart/qgr/longevity-memory-sdk-matt-mo-worktree-agent-daypart-longevity-memory-sdk-qgr-iteration-complete-20261110-0152-b2018dc.md",
+      "summary": "hosted passport fix: evidence package-data + post-deploy SC1 journey smoke",
+      "pr": "",
+      "updated_at": "2026-11-10T01:53:54.269903+00:00"
     }
   }
 }
