@@ -323,8 +323,14 @@ def test_hac76_no_real_input_or_mode_toggle_on_either_surface(html, admin):
         text = _visible(page).lower()
         for phrase in ("real input", "demonstration", "playground", "judges?", "demo mode"):
             assert not re.search(rf"\b{phrase}\b", text), phrase
-        js = _script(page)
-        assert "/api/mode" not in js and "realInput" not in js
+        blocks = re.findall(r"<script\b[^>]*>(.*?)</script>", page, re.S)
+        assert blocks, "no <script> block"
+        for js in blocks:  # every script, the simulated-sessions one included
+            assert "/api/mode" not in js and "realInput" not in js
+    # the real-input screen's styles went with it: nowhere in the stylesheet
+    css = _style(admin)
+    for rule in (".ri-panel", ".gates", ".a-crumb", ".screen-intro"):
+        assert not re.search(rf"{re.escape(rule)}(?![\w-])", css), rule
 
 
 # --- palette and escaping ----------------------------------------------------------------------------
@@ -370,8 +376,8 @@ def test_t1_5_openapi_title_and_description(client):
     d = info["description"].lower()
     # P6.2 (G38): production-style wording, as P6.1 did for the UI copy (was "Synthetic data only … Not
     # for clinical use"); the synthetic-data disclosure is in docs/daypart/submission/assumptions-limits.md.
-    # HAC-76: the description no longer advertises the real-input request (POST /api/mode still refuses it)
-    assert "not medical advice" in d and "real input" not in d and "playground" not in d
+    # HAC-76: on-screen labels went; the API contract (T1.5) keeps "Real input is off in this build".
+    assert "not medical advice" in d and "real input is off in this build" in d and "playground" not in d
     for word in ("synthetic", "demo", "not for clinical use", "clinically", "fda", "regulat", "approved", "reviewed by"):
         assert word not in d, word
 
@@ -2052,18 +2058,31 @@ def test_rev3_pipeline_lanes_stage_counts_and_copy(admin):
 
 
 def test_rev3_pipeline_live_lane_names_only_code_that_exists():
-    """§4.1: the check-in lane states only what the running code does (HAC-76: in words): the freshness
-    window is the passport's own constant, and the next-step policy selects by rules and checks with the
-    safety rules: nothing in the loop imports a model client."""
+    """§4.1: the check-in lane states only what the running code does. HAC-76: the steps are in words and
+    each path's running constant sits in the "Technical details, for reviewers" disclosure; the next-step
+    policy selects by rules and checks with the membrane: nothing in the loop imports a model client."""
     from daypart.checkin import next_step
+    from daypart.checkin.models import METHOD_FIXTURE, METHOD_TEXT
+    from daypart.memory.registry import SLICE_VERSION
     from daypart.passport.view import READY_WINDOW_DAYS
 
     src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
     live = _section(src, '<ol class="pipe" id="pipe-live"', "</ol>")
+    # QG P6.2 B1 (G36): the step states only what runs: typed text takes the PII and crisis screens and
+    # the rules; a file takes the allow-list, and is never said to pass the text screens
     checkin = _section(live, '<span class="stage-name">Member checks in</span>', "</p>")
-    assert "personal details and crisis language are screened" in checkin
+    assert ("Typed text is read by rules after personal details and crisis language are screened; "
+            "a file is accepted only from the approved list.") in checkin
+    assert "bundled file" not in checkin and "A sentence or a file" not in checkin
     assert f"A value counts as current for {READY_WINDOW_DAYS} days." in live
     assert "A rule-based suggestion, checked against the safety rules" in live
+    tech = _section(src, '<details class="thread records" id="pipe-live-tech">', "</details>")
+    assert (f"<dt>text</dt><dd>{METHOD_TEXT}</dd><dt>screen</dt><dd>PII + crisis</dd>"
+            f"<dt>file</dt><dd>{METHOD_FIXTURE}</dd><dt>gate</dt><dd>sha256 allow-list</dd>") in tech
+    assert f"<dd>{SLICE_VERSION}</dd>" in tech
+    assert f"<dd>value ≤ {READY_WINDOW_DAYS} days old</dd>" in tech
+    assert f"<dd>{next_step.POLICY_VERSION} (rules)</dd>" in tech and "<dd>membrane post()</dd>" in tech
+    assert "<summary>Technical details, for reviewers</summary>" in tech and " open" not in tech.split(">")[0]
     loop = Path(next_step.__file__).read_text()
     for client in ("anthropic", "openai", "httpx", "requests", "modal", "transformers", "torch", "muse"):
         assert not re.search(rf"^\s*(import|from)\s+{client}\b", loop, re.M), client
@@ -2120,7 +2139,8 @@ function txt(e) { return e.textContent; }
 return { kpis: kp.children.map(function (li) { return li.children.map(txt); }),
   stages: ol.children.map(function (li) { return [li.className, li.querySelector("span.stage-name").textContent,
     li.querySelectorAll("span.tag").map(txt), li.querySelectorAll("dt").map(txt), li.querySelectorAll("dd").map(txt),
-    li.querySelectorAll("a").map(function (a) { return [a.textContent, a.href, a.title]; })]; }),
+    li.querySelectorAll("a").map(function (a) { return [a.textContent, a.href, a.title]; }),
+    li.querySelectorAll("p.stage-desc").map(txt)]; }),
   label: ol.getAttribute("aria-label"), note: $("pipe-note").textContent,
   hidden: [res.hidden, kp.hidden, lane.hidden], msg: $("pipe-msg").textContent };
 """
@@ -2142,6 +2162,18 @@ def _pipeline(response: object) -> dict:
     return got
 
 
+def _env_name(row: str) -> str:
+    """The page's envName(), written out independently: the plain name of a simulated-member approach."""
+    k = row.removeprefix("env_")
+    if k == "always_none":
+        return "No coaching message"
+    if k == "random_intent":
+        return "A random approach each day"
+    if k.startswith("always_"):
+        return "Always " + k.removeprefix("always_").replace("_", " ")
+    return k.replace("_", " ")
+
+
 def test_rev3_pipeline_maps_every_lab_field_1_to_1():
     """Every overview number is one /api/lab field, as a percentage (HAC-76: was 3 decimals), under a
     plain-language label with a one-line explanation."""
@@ -2161,8 +2193,7 @@ def test_rev3_pipeline_maps_every_lab_field_1_to_1():
     assert k2[3] == f"Before training: {_pc(base['metrics']['rubric_pass_rate'])}"
     assert k3[:2] == ["Test members kept out of training", "✓ Passed" if t["i1_passed"] else "⚠ Not passed"] and len(k3) == 3
     assert k4[:2] == ["Best simulated adherence", _pc(best["metrics"]["mean_adherence"])]
-    assert k4[3] == "Approach: " + ("Always " + best["row"].removeprefix("env_always_").replace("_", " ")
-                                    if best["row"].startswith("env_always_") else k4[3].split(": ", 1)[1])
+    assert k4[3] == "Approach: " + _env_name(best["row"])
     for k in got["kpis"]:  # one plain sentence under every number
         assert k[2].endswith(".") and len(k[2].split()) >= 6, k
     assert got["label"] == "Training, 4 steps"
@@ -2170,12 +2201,19 @@ def test_rev3_pipeline_maps_every_lab_field_1_to_1():
     assert b[:4] == ["", "Starting model", [], ["Safety rules", "Quality"]]
     assert b[4] == [_pc(base["metrics"]["boundary_pass_rate"]), _pc(base["metrics"]["rubric_pass_rate"])]
     assert b[5] == [["Run record", "#lab/" + base["run_id"], base["run_id"]]]
+    assert b[6] == ["A general language model before any coaching training."]
     assert s[1:3] == ["Learning from example replies", ["✓ Passed its check"]]
     assert s[4] == [f"{_pc(sft['metrics']['boundary_pass_rate'])} ({_pt(sft['gate']['delta'])})", _pc(sft["metrics"]["rubric_pass_rate"])]
+    assert s[5] == [["Run record", "#lab/" + sft["run_id"], sft["run_id"]]]
+    assert s[6] == ["Trained on example coaching replies that follow the safety rules."]
     assert p[1:3] == ["Learning from preferred replies", ["✓ Passed its check"]]
     assert p[4] == [_pc(dpo["metrics"]["boundary_pass_rate"]), f"{_pc(dpo['metrics']['rubric_pass_rate'])} ({_pt(dpo['gate']['rubric_delta'])})"]
-    assert g == ["is-proposed", "Practice with simulated members", ["○ Planned, not built"], [], [], []]
-    assert grpo["reason"]  # drawn verbatim under the planned step (checked by the hard-coded-number test)
+    assert p[5] == [["Run record", "#lab/" + dpo["run_id"], dpo["run_id"]]]
+    assert p[6] == ["Shown pairs of a better and a worse reply, and trained to prefer the better one."]
+    assert g[:6] == ["is-proposed", "Practice with simulated members", ["○ Planned, not built"], [], [], []]
+    assert isinstance(grpo["reason"], str) and grpo["reason"]
+    # the planned step's reason is the API's own text, verbatim, after "Not built: "
+    assert g[6] == ["Would learn from simulated members' responses over many days.", "Not built: " + grpo["reason"]]
     assert got["note"] == (f"Each step is tested on the same {base['split']['n']} held-out practice prompts. "
                            "The trained model is evaluated here only; the check-in loop above does not use it in this prototype.")
 
@@ -2262,7 +2300,7 @@ def test_hac76_g5_table_text_breaks_at_spaces_only(admin):
     css = _style(admin)
     assert "table.stack th,table.stack td{overflow-wrap:normal;word-break:normal;" in css
     assert "table.stack .run-id{overflow-wrap:anywhere}" in css
-    assert ".gates{" not in css.split("HAC-76 readability pass")[1]  # the gates list went with the real-input screen
+    assert not re.search(r"\.gates(?![\w-])", css)  # the gates list went with the real-input screen
 
 
 def test_rev3_inventory_table_maps_the_api_and_has_no_cards_column(admin, client):

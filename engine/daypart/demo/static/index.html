@@ -297,7 +297,6 @@ details.thread li.none::before{border-style:dashed;color:var(--c-muted);border-c
 @media (min-width:48rem){.a-main{padding:var(--s5) var(--s6) var(--s7)}}
 .a-top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s5);padding-bottom:var(--s4);border-bottom:var(--bw) solid var(--a-hair)}
 .a-top h1{margin:0;font-size:var(--fs-xl)}
-.a-crumb{font:var(--fs-xs)/1 var(--mono);color:var(--a-muted);margin:0 0 var(--s2)}
 .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2);list-style:none;margin:0 0 var(--s5);padding:0}
 @media (min-width:56rem){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .kpis li{background:var(--a-surface);border:var(--bw) solid var(--a-hair);border-radius:var(--r1);padding:var(--s3)}
@@ -356,8 +355,6 @@ table.stack tr[aria-current="true"] td{background:var(--a-raised)}
   table.stack tr.proposed{border:var(--bw) dashed var(--a-line)}
 }
 .footnote{font-weight:700;font-size:var(--fs-sm);margin-top:var(--s3)}
-.gates{columns:1;margin:var(--s2) 0 0;padding-left:1.4em;font-family:var(--mono);font-size:var(--fs-xs)}
-@media (min-width:48rem){.gates{columns:2}}
 
 /* ============ Build additions (HAC-38 P6.2; role tokens only, nothing in the rev 3 rules above changed) ============ */
 [hidden]{display:none!important}
@@ -365,13 +362,12 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
 .notice>div>:last-child{margin-bottom:0}
 [aria-invalid="true"]{border-color:var(--warn);border-left-width:var(--bar)}
 .label{display:block;font-weight:650;margin-bottom:var(--s1)}
-.screen-intro{margin-bottom:var(--s5)}
 .choice-list{list-style:none;padding:0;margin:0;display:grid;gap:var(--s2)}
 .value-label{margin:0;font-size:var(--fs-sm);color:var(--c-muted);font-weight:600}
 .persona code{color:var(--c-text)}
 #ns-result{margin-top:var(--s4)}
 .tl-more{margin-top:var(--s2)}
-/* research console (rev 3 §4): the sidebar column holds main and the LOINC footer; playground widgets */
+/* research console (rev 3 §4): the sidebar column holds main and the LOINC footer; simulated-session widgets */
 .a-body{min-width:0;display:flex;flex-direction:column}
 .a-body>.a-main{flex:1}
 .a-foot{border-top:var(--bw) solid var(--a-hair);padding:var(--s4);color:var(--a-muted)}
@@ -379,8 +375,7 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
 .a-foot .loinc{font-size:var(--fs-xs);max-width:var(--measure);margin:0}
 .a-nav a{overflow-wrap:normal;word-break:keep-all}
 .a-side-foot{display:flex;flex-wrap:wrap;gap:0 var(--s4)}
-.ri-panel,.r-gap{margin-top:var(--s4)}
-.ri-panel .notice-title{font-size:var(--fs-md)}
+.r-gap{margin-top:var(--s4)}
 .days{display:flex;flex-wrap:wrap;gap:2px;margin:var(--s2) 0 0;padding:0;list-style:none}
 .day{width:1rem;height:1rem;border:var(--bw) solid var(--c-line);border-radius:2px;background:var(--c-bg)}
 .day.y{background:var(--observed);border-color:var(--observed)}
@@ -609,7 +604,7 @@ table.data td.num .nr,table.data td.num .muted{font-weight:400;font-size:var(--f
     <ol class="pipe" id="pipe-live" aria-label="Every check-in, 5 steps">
       <li><div class="node"><span class="dot" aria-hidden="true">1</span><span class="wire" aria-hidden="true"></span></div>
         <div class="stage"><div class="stage-top"><span class="stage-name">Member checks in</span></div>
-          <p class="stage-desc">A sentence or a file. Rules read the values; personal details and crisis language are screened first.</p></div></li>
+          <p class="stage-desc">Typed text is read by rules after personal details and crisis language are screened; a file is accepted only from the approved list.</p></div></li>
       <li><div class="node"><span class="dot" aria-hidden="true">2</span><span class="wire" aria-hidden="true"></span></div>
         <div class="stage"><div class="stage-top"><span class="stage-name">Member reviews</span></div>
           <p class="stage-desc">The member confirms, corrects or discards each value. Nothing is saved before this.</p></div></li>
@@ -624,6 +619,12 @@ table.data td.num .nr,table.data td.num .muted{font-weight:400;font-size:var(--f
           <p class="stage-desc">A rule-based suggestion, checked against the safety rules before the member sees it.</p></div></li>
     </ol>
     <p class="loop-back">↺ The next check-in starts again at step 1. <strong>No AI model is used in this loop.</strong></p>
+    <details class="thread records" id="pipe-live-tech">
+      <summary>Technical details, for reviewers</summary>
+      <dl class="stage-meta" aria-label="Step 1, member checks in"><dt>text</dt><dd>rules-v1</dd><dt>screen</dt><dd>PII + crisis</dd><dt>file</dt><dd>fixture-sidecar-v1</dd><dt>gate</dt><dd>sha256 allow-list</dd></dl>
+      <dl class="stage-meta" aria-label="Step 4, passport updated"><dt>ontology</dt><dd>core-v1+u1</dd><dt>ready</dt><dd>value ≤ 14 days old</dd></dl>
+      <dl class="stage-meta" aria-label="Step 5, next step suggested"><dt>policy</dt><dd>next-step-v1 (rules)</dd><dt>safety</dt><dd>membrane post()</dd></dl>
+    </details>
   </section>
   <section class="lane" id="lane-offline" aria-labelledby="lane-off-h" hidden>
     <div class="lane-head"><h2 id="lane-off-h">How the coaching model is trained</h2><span class="tag tag--offline">○ offline, not on each check-in</span></div>
@@ -1784,8 +1785,8 @@ function rangeCell(r) {
   return dd;
 }
 /* AM-2 D1 (G31): the member app never links into the research console; such an evidence-thread link
-   is shown as its text only. The list is every console route (app.ADMIN_ROUTES) plus the #research
-   alias, so a later link to any of them stays text too (QG P6.2 B4; a unit test pins the list). */
+   is shown as its text only. The list is every console route (app.ADMIN_ROUTES) plus its aliases
+   (app.ADMIN_ROUTE_ALIASES: #playground, #research), so a later link to any of them stays text too (QG P6.2 B4; a unit test pins the list). */
 var ADMIN_CONSOLE_ROUTES = ["pipeline", "lab", "inventory", "sessions", "playground", "research"];
 var ADMIN_HASH = new RegExp("^#(" + ADMIN_CONSOLE_ROUTES.join("|") + ")(/|$)");
 function memberLink(u) { return safeHref(u) !== null && !ADMIN_HASH.test(u); }

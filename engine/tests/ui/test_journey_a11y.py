@@ -1201,30 +1201,41 @@ def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe
     assert_axe_clean(page, axe_source, "lab deep link")
 
 
+_G5_SPLIT_WORDS = """(sel) => Array.from(document.querySelectorAll(sel)).map(t => {
+  const out = []; let cells = 0;
+  t.querySelectorAll('th, td').forEach(c => {
+    cells++;
+    const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (n.parentElement.closest('.run-id')) continue;
+      const re = /\\S+/g; let m;
+      while ((m = re.exec(n.data))) {
+        const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+        if (r.getClientRects().length > 1) out.push(m[0]);
+      }
+    }
+  });
+  return { cells: cells, split: out }; })"""
+
+
 @pytest.mark.parametrize("width", [1280, 1920])
-def test_hac76_g5_results_tables_never_break_a_word(browser: Browser, page_errors, base_url: str, width: int):
+@pytest.mark.parametrize(("route", "tables"), [("lab", 3), ("inventory", 1)])
+def test_hac76_g5_results_tables_never_break_a_word(browser: Browser, page_errors, base_url: str, width: int,
+                                                    route: str, tables: int):
     """G5 (HAC-74): at 1280 the lab table broke words mid-word. Every table cell's words now fit on their
-    line: no word in a header or cell is split across lines (run ids and digests excepted)."""
+    line: no word in a header or cell is split across lines (run ids and digests excepted). Each screen is
+    checked on its own route (a hidden screen has no line boxes) and every table must have cells."""
     page = _new_page(browser, page_errors, viewport={"width": width, "height": 1000})
-    goto(page, base_url, "lab")
-    wait_route_ready(page, "lab")
-    page.locator("#lab-records > summary").click()
-    split = page.evaluate("""() => {
-      const out = [];
-      document.querySelectorAll('#screen-lab th, #screen-lab td, #screen-inventory th, #screen-inventory td').forEach(c => {
-        const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
-        for (let n = w.nextNode(); n; n = w.nextNode()) {
-          if (n.parentElement.closest('.run-id')) continue;
-          const re = /\S+/g; let m;
-          while ((m = re.exec(n.data))) {
-            const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
-            if (r.getClientRects().length > 1) out.push(m[0]);
-          }
-        }
-      });
-      return out; }""")
-    assert split == [], f"@{width}px: words broken across lines: {split}"
-    assert_no_hscroll(page, f"lab @ {width}px")
+    goto(page, base_url, route)
+    wait_route_ready(page, route)
+    if route == "lab":
+        page.locator("#lab-records > summary").click()
+    got = page.evaluate(_G5_SPLIT_WORDS, f"#screen-{route} table")
+    assert len(got) == tables, f"#{route}: {len(got)} tables"
+    for i, t in enumerate(got):
+        assert t["cells"] > 0, f"#{route} table {i}: no cells checked"
+        assert t["split"] == [], f"#{route} table {i} @{width}px: words broken across lines: {t['split']}"
+    assert_no_hscroll(page, f"{route} @ {width}px")
     page.context.close()
 
 
