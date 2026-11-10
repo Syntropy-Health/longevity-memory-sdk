@@ -330,3 +330,12 @@ def test_each_next_step_has_its_own_reason(cohort, rm):  # QG U2
         tails = [i.reason.split(". ", 1)[1] for i in out.insights]
         assert len(set(tails)) == len(tails), p.member_id
         assert all("this kind of message" not in i.reason for i in out.insights)
+
+
+def test_true_adherence_is_the_simulators_own_probability(cohort):  # QG D8
+    from daypart.simmember import dynamics
+
+    p = cohort.training_profiles()[0]
+    for s in STATES:
+        for i in INTENTS:
+            assert model.true_adherence(p, s, i) == dynamics.p_adhered(p.latents, s, i)

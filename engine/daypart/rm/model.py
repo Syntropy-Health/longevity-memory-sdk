@@ -241,12 +241,9 @@ def auc(scores: np.ndarray, y: np.ndarray) -> float | None:
 
 def true_adherence(profile: Profile, state: str, intent: str) -> float:
     """The simulator's own P(adhered today | status, message) — ground truth for attribution checks."""
-    from daypart.simmember import dynamics as d
+    from daypart.simmember.dynamics import p_adhered
 
-    r = d.risk(profile.latents)
-    _, _, bonus = d._intent_effect(profile.latents, state, intent)  # pyright: ignore[reportPrivateUsage]
-    base = d._BASE_ADHERENCE[state] - (0.10 * r if state == "engaged" else 0.05 * r)  # pyright: ignore[reportPrivateUsage]
-    return min(max(base + bonus, 0.0), 1.0, 0.98)
+    return p_adhered(profile.latents, state, intent)
 
 
 def _spearman(a: np.ndarray, b: np.ndarray) -> float:
