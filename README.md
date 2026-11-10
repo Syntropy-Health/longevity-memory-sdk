@@ -27,71 +27,86 @@ You can measure this because it runs inside **SimMember**, a seeded synthetic co
 ```mermaid
 flowchart TD
     subgraph WORLD["Synthetic world (seeded, offline)"]
-        SM["SimMember cohort<br/><code>daypart.simmember</code><br/>latents → daily state chain → LHM records → I1 manifest"]
-        ENV["SimMemberEnv (FutureHouse aviary)<br/><code>daypart.simmember.env</code><br/>send_message(text, intent) → next state + adherence reward"]
+        SM["SimMember cohort<br/>daypart.simmember<br/>latents → daily state chain → LHM records → I1 manifest"]
+        ENV["SimMemberEnv (FutureHouse aviary)<br/>daypart.simmember.env<br/>send_message(text, intent) → next state + adherence reward"]
         SM --> ENV
     end
 
     subgraph DECIDE["Decide: what to say, then how"]
         POL["Policy: choose 1 of 7 intents<br/>baselines today · GRPO / reward model planned"]
-        LM["Muse Glimmer 30B<br/><code>daypart.train</code> (SFT → DPO, 4-bit QLoRA on Modal H100)"]
+        LM["Muse Glimmer 30B<br/>daypart.train (SFT → DPO, 4-bit QLoRA on Modal H100)"]
         POL --> LM
     end
 
-    MEM["Membrane<br/><code>daypart.membrane</code><br/>LHM layer-0 narration guard + boundary-v1 DSL"]
+    MEM["Membrane<br/>daypart.membrane<br/>LHM layer-0 narration guard + boundary-v1 DSL"]
 
     subgraph STATE["Remember and show"]
-        MEMORY["Memory <code>daypart.memory</code><br/>typed events · LOINC-seeded ontology · LHM metric state"]
-        PASS["Pattern passport <code>daypart.passport</code><br/>a number shows only when ready and claim-safe"]
+        MEMORY["Memory daypart.memory<br/>typed events · LOINC-seeded ontology · LHM metric state"]
+        PASS["Pattern passport daypart.passport<br/>a number shows only when ready and claim-safe"]
         MEMORY --> PASS
     end
 
-    EVAL["Eval harness <code>daypart.eval</code><br/>runs.yaml → metrics.json (every arm, including failed / not run)"]
-    DEMO["Demo <code>daypart.demo</code>, <code>engine/deploy</code><br/>member app + research console (FastAPI) and research view (Streamlit), on Modal"]
+    EVAL["Eval harness daypart.eval<br/>runs.yaml → metrics.json (every arm, including failed / not run)"]
+    DEMO["Demo daypart.demo, engine/deploy<br/>member app + research console (FastAPI) and research view (Streamlit), on Modal"]
 
     ENV -- member state --> POL
+    POL -- "send_message(text, intent)<br/>(baselines today; env runs boundary-v1 itself)" --> ENV
     LM -- draft --> MEM
-    MEM -- pass --> ENV
-    MEM -- pass --> MEMORY
+    MEM -- "pass (check-in, demo)" --> MEMORY
+    MEM -. "planned: gate the policy's drafts in the env" .-> ENV
     ENV --> EVAL
     MEM --> EVAL
     PASS --> DEMO
     EVAL --> DEMO
 
-    LHM[("LHM SDK (pinned, unmodified)<br/><code>syntropy.lhm</code>")]
+    LHM[("LHM SDK (pinned, unmodified)<br/>syntropy.lhm")]
     LHM -. claim + narration guards .-> MEM
     LHM -. scoring + readiness .-> MEMORY
 ```
 
 ### One day for one member
 
-The policy and the language model never send anything directly. Every draft goes through the membrane first.
+Two paths exist today. In the check-in and demo path, every Muse Glimmer draft goes through `membrane.post()` before it reaches the member:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Env as SimMemberEnv
     participant Pol as Policy
     participant LM as Muse Glimmer
-    participant Mem as Membrane
-    Env->>Pol: member state + latent profile
+    participant Mem as Membrane (post)
+    participant Out as Member (check-in / demo)
     Pol->>LM: intent (e.g. barrier_problem_solving)
     LM->>Mem: draft message
     Mem->>Mem: layer 0 (LHM narration guard), then boundary-v1 DSL
     alt draft passes
-        Mem->>Env: send_message(text, intent), byte-identical
-        Env-->>Pol: next state + adherence reward
+        Mem->>Out: message, byte-identical (never edited)
     else draft fails
         Mem->>LM: regenerate (once)
         LM->>Mem: second draft
-        Mem-->>Env: pass, or escalate (nothing sent)
+        Mem-->>Out: pass, or escalate (nothing sent)
     end
-    Note over Env: In the RL env, a message that fails the DSL<br/>ends the episode with reward −1.
+```
+
+In `SimMemberEnv` (the RL env and the eval baselines), the policy calls `send_message` directly. The env runs `boundary-v1` itself, with no layer 0 and no regenerate. Routing env drafts through the membrane is planned.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Pol as Policy (baseline)
+    participant Env as SimMemberEnv
+    Env->>Pol: member state + latent profile
+    Pol->>Env: send_message(text, intent)
+    Env->>Env: boundary-v1 DSL check
+    alt passes
+        Env-->>Pol: next state + adherence reward
+    else fails
+        Env-->>Pol: reward −1, episode ends
+    end
 ```
 
 ### Member state chain
 
-The same transition function drives the baseline trajectories and the RL env, so the two cannot drift apart. A lapsed member never jumps straight back to `engaged`. Every intent can only raise the chance of improving compared with `none`. Base adherence probability is shown per state.
+The same transition function drives the baseline trajectories and the RL env, so the two cannot drift apart. A lapsed member never jumps straight back to `engaged`. No intent ever lowers the chance of improving compared with `none` (some are exact no-ops in some states). Base adherence probability is shown per state.
 
 ```mermaid
 stateDiagram-v2
