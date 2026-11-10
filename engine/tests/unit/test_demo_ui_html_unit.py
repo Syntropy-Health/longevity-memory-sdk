@@ -1620,6 +1620,48 @@ def test_rev3_save_falls_back_to_the_saved_notice_without_an_error(timeline):
     assert "Something went wrong" not in got["text"] and "error" not in got["text"]
 
 
+@pytest.mark.parametrize("held", ["POST", "GET"])
+def test_rev3_save_never_draws_on_a_review_the_route_moved_to(held):
+    """QG P6.2 K10: the person opens #review/c3 while c2's save (POST) or its timeline GET is in flight.
+    c2's save is recorded, but c3's screen keeps its own form and message and keeps focus, and c3's
+    Save is not blocked by c2's call."""
+    got = _run_page(
+        _SAVE,
+        f"""
+        S.checkins = {{ c2: {{ proposals: [], status: "pending_review", result: null }},
+                       c3: {{ proposals: [], status: "pending_review", result: null }} }};
+        ["rv-intro", "rv-msg", "rv-list", "session-msg"].forEach(function (i) {{ mk(i); }});
+        mk("rv-form", "form"); mk("rv-submit", "button");
+        var sessionStorage = {{ setItem: function () {{}} }};
+        var release, gate = new Promise(function (r) {{ release = r; }});
+        fetch = async function (path, init) {{
+          CALLS.push([init.method, path]);
+          if (init.method === "{held}") await gate;
+          var body = init.method === "POST" ? {{ status: "saved", written: ["e1"], records: ["r1"] }} : {{ entries: [{_ENTRY}] }};
+          return {{ status: 200, ok: true, json: async function () {{ return body; }} }};
+        }};
+        rvCurrent = "c2";
+        var save = submitReview({{ preventDefault: function () {{}} }});
+        await new Promise(function (r) {{ setTimeout(r, 10); }});
+        rvCurrent = "c3";                          /* what showReview("c3") leaves: its own form and message */
+        var mine = el("p", null, "c3 form"); clear($("rv-msg")).append(mine); $("rv-form").hidden = false; mine.focus();
+        var busyWhileHeld = rvBusy;
+        release(); await save;
+        return {{ msg: $("rv-msg").textContent, formHidden: $("rv-form").hidden, focus: document.activeElement === mine,
+          saved: S.checkins.c2.status, busy: rvBusy, busyWhileHeld: busyWhileHeld,
+          disabled: $("rv-submit").getAttribute("aria-disabled"), calls: CALLS.map(function (c) {{ return c[0]; }}) }};
+        """,
+    )
+    assert got["msg"] == "c3 form" and got["formHidden"] is False and got["focus"]  # c3's screen is untouched
+    assert got["saved"] == "saved"  # c2's save happened and is recorded
+    assert got["busy"] is False and got["disabled"] is None
+    if held == "GET":
+        assert got["busyWhileHeld"] is False  # the save settled: c3's Save is not silently ignored during the GET
+        assert got["calls"] == ["POST", "GET"]
+    else:
+        assert got["calls"] == ["POST"]  # the route moved on: no timeline GET for a panel nobody sees
+
+
 _TIMELINE = _BASE + _API + _TL + ["journalPending", "ensureJournal", "sessionEnded", "TL_PAGE", "showTimeline", "tlMore", "tlEntry"]
 _TL_DOM = """
 ["tl-msg", "tl-body", "tl-days", "tl-omitted", "tl-more-row", "session-msg"].forEach(function (i) { mk(i); });

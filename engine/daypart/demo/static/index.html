@@ -1548,25 +1548,34 @@ async function submitReview(ev) {
   ev.preventDefault();
   if (rvBusy || !rvCurrent || !S.checkins[rvCurrent]) return;
   rvBusy = true;
-  var id = rvCurrent, btn = $("rv-submit");
+  var id = rvCurrent, btn = $("rv-submit"), held = true;
+  /* frees Save once this call has settled; it never clears a later call's busy state */
+  function release() { if (held) { held = false; rvBusy = false; btn.removeAttribute("aria-disabled"); } }
   btn.setAttribute("aria-disabled", "true");
   try {
     var res = await api("POST", "/api/checkins/" + encodeURIComponent(id) + "/review", { journal_id: S.journal, decisions: decisionsRv().decisions });
     if (isGone(res)) { sessionEnded(); return; }
+    var saved = res.status === 200 && res.data && res.data.status === "saved";
+    var already = res.status === 409 && code(res) === "already_saved";
+    if (saved) { S.checkins[id].status = "saved"; S.checkins[id].result = res.data; persist(); }
+    if (already) { S.checkins[id].status = "saved"; S.checkins[id].alreadySaved = true; persist(); }
+    /* QG P6.2 K10: the route moved on (#review/<other>) while the save was in flight: the save is
+       recorded, the other check-in's screen is left alone */
+    if (rvCurrent !== id) return;
     var msg = clear($("rv-msg"));
-    if (res.status === 200 && res.data && res.data.status === "saved") {
-      S.checkins[id].status = "saved"; S.checkins[id].result = res.data; persist();
+    if (saved) {
       $("rv-form").hidden = true; $("rv-intro").textContent = "";
+      release();
       /* the save happened: a failed timeline GET is not an error, it falls back to the saved notice */
       var tl = await api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/timeline");
+      if (rvCurrent !== id) return;
       var entry = tl.ok && tl.data && Array.isArray(tl.data.entries)
         ? tl.data.entries.find(function (e) { return e && e.checkin_id === id; }) : null;
       var n = entry ? cloneUpdated(res.data, entry) : savedNotice(res.data);
       n.setAttribute("tabindex", "-1"); clear(msg).append(n); n.focus();
       return;
     }
-    if (res.status === 409 && code(res) === "already_saved") {
-      S.checkins[id].status = "saved"; S.checkins[id].alreadySaved = true; persist();
+    if (already) {
       $("rv-form").hidden = true;
       var a = alreadySavedNotice(true);
       msg.append(a); a.focus();
@@ -1580,7 +1589,7 @@ async function submitReview(ev) {
     /* the form and its input stay; Try again re-sends (409 already_saved if the first one landed) */
     showError(msg, serverError(res, function () { $("rv-submit").click(); }, { focus: true }));
   } finally {
-    rvBusy = false; btn.removeAttribute("aria-disabled");
+    release();
   }
 }
 
