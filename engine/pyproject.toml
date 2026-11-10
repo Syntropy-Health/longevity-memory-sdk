@@ -50,6 +50,7 @@ include = ["daypart*"]
 "daypart.demo" = ["static/*.html", "fixtures/*"]
 "daypart.memory" = ["*.json", "*.csv"]
 "daypart.governance" = ["*.yaml"]
+"daypart.evidence" = ["*.json"]
 
 [tool.pyright]
 # CI type check (HAC-38 G20): basic mode over the daypart package.
