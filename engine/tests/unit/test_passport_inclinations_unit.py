@@ -85,3 +85,11 @@ def test_view_renders_inclinations_in_the_passport_section():
     assert 'id="h-inclinations"' in section and 'id="pp-incl"' in section
     assert "function renderInclinations" in html and "renderInclinations(pp.inclinations)" in html
     assert "Linked to: " in html
+
+
+def test_app_startup_warms_the_reward_model():
+    from daypart.rm import model
+
+    model.trained.cache_clear()
+    create_app(cohort_seed=0)
+    assert model.trained.cache_info().currsize == 1
