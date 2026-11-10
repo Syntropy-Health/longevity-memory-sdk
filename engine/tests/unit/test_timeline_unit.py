@@ -166,3 +166,69 @@ def _concept_id(client, code):
     c = load_registry().by_code(code)
     assert c is not None
     return c.concept_id
+
+
+# --- QG P6.1 ------------------------------------------------------------------------------------
+
+
+def test_k7_a_backdated_save_is_judged_on_its_own_day(client):
+    """G33: an entry is judged at 12:00 UTC on the date its save recorded, not on today."""
+    jid = _journal(client)
+    _save(client, jid, "slept 6 hours")
+    _, out = _save(client, jid, "yesterday I slept 7 hours")
+    e1, e2 = client.get(f"/api/journals/{jid}/timeline").json()["entries"]
+    assert e1["as_of"].startswith("2026-09-29T12:00:00") and e2["as_of"].startswith("2026-09-28T12:00:00")
+    (a,) = e2["appends"]
+    rec = client.get(f"/api/journals/{jid}/observations/{a['record_id']}").json()
+    assert a["observed_at"] == rec["observed_at"] and a["observed_at"].startswith("2026-09-28")
+    # on 09-28 the first save (dated 09-29) did not exist yet, so the sleep card became ready with this one
+    sleep = {c["card_id"]: c for c in e2["passport_changes"]}["observation:" + _concept_id(client, "93832-4")]
+    assert sleep["change"] == "became_ready" and sleep["before"]["status"] == "withheld"
+
+
+def test_k8_entries_follow_save_order_not_creation_order(client):
+    jid = _journal(client)
+    a = _checkin(client, jid, "slept 6 hours")  # created first, saved second
+    b, _ = _save(client, jid, "pulse 64 bpm")
+    decisions = [{"proposal_id": p["proposal_id"], "action": "confirm"} for p in a["proposals"]]
+    assert client.post(f"/api/checkins/{a['checkin_id']}/review", json={"decisions": decisions}).status_code == 200
+    e1, e2 = client.get(f"/api/journals/{jid}/timeline").json()["entries"]
+    assert [e1["checkin_id"], e2["checkin_id"]] == [b, a["checkin_id"]]
+    assert [x["code"] for x in e1["appends"]] == ["8867-4"]
+    assert "observation:" + _concept_id(client, "93832-4") not in {c["card_id"] for c in e1["passport_changes"]}
+    assert e1["next_step"]["after"]["step_id"] == f"ns-{b}"
+
+
+def _state(status, origin="observed", value=None, unit=None):
+    from daypart.passport.timeline import CardState
+
+    return CardState(status=status, origin=origin, value=value, unit=unit)
+
+
+@pytest.mark.parametrize(
+    "before, after, want",
+    [
+        (None, ("ready", "observed", 6.0, "h"), "became_ready"),
+        (("withheld", "simulated"), ("ready", "observed", 6.0, "h"), "became_ready"),
+        (("ready", "observed", 6.0, "h"), ("withheld", "observed"), "withheld"),
+        (("withheld", "simulated"), ("withheld", "simulated"), None),
+        (None, ("withheld", "simulated"), None),
+        (("ready", "simulated", 6.0, "h"), ("ready", "observed", 7.0, "h"), "now_observed"),
+        (("ready", "observed", 6.0, "h"), ("ready", "observed", 7.0, "h"), "value_changed"),
+        (("ready", "observed", 160.0, "kg"), ("ready", "observed", 160.0, "[lb_av]"), "value_changed"),
+        (("ready", "observed", 6.0, "h"), ("ready", "observed", 6.0, "h"), None),
+    ],
+)
+def test_k9_change_truth_table(before, after, want):
+    from daypart.passport.timeline import _change
+
+    assert _change(_state(*before) if before else None, _state(*after)) == want
+
+
+def test_k9_first_sleep_save_is_exactly_became_ready(client):
+    jid = _journal(client)
+    _save(client, jid, "slept 6 hours")
+    (entry,) = client.get(f"/api/journals/{jid}/timeline").json()["entries"]
+    c = {c["card_id"]: c for c in entry["passport_changes"]}["observation:" + _concept_id(client, "93832-4")]
+    assert c["change"] == "became_ready"
+    assert c["before"] == {"status": "withheld", "origin": "simulated", "value": None, "unit": None}
