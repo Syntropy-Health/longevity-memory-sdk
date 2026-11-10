@@ -226,7 +226,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | Timeline (AM-2 D3, G33) | `passport/timeline.py` | `await timeline(journal) -> Timeline` (read-only; prefix views; newest `MAX_ENTRIES` = 60) | app | passport view, next step, journal |
 | Surfaces (AM-2 D1, G31) | `demo/surfaces.py` | `render_surface(source, "member"\|"admin") -> str`; `SurfaceMarkupError` at startup | app | — |
 | App routes | `demo/app.py` (extended) | the endpoints below | UI | all of the above |
-| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | member app at `/` (4 screens) + research console at `/admin` (3 screens), one source, two shells (AM-2 D1, G31) | judges | API |
+| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | member app at `/` (5 screens) + research console at `/admin` (5 screens), one source, two shells, visual spec rev 3 (AM-2 D1, G31, G35, G36) | judges | API |
 | UI CI | `tests/ui/test_journey_a11y.py`, job `demo-ui` in `engine.yml` | axe, keyboard, 375 px, reduced motion | CI | Playwright |
 | Submission pack | `docs/daypart/submission/` + `tests/unit/test_submission_pack_unit.py` | layout §4.11 and the claim-ledger check | judges | — |
 
@@ -534,18 +534,22 @@ The app still starts in demo mode, logs one refusal line listing the open gate i
 
 ### 4.10 UI routes
 
-*As amended by AM-2 D1/D2 (2026-11-10, G31/G32).* Two surfaces, served from one page source
+*As amended by AM-2 D1/D2/D3 (2026-11-10, G31–G33) and visual spec rev 3 (G35, G36).* Two surfaces, served from one page source
 (`static/index.html`, member- and admin-marked blocks; `demo/surfaces.py` keeps one side):
 
-- **Member app** at `/`: hash routes `#checkin` (default), `#review/<id>`, `#passport`, `#next`
-  (P6.2 adds the adaptation timeline). The nav and every link stay on the member app: an
-  evidence-thread link the API points at a research route (`#research`, `#lab/<run>`) is shown as
-  text. It opens on the seeded persona's journal; "Start a fresh journal" makes an empty one.
-- **Research console** at `/admin`: `#lab` (default), `#inventory` (the concept registry from
-  `/api/inventory`), `#research` (the old episode/intent/draft playground, labelled "Research
-  playground"; the only place "Intent"/"Draft" may appear), links to the member app, `/results`
-  and `/docs`. The "Real input" control is in its footer only: it calls `POST /api/mode` and shows
-  the refusal and gate list in an `aria-live` region.
+- **Member app** at `/`: hash routes `#today` (default; `#checkin` is its alias), `#review/<id>`
+  (a save shows "Your clone updated" in place), `#passport`, `#next`, `#timeline` (G33, G35). The
+  nav and every link stay on the member app: an evidence-thread link the API points at a research
+  route (`#research`, `#lab/<run>`) is shown as text. It opens on the seeded persona's journal;
+  "Start a fresh journal" makes an empty one.
+- **Research console** at `/admin` (sidebar shell, rev 3 §4; G36): hash routes `#pipeline`
+  (default: the static live loop plus KPIs and the offline lane read per request from `/api/lab`),
+  `#lab[/<run_id>]`, `#inventory` (the concept registry from `/api/inventory`, one table row per
+  vertical), `#playground` (alias `#research`; the old episode/intent/draft playground, the only
+  place "Intent"/"Draft" may appear) and `#input` (the "Request real input" control: `POST
+  /api/mode` and the refusal with its gate list in an `aria-live` region). `/admin/<route>` serves
+  the same shell and is rewritten to `/admin#<route>`. The nav also links Dashboard ↗ (`/results`,
+  new tab), and the sidebar links the member app and `/docs`.
 
 On each surface there is one `<main>`, one `<h1>` per screen, and focus moves to the screen `<h1>`
 on route change. There is no banner (AM-2 D2).
