@@ -14,7 +14,7 @@ flowchart LR
     C[Check in<br/>text / demo file / demo image] --> R[Review<br/>confirm · correct · discard · save unmapped]
     R --> P[Health Clone Passport<br/>cards + evidence thread]
     P --> N[Suggested next step<br/>choose · defer · ask a professional]
-    N --> L[Learning lab<br/>base · SFT · DPO · baselines · GRPO proposed]
+    N --> L[Learning lab<br/>base · SFT · DPO · baselines · GRPO]
   end
   subgraph API["FastAPI app (engine/daypart/demo)"]
     G{{Real-input gate<br/>hard off}}

@@ -38,6 +38,7 @@ from daypart.memory.registry import REVIEWER_STATUS, Concept, ConceptRegistry, l
 from daypart.passport.constants import WITHHELD_MESSAGE
 from daypart.passport.models import Flag
 from daypart.passport.render import flags_from_state
+from daypart.rm.inclinations import Inclinations
 from daypart.simmember.trajectory import START_DATE
 
 DISPLAY_NAME = "Health Clone Passport"
@@ -256,6 +257,28 @@ class HealthClonePassport(pydantic.BaseModel):
     mode: Literal["demo"] = "demo"
     cards: tuple[Card, ...]
     inventory: Inventory
+    #: HAC-75: what the reward model says drives this member, with linked next steps. None when it
+    #: cannot be computed (fail closed: the passport still renders, with no inclinations section).
+    inclinations: Inclinations | None = None
+
+
+def member_inclinations(journal: Journal) -> Inclinations | None:
+    """The journal member's inclinations from simulated Jev answers and the trained reward model.
+
+    Synthetic only: the member is a ``syn-`` cohort profile and its answers are simulated from its
+    hidden latents. Any failure (a guard, an unexpected error) → ``None``, never a partial section.
+    """
+    from daypart.rm import jev
+    from daypart.rm.inclinations import inclinations
+    from daypart.rm.model import trained
+
+    try:
+        member = journal.member
+        if member.cohort != "synthetic":
+            return None
+        return inclinations(trained(journal.cohort_seed), jev.answers_for(member, journal.cohort_seed))
+    except Exception:  # fail closed
+        return None
 
 
 # --- helpers ------------------------------------------------------------------------------------
@@ -591,6 +614,7 @@ async def health_clone_passport(journal: Journal, as_of: dt.datetime) -> HealthC
         guard_versions=dict(state.guard_versions),
         cards=tuple(cards),
         inventory=inventory(reg),
+        inclinations=member_inclinations(journal),
     )
 
 

@@ -164,6 +164,38 @@ def _run_escalation(arm: ArmConfig) -> dict:
     return evaluate(arm.seeds, history_days=arm.horizon)
 
 
+def _run_jev_library(config: RunsConfig) -> dict:
+    """4.1: the question library, and how well its simulated answers recover the hidden axes."""
+    from daypart.rm import jev
+    from daypart.rm.model import split
+    from daypart.simmember.cohort import generate
+
+    _, held = split(generate(config.cohort_seed))
+    return {
+        "data": "synthetic",
+        "label": "Simulated SimMember answers; not clinical evidence.",
+        "jev_version": jev.LIBRARY_VERSION,
+        "n_questions": len(jev.QUESTIONS),
+        "question_ids": list(jev.QUESTION_IDS),
+        "n_features": len(jev.FEATURE_NAMES),
+        "heldout_recovery": jev.recovery(held, config.cohort_seed),
+    }
+
+
+def _run_reward_model(config: RunsConfig) -> dict:
+    """4.2: held-out fit and attribution recovery of the interpretable reward model."""
+    from daypart.rm.model import evaluate
+
+    return evaluate(config.cohort_seed)
+
+
+def _run_grpo_policy(arm: ArmConfig, config: RunsConfig) -> dict:
+    """4.3: the GRPO policy in SimMemberEnv on the env_baseline scenarios."""
+    from daypart.rm.grpo import evaluate_env
+
+    return evaluate_env(config.cohort_seed, arm.seeds, arm.n_scenarios or 0, arm.horizon)
+
+
 # --------------------------------------------------------------------------- #
 # boundary_eval (2.4: base / SFT / DPO, read from committed results files)
 # --------------------------------------------------------------------------- #
@@ -244,6 +276,9 @@ def _run_arm(arm: ArmConfig, config: RunsConfig, root: pathlib.Path) -> dict:
         "i1_gate": lambda: _run_i1_gate(config),
         "boundary_eval": lambda: _run_boundary_eval(arm, root),
         "escalation": lambda: _run_escalation(arm),
+        "jev_library": lambda: _run_jev_library(config),
+        "reward_model": lambda: _run_reward_model(config),
+        "grpo_policy": lambda: _run_grpo_policy(arm, config),
     }
     runner = runners.get(arm.kind)
     if runner is None:

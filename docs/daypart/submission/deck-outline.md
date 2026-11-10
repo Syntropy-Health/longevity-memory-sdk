@@ -67,7 +67,7 @@ synthetic prompts; the simulator compares scripted policies. None of it is a pat
 **Illustration:** the research console's learning lab (`/admin#lab`). A bar chart of boundary pass
 rate, n = 141, base 45 of 141, fine-tuned 141 of 141, with the note that 90 of the base model's
 replies were empty. Beside it, the weak slice: the lapse-recovery check passes on only 7 of 51
-(and 6 of 51) check-in prompts. Label the reinforcement-learning stage "proposed, not built".
+(and 6 of 51) check-in prompts. Label the GRPO stage "simulated: a small message-type policy, not a language model" (HAC-75).
 Units and sample sizes on every axis.
 
 ## Slide 6: Responsible AI and limits

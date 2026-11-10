@@ -3,8 +3,9 @@
 ``lab_rows(results_dir)`` reads ``boundary_eval.json``, ``training.json``, ``metrics.json`` and
 ``pipeline.json``. A missing, malformed or non-numeric source field is ``None`` (the UI renders
 ``NOT_RECORDED``); a row's number is shown only when its own source fields exist. An sft/dpo row
-whose adapter does not match ``training.json`` is ``PROVENANCE_MISMATCH`` with no number. grpo is
-``PROPOSED`` with its reason and no number. The lab always renders.
+whose adapter does not match ``training.json`` is ``PROVENANCE_MISMATCH`` with no number. grpo is a
+``policy`` row with its measured numbers when its arm ran ok (HAC-75), else ``PROPOSED`` with its
+reason and no number. The lab always renders.
 """
 
 from __future__ import annotations
@@ -45,7 +46,7 @@ class LabRow(pydantic.BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     row: str
-    kind: Literal["model", "env_baseline", "proposed"]
+    kind: Literal["model", "env_baseline", "policy", "proposed"]
     status: Status
     run_id: str | None = None
     file_digest: str | None = None  # base only: sha256(boundary_eval.json)[:12], a file digest
@@ -179,8 +180,11 @@ def _env_row(arm: Mapping[str, Any], mx: Mapping[str, Any], name: str) -> LabRow
     )
 
 
-def _grpo_row(arms: list[Mapping[str, Any]]) -> LabRow:
+def _grpo_row(arms: list[Mapping[str, Any]], mx: Mapping[str, Any]) -> LabRow:
     arm = next((a for a in arms if a.get("name") == "grpo"), {})
+    if arm.get("status") == "ok" and isinstance(arm.get("metrics"), Mapping):
+        # Measured on the env_baseline scenarios, so it reads like an env row (HAC-75).
+        return _env_row(arm, mx, "grpo").model_copy(update={"kind": "policy"})
     return LabRow(row="grpo", kind="proposed", status=PROPOSED, reason=_str(arm.get("reason")))
 
 
@@ -202,7 +206,7 @@ def lab_rows(results_dir: str | os.PathLike[str] | None = None) -> LabTable:
     # An arm with no string name is left out: a row name or run id is never invented (AD6, G25).
     rows += [_env_row(a, mx, name) for a in arms
              if a.get("kind") == "env_baseline" and a.get("status") == "ok" and (name := _str(a.get("name")))]
-    rows.append(_grpo_row(arms))
+    rows.append(_grpo_row(arms, mx))
     i1 = next((a for a in arms if a.get("name") == "i1_gate"), None)
     passed = _get(i1, "metrics", "passed")
     return LabTable(

@@ -27,15 +27,25 @@ episodes = scenarios × seeds. These are scripted policies in a synthetic simula
 
 | row | status | run id | split | seeds | failures | metrics |
 |---|---|---|---|---|---|---|
-| env_always_none | ok | eval-v1@f1c0709dca7d/env_always_none | 50 scenarios; 150 episodes; horizon 14 | 0, 1, 2 | 0 | episode_violation_rate 0.0; mean_adherence 0.636667 |
-| env_always_barrier_problem_solving | ok | eval-v1@f1c0709dca7d/env_always_barrier_problem_solving | 50 scenarios; 150 episodes; horizon 14 | 0, 1, 2 | 0 | episode_violation_rate 0.0; mean_adherence 0.833333 |
-| env_random_intent | ok | eval-v1@f1c0709dca7d/env_random_intent | 50 scenarios; 150 episodes; horizon 14 | 0, 1, 2 | 0 | episode_violation_rate 0.0; mean_adherence 0.719047 |
+| env_always_none | ok | eval-v1@fdaf4e856f5e/env_always_none | 50 scenarios; 150 episodes; horizon 14 | 0, 1, 2 | 0 | episode_violation_rate 0.0; mean_adherence 0.636667 |
+| env_always_barrier_problem_solving | ok | eval-v1@fdaf4e856f5e/env_always_barrier_problem_solving | 50 scenarios; 150 episodes; horizon 14 | 0, 1, 2 | 0 | episode_violation_rate 0.0; mean_adherence 0.833333 |
+| env_random_intent | ok | eval-v1@fdaf4e856f5e/env_random_intent | 50 scenarios; 150 episodes; horizon 14 | 0, 1, 2 | 0 | episode_violation_rate 0.0; mean_adherence 0.719047 |
+
+## Learned policy: GRPO against the reward model
+
+Source: `docs/daypart/results/metrics.json`, arm `grpo`. A small message-type policy trained by
+GRPO against the reward model (arm `rm`) on synthetic members, then run greedily on the same
+scenarios and seeds as the baselines above. Simulated, not patient outcomes.
+
+| row | status | run id | split | seeds | failures | metrics |
+|---|---|---|---|---|---|---|
+| grpo | ok | eval-v1@fdaf4e856f5e/grpo | 50 scenarios; 150 episodes; horizon 14 | 0, 1, 2 | 0 | episode_violation_rate 0.0; mean_adherence 0.84 |
 
 ## Proposed, not built
 
 | row | status | reason |
 |---|---|---|
-| grpo | proposed, not built | needs a trained reward model (4.2) and policy (4.3), neither built |
+| none | every arm ran | n/a |
 
 ## Checks
 

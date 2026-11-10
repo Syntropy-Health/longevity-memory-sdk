@@ -2,7 +2,8 @@
 
 The outcomes table is generated, never hand-typed: every number in it comes from ``lab_rows()``
 over the committed ``docs/daypart/results/`` (A&D §4.8). A field ``lab_rows()`` could not read is
-"not recorded"; a provenance-mismatch row and the proposed GRPO row carry no number.
+"not recorded"; a provenance-mismatch row and a proposed (not run) GRPO row carry no number. A GRPO
+row that ran (HAC-75) is a "policy" row with its env numbers, like a baseline.
 
 Run from ``engine/``::
 
@@ -96,6 +97,7 @@ def _env_line(r: LabRow) -> str:
 def render(table: LabTable) -> str:
     models = [r for r in table.rows if r.kind == "model"]
     envs = [r for r in table.rows if r.kind == "env_baseline"]
+    policies = [r for r in table.rows if r.kind == "policy"]
     proposed = [r for r in table.rows if r.kind == "proposed"]
     i1 = NOT_RECORDED if table.i1_passed is None else ("passed" if table.i1_passed else "failed")
     out = [
@@ -128,11 +130,22 @@ def render(table: LabTable) -> str:
         "|---|---|---|---|---|---|---|",
         *(_env_line(r) for r in envs),
         "",
+        "## Learned policy: GRPO against the reward model",
+        "",
+        "Source: `docs/daypart/results/metrics.json`, arm `grpo`. A small message-type policy trained by",
+        "GRPO against the reward model (arm `rm`) on synthetic members, then run greedily on the same",
+        "scenarios and seeds as the baselines above. Simulated, not patient outcomes.",
+        "",
+        "| row | status | run id | split | seeds | failures | metrics |",
+        "|---|---|---|---|---|---|---|",
+        *(_env_line(r) for r in policies),
+        "",
         "## Proposed, not built",
         "",
         "| row | status | reason |",
         "|---|---|---|",
         *(_row([r.row, PROPOSED, r.reason]) for r in proposed),
+        *(() if proposed else ("| none | every arm ran | n/a |",)),
         "",
         "## Checks",
         "",

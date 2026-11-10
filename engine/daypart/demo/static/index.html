@@ -520,6 +520,10 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
     <h2 style="margin-top:var(--s5)">Cards</h2>
     <p class="small muted measure">Where a public source states a reference range, the card shows it with the group it applies to and the source. It is reference text only, not a judgement of your value.</p>
     <div class="cards" id="pp-cards"></div>
+    <!-- HAC-75: inclinations = what the reward model says drives this member (pp.inclinations), each next step linked to its driver -->
+    <h2 id="h-inclinations" tabindex="-1" style="margin-top:var(--s6)">Inclinations</h2>
+    <p class="small muted measure">What seems to matter most for keeping your routine, from your answers to a few short questions, and up to three next steps, each linked to what it responds to.</p>
+    <div id="pp-incl"></div>
     <h2 id="h-inventory" tabindex="-1" style="margin-top:var(--s6)">What your clone knows</h2>
     <p class="muted small">Each area and whether it has data. A gap means nothing has been confirmed yet.</p>
     <ul class="inv measure" id="inventory" aria-labelledby="h-inventory"></ul>
@@ -1627,6 +1631,7 @@ function renderPassport(pp, inv) {
   row("Review", reviewLabel(inv && inv.reviewer_status));
   var cards = clear($("pp-cards"));
   pp.cards.forEach(function (c, i) { cards.append(card(c, i)); });
+  renderInclinations(pp.inclinations);
   var list = clear($("inventory"));
   var byConcept = {};
   pp.cards.forEach(function (c) { (byConcept[c.concept_id] = byConcept[c.concept_id] || []).push(c); });
@@ -1644,6 +1649,42 @@ function renderPassport(pp, inv) {
     li.append(el("span", null, g), el("span", "tag tag--withheld", "○ Gap: no data yet"));
     list.append(li);
   });
+}
+/* HAC-75 inclinations: drivers (label, helps / makes it harder, share) and 1-3 next steps, each linked to a driver.
+   Absent (null) → "Not enough data yet." Every string is the API's own (already narration-guarded). */
+function renderInclinations(inc) {
+  var box = clear($("pp-incl"));
+  if (!inc || !Array.isArray(inc.drivers) || !Array.isArray(inc.insights) || !inc.drivers.length) {
+    box.append(el("p", "withheld-msg", "Not enough data yet."));
+    return;
+  }
+  var byId = {};
+  box.append(el("h3", "label small", "What weighs most"));
+  var dl = attrs(el("ul", "inv measure"), { "aria-label": "What weighs most" });
+  inc.drivers.forEach(function (d, i) {
+    var li = el("li"); li.id = "pp-drv-" + i; byId[d.driver_id] = { id: li.id, label: d.label };
+    var share = typeof d.share === "number" ? Math.round(d.share * 100) + "% of what we can explain" : null;
+    li.append(el("span", null, d.label));
+    li.append(el("span", "tag " + (d.direction === "helps" ? "tag--ready" : "tag--withheld"),
+      (d.direction === "helps" ? "Helps" : "Makes it harder") + (share ? " · " + share : "")));
+    dl.append(li);
+  });
+  box.append(dl);
+  box.append(el("h3", "label small", "Next steps"));
+  var cards = el("div", "cards");
+  inc.insights.forEach(function (s, i) {
+    var art = el("article", "card"), hid = "pp-ins" + i;
+    art.setAttribute("aria-labelledby", hid);
+    var h = el("h3", null, s.title); h.id = hid; art.append(h);
+    art.append(el("p", null, s.action));
+    art.append(el("p", "small", s.reason));
+    var drv = byId[s.driver];
+    /* the link to its driver is shown as text (a #hash link would change the route) and tied by aria-describedby */
+    if (drv) { var lk = el("p", "small muted", "Linked to: "); lk.append(el("strong", null, drv.label)); art.append(lk); art.setAttribute("aria-describedby", drv.id); art.setAttribute("data-driver", s.driver); }
+    cards.append(art);
+  });
+  box.append(cards);
+  if (inc.note) box.append(el("p", "small muted measure", inc.note));
 }
 /* §3.3 inventory: a vertical with a ready card is covered, "✓ N card(s)" (N = its cards); else "○ Gap: no data yet". */
 function invTag(cards) {

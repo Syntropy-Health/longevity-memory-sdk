@@ -32,7 +32,7 @@ live on the hosted demo (P1–P4 are deployed); you can also run it locally with
    (409 `no_saved_checkin` before any). `POST` the same path with `{"step_id", "choice"}`, where the
    choice is `choose`, `defer` or `ask_professional`; a stale step gets 422 `unknown_step`.
 7. **Learning lab**: `GET /api/lab` returns the committed training and evaluation rows, each with
-   its run ID, split, seed and failure count; GRPO is "proposed, not built".
+   its run ID, split, seed and failure count; GRPO is measured on the same simulated scenarios as the baselines.
 8. `GET /api/units` lists the units a correction may use for each concept.
 
 ## Clinical Human Clone in the browser (FHDIC P3)
@@ -45,6 +45,8 @@ Run `uv run daypart-demo serve` from `engine/` (or open the hosted demo) and fol
 3. **Passport** (`#passport`): one card per measure, with its evidence thread. A sourced reference
    range sits beside a recent value, with its population and source link; it is never used to
    call the value high or low. `#passport/inventory` lists what is covered and what is not.
+   **Inclinations** shows the answers that weigh most and up to three next steps, each linked to
+   one of them (the passport JSON's `inclinations`; `null` when it cannot be built).
 4. **Next step** (`#next`): one suggestion; choose it, put it off, or ask a professional.
 5. **Learning lab** (`#lab`): the base, sft and dpo models and the 3 baselines, from the committed
    results.
