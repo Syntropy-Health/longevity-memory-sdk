@@ -2,7 +2,7 @@
 
 **An adherence-intelligence engine for health routines. It decides *what kind* of message a person should get today. Every word it sends passes a deterministic safety boundary first. It is trained on Meta's Muse Glimmer 30B and measured in a reproducible synthetic world.**
 
-- **Live demo:** [Clinical Human Clone](https://supermomo668--daypart-demo-playground.us-east.modal.run) (the five-screen journey: check in, review, passport, next step, learning lab; the step-by-step research playground is its research view) · [research view: full results](https://supermomo668--daypart-demo-dashboard.us-east.modal.run) (Streamlit dashboard)
+- **Live demo:** [Clinical Human Clone](https://supermomo668--daypart-demo-playground.us-east.modal.run) (the member app: check in, review, passport, next step; the learning lab, concept inventory and step-by-step research playground are on its research console at `/admin`) · [research view: full results](https://supermomo668--daypart-demo-dashboard.us-east.modal.run) (Streamlit dashboard)
 - **Status:** hackathon build (Meta, Nov 2026). Synthetic data only. Not a medical device and not medical advice.
 
 ---

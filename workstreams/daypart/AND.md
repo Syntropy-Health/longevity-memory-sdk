@@ -222,8 +222,11 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | Passport view | `passport/view.py` | `await health_clone_passport(journal, as_of) -> HealthClonePassport` (async: the series is read through the async LHM adapter; observation cards + existing LHM flags + inventory) (G23) | app | `passport.render`, registry, evidence, journal, `memory.lhm`, `membrane.dsl`, `demo.safety`, `demo.dashboard_data` (results path) |
 | Next step | `checkin/next_step.py` | `await suggest(journal) -> NextStep` through `membrane.post`/`dsl.check`; `await record_choice` (G24) | app | membrane, journal, `eval.policies`, registry, `demo.safety`, `memory.events`, `memory.lhm` |
 | Lab rows | `demo/lab.py` | `lab_rows(results_dir) -> LabTable` from the committed JSON (§4.8) | app, submission pack | `dashboard_data.results_dir` + `default_metrics_path` (path only); its own tolerant readers, no `MetricsDoc` validation (G25) |
+| Persona (AM-2 D2, G32) | `demo/persona.py` + `demo/persona_v1.json` (written by `tools/make_persona.py`) | `load_persona()`, `personas()`, `await seed(store, persona_id) -> Journal` (replays every check-in through `create_checkin` + `review`; `PersonaSeedError` on drift) | app | check-in service, journal |
+| Timeline (AM-2 D3, G33) | `passport/timeline.py` | `await timeline(journal) -> Timeline` (read-only; prefix views; newest `MAX_ENTRIES` = 60) | app | passport view, next step, journal |
+| Surfaces (AM-2 D1, G31) | `demo/surfaces.py` | `render_surface(source, "member"\|"admin") -> str`; `SurfaceMarkupError` at startup | app | — |
 | App routes | `demo/app.py` (extended) | the endpoints below | UI | all of the above |
-| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | 5 screens + research view | judges | API |
+| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | member app at `/` (4 screens) + research console at `/admin` (3 screens), one source, two shells (AM-2 D1, G31) | judges | API |
 | UI CI | `tests/ui/test_journey_a11y.py`, job `demo-ui` in `engine.yml` | axe, keyboard, 375 px, reduced motion | CI | Playwright |
 | Submission pack | `docs/daypart/submission/` + `tests/unit/test_submission_pack_unit.py` | layout §4.11 and the claim-ledger check | judges | — |
 
