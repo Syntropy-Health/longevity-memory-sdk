@@ -18,7 +18,7 @@ Language models can write good supportive messages. In a health setting, though,
 Daypart splits the decision into two parts:
 
 1. **What to say (the policy).** Each day, for each member, pick one of seven *intents*: `none`, `reminder`, `encouragement`, `barrier_problem_solving`, `celebrate_streak`, `check_in_question`, `clinician_handoff`. The pick is conditioned on the member's state (`engaged`, `strained`, `lapsed`, `recovering`; see the state diagram below) and on their latent profile (motivation, barrier type, health literacy, engagement pattern).
-2. **How to say it (the language model), behind a membrane.** A fine-tuned Muse Glimmer writes the message for the chosen intent. Every draft then passes a **deterministic boundary DSL** (`boundary-v1`, no LLM in the loop). Any dose quantity, outcome or efficacy claim, diagnosis, or advice outside the lane fails. The draft is regenerated once; if it still fails, the decision is `escalate` and nothing is sent. The membrane never edits text. In the RL environment a violation ends the episode with reward −1.
+2. **How to say it, behind a membrane.** Muse Glimmer (fine-tuned with SFT → DPO) writes messages offline: the member journals and coach replies of the synthetic cohort. Live check-ins and the demo use a fixed, reviewed text per intent. Every message passes a **deterministic boundary DSL** (`boundary-v1`, no LLM in the loop). Any dose quantity, outcome or efficacy claim, diagnosis, or advice outside the lane fails. The membrane never edits text. What happens on a fail depends on the path (see below): an LM draft is regenerated once and then escalated; a check-in step is replaced by a clinician handoff; in the RL environment the episode ends with reward −1.
 
 You can measure this because it runs inside **SimMember**, a seeded synthetic cohort. 200 members have latent-conditioned day-by-day adherence dynamics. 25 curated profiles are held out of all training (invariant I1, enforced in CI).
 
@@ -51,8 +51,9 @@ flowchart TD
 
     ENV -- member state --> POL
     POL -- "send_message(text, intent)<br/>(baselines today; env runs boundary-v1 itself)" --> ENV
-    LM -- draft --> MEM
-    MEM -- "pass (check-in, demo)" --> MEMORY
+    LM -- "draft (offline narrative)" --> MEM
+    POL -- "fixed intent text (check-in, demo)" --> MEM
+    MEM -- "pass: narrative cache, check-in step" --> MEMORY
     MEM -. "planned: gate the policy's drafts in the env" .-> ENV
     ENV --> EVAL
     MEM --> EVAL
@@ -66,28 +67,47 @@ flowchart TD
 
 ### One day for one member
 
-Two paths exist today. In the check-in and demo path, every Muse Glimmer draft goes through `membrane.post()` before it reaches the member:
+Three paths exist today, and each handles a membrane fail differently.
+
+**Check-in (member app).** A rules policy (`next-step-v1`) picks the intent; the text is the fixed library entry for it. No language model runs here.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Pol as Policy
-    participant LM as Muse Glimmer
+    participant Pol as Rules policy (next-step-v1)
     participant Mem as Membrane (post)
-    participant Out as Member (check-in / demo)
-    Pol->>LM: intent (e.g. barrier_problem_solving)
-    LM->>Mem: draft message
+    participant Out as Member (check-in)
+    Pol->>Mem: fixed text for the intent
     Mem->>Mem: layer 0 (LHM narration guard), then boundary-v1 DSL
-    alt draft passes
-        Mem->>Out: message, byte-identical (never edited)
-    else draft fails
-        Mem->>LM: regenerate (once)
-        LM->>Mem: second draft
-        Mem-->>Out: pass, or escalate (nothing sent)
+    alt passes
+        Mem->>Out: the step, byte-identical (never edited)
+    else fails
+        Mem->>Out: replaced by the clinician handoff ("Ask a professional")
     end
 ```
 
-In `SimMemberEnv` (the RL env and the eval baselines), the policy calls `send_message` directly. The env runs `boundary-v1` itself, with no layer 0 and no regenerate. Routing env drafts through the membrane is planned.
+**Offline narrative (synthetic cohort).** The only path that regenerates a failed draft. Muse Glimmer (or the offline template client) writes each member journal and coach reply; nothing here reaches a live member.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Gen as simmember.narrative
+    participant LM as Muse Glimmer (or template)
+    participant Mem as Membrane (post)
+    participant Cache as NarrativeCache
+    Gen->>LM: prompt (member, day, kind)
+    LM->>Mem: draft
+    Mem->>Mem: layer 0, then boundary-v1 DSL
+    alt passes
+        Mem->>Cache: draft, byte-identical
+    else fails
+        Mem->>LM: regenerate (once)
+        LM->>Mem: second draft
+        Mem-->>Cache: pass, or escalate (no text stored)
+    end
+```
+
+**RL env and eval (`SimMemberEnv`).** The policy calls `send_message` directly. The env runs `boundary-v1` itself, with no layer 0 and no regenerate. The demo playground runs `post()` on the draft first, but only as an advisory verdict: the env is stepped with the draft whatever the membrane says, and only the echoed draft is withheld. Gating env drafts with the membrane is planned.
 
 ```mermaid
 sequenceDiagram
