@@ -46,12 +46,15 @@ VENDOR = Path(__file__).parent / "vendor"
 AXE_SHA256 = "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1"
 AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
 # AM-2 D1 (G31): the member app is served at "/", the research console at "/admin".
-ROUTES = ["checkin", "review", "passport", "next"]
+# Visual spec rev 3 §2 (HAC-68): the member routes; #checkin stays an alias of #today.
+ROUTES = ["today", "review", "passport", "next", "timeline"]
+ALIASES = {"checkin": "today"}
 ADMIN_ROUTES = ["lab", "inventory", "research"]
 # AM-2 D2 (G32): the board removed the demo banner and these tags (HAC-66); T1.2 now checks they are absent.
 REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
                 "Research view (optional)")
 REAL_PHRASE = "Your real input, evaluation from vetted sources"
+SAVED = re.compile(r"Your clone updated|to your clone")
 TEXT_CHECKIN = "slept 6 hours and walked 8000 steps"
 CRISIS_TEXT = "slept 3 hours, I want to end my life"
 TIMEOUT_MS = 20_000
@@ -131,7 +134,7 @@ def page(browser: Browser, page_errors: list[str]) -> Iterator[Page]:
 
 
 def screen(page: Page, route: str):
-    return page.locator(f"#screen-{route}")
+    return page.locator(f"#screen-{ALIASES.get(route, route)}")
 
 
 def url(base_url: str, route: str) -> str:
@@ -157,6 +160,8 @@ def fresh_journal(page: Page, base_url: str) -> None:
 
 def axe_violations(page: Page, axe_source: str) -> list[dict[str, Any]]:
     """T10.1: serious or critical violations for the WCAG 2.0/2.1 A and AA tags."""
+    # rev 3's one-shot entrance motion (520 ms) fades rows in from opacity 0: measure the settled page
+    page.wait_for_function("document.getAnimations().every(a => a.playState !== 'running')")
     if not page.evaluate("typeof window.axe !== 'undefined'"):
         page.add_script_tag(content=axe_source)
     found = page.evaluate(
@@ -201,7 +206,8 @@ def confirm_all_and_save(page: Page) -> None:
     for radio in page.locator("#rv-list input[type=radio][value=confirm]").all():
         radio.check()
     page.click("#rv-submit")
-    expect(page.locator("#rv-msg")).to_contain_text("to your clone")
+    # rev 3 §3.3: "Your clone updated", or the rev 2 saved notice if the timeline GET failed
+    expect(page.locator("#rv-msg")).to_contain_text(SAVED)
 
 
 def saved_journal(page: Page, base_url: str) -> None:
@@ -214,9 +220,11 @@ def saved_journal(page: Page, base_url: str) -> None:
 def wait_route_ready(page: Page, route: str) -> None:
     ready = {
         "checkin": "#ci-files-btn",
+        "today": "#ci-files-btn",
         "review": "#screen-review h1",
         "passport": "#pp-cards article",
         "next": "#ns-panel button",
+        "timeline": "#tl-days details",
         "lab": "#lab-rows tr",
         "inventory": "#ainv-list li",
     }[route]
@@ -238,8 +246,8 @@ def research_episode(page: Page) -> None:
 
 @pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
 def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
-    """T1.2, T10.1, T10.3 on the 4 member routes, walked in journey order on the seeded persona's journal
-    with one more check-in, then every research-console route (AM-2 D1)."""
+    """T1.2, T10.1, T10.3 on the 5 member routes (and the "Your clone updated" moment), walked in journey
+    order on the seeded persona's journal with one more check-in, then every research-console route (AM-2 D1)."""
     page = _new_page(browser, page_errors, viewport=viewport)
     seen: list[str] = []
 
@@ -250,9 +258,10 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
         assert_no_hscroll(page, where)
         seen.append(route)
 
-    goto(page, base_url, "checkin")
-    wait_route_ready(page, "checkin")
-    check("checkin")
+    goto(page, base_url, "today")
+    wait_route_ready(page, "today")
+    expect(page.locator("#clone-aside")).to_be_visible()  # the seeded landing with its "Your clone" aside
+    check("today")
 
     page.fill("#ci-text", TEXT_CHECKIN)
     page.click("#ci-submit")
@@ -260,6 +269,8 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
     check("review")  # pending review: the proposal cards and decision radios
 
     confirm_all_and_save(page)
+    expect(page.locator("#rv-msg .clone-updated")).to_be_visible()
+    check("updated")  # rev 3 §3.3: the "Your clone updated" moment
     goto(page, base_url, "passport")
     wait_route_ready(page, "passport")
     page.locator("details.thread > summary").first.click()
@@ -269,6 +280,12 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
     goto(page, base_url, "next")
     wait_route_ready(page, "next")
     check("next")
+
+    goto(page, base_url, "timeline")
+    wait_route_ready(page, "timeline")
+    page.click("#tl-more")  # a second page of days, and a closed entry opened
+    page.locator("#tl-days details:not([open]) > summary").first.click()
+    check("timeline")
 
     goto(page, base_url, "lab")
     wait_route_ready(page, "lab")
@@ -282,13 +299,14 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
     research_episode(page)
     check("research")
 
-    assert seen == ROUTES + ADMIN_ROUTES
+    assert seen == ["today", "review", "updated", "passport", "next", "timeline"] + ADMIN_ROUTES
     page.context.close()
 
 
 def test_direct_load_focuses_each_h1(browser: Browser, page_errors, base_url: str):
-    """G27 (9): a direct load or reload of a route URL leaves focus on that screen's h1."""
-    for route in ROUTES + ADMIN_ROUTES:
+    """G27 (9): a direct load or reload of a route URL leaves focus on that screen's h1 (the #checkin
+    alias lands on #today's)."""
+    for route in ROUTES + ["checkin"] + ADMIN_ROUTES:
         page = _new_page(browser, page_errors, viewport=DESKTOP)
         for _ in range(2):  # the first load, then a reload of the same URL
             if _:
@@ -297,7 +315,7 @@ def test_direct_load_focuses_each_h1(browser: Browser, page_errors, base_url: st
                 page.goto(url(base_url, route))
             expect(screen(page, route)).to_be_visible()
             focused = page.evaluate("document.activeElement && document.activeElement.id")
-            assert focused == f"h-{route}", f"#{route}: focus on {focused!r}"
+            assert focused == f"h-{ALIASES.get(route, route)}", f"#{route}: focus on {focused!r}"
             assert page.evaluate("window.scrollY") == 0, f"#{route} scrolled on load"
         page.context.close()
 
@@ -307,12 +325,16 @@ def test_direct_load_focuses_each_h1(browser: Browser, page_errors, base_url: st
 
 def test_t2_1_checkin_heading_label_and_warning(page: Page, base_url: str):
     goto(page, base_url, "checkin")
-    expect(page.locator("#screen-checkin h1")).to_have_text("What matters today?")
+    # rev 3 §3.1: the seeded persona is greeted by first name; a fresh journal has the plain question
+    expect(page.locator("#screen-today h1")).to_have_text(re.compile(r"^What matters today(, \S+)?\?$"))
     box = page.get_by_label("Your check-in")
     expect(box).to_have_count(1)
     assert box.evaluate("e => e.tagName") == "TEXTAREA"
-    expect(page.locator("#real-data-warning")).to_be_visible()
-    expect(page.locator("#real-data-warning")).to_contain_text("Keep personal details out")  # AM-2 D2
+    # rev 3 (AM-2 D2): the privacy notice is one neutral hint, still in aria-describedby
+    expect(page.locator("#ci-pii")).to_be_visible()
+    expect(page.locator("#ci-pii")).to_have_text("Leave out names, e-mail addresses, phone numbers and dates of birth.")
+    assert "ci-pii" in (box.get_attribute("aria-describedby") or "").split()
+    expect(page.locator("#real-data-warning")).to_have_count(0)
 
 
 def test_t3_3_voice_and_video_disabled(page: Page, base_url: str):
@@ -456,7 +478,9 @@ def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
     expect(confirm).to_be_focused()
     kb.to("#rv-submit")
     kb.press("Enter")
-    expect(page.locator("#rv-msg")).to_contain_text("Saved 1 value to your clone")
+    # rev 3 §3.3: "Your clone updated" takes focus; its first action is the passport
+    expect(page.locator("#rv-msg .clone-updated")).to_be_focused()
+    expect(page.locator("#rv-msg")).to_contain_text("Saved 1 value")
 
     kb.to("#rv-msg a[href='#passport']")
     kb.press("Enter")
@@ -475,12 +499,21 @@ def test_t10_2_keyboard_only_journey(page: Page, base_url: str):
     kb.press("Space")
     expect(page.locator("#ns-result")).to_contain_text("Goal set")
 
-    kb.to("#ns-result a[href='#passport']")
+    kb.to("#ns-result a[href='#timeline']")  # rev 3 §3.5 (was "Back to your passport")
     kb.press("Enter")
-    wait_route_ready(page, "passport")
-    expect(page.locator("#h-passport")).to_be_focused()
-    kb.to("details.thread > summary")
-    kb.press("Tab")  # focus leaves the summary, so its ring is settled before the page changes
+    wait_route_ready(page, "timeline")
+    expect(page.locator("#h-timeline")).to_be_focused()
+    kb.to("#tl-days details > summary")  # the newest entry, open
+    newest = page.locator("#tl-days details").first
+    expect(newest).to_have_attribute("open", "")
+    kb.press("Enter")  # Enter toggles a timeline entry (rev 3 §5)
+    expect(newest).not_to_have_attribute("open", "")
+    kb.press("Space")
+    expect(newest).to_have_attribute("open", "")
+    kb.to("#tl-more")
+    kb.press("Enter")
+    expect(page.locator("#tl-days h2").nth(7)).to_be_focused()  # focus moves to the first day it added
+    kb.press("Tab")  # focus leaves the last stop, so its ring is settled before the page changes
 
     goto(page, base_url, "lab")
     wait_route_ready(page, "lab")
@@ -525,6 +558,9 @@ MOTION_JS = """() => {
 def test_t10_4_reduced_motion_zeroes_every_duration(browser: Browser, page_errors, base_url: str):
     page = _new_page(browser, page_errors, viewport=DESKTOP, reduced_motion="reduce")
     saved_journal(page, base_url)
+    expect(page.locator("#rv-msg .clone-updated")).to_be_visible()
+    bad = page.evaluate(MOTION_JS)
+    assert bad == [], f"clone updated: {bad[:10]}"  # rev 3 §3.3: the ring pulse and row rise are removed too
     for route in ROUTES + ADMIN_ROUTES:  # every route on both surfaces (QG P3 B3, AM-2 D1)
         goto(page, base_url, route)
         if route == "research":
@@ -549,7 +585,9 @@ def test_crisis_handoff_replaces_review(page: Page, base_url: str, axe_source: s
     check_in_text(page, base_url, CRISIS_TEXT)
     msg = page.locator("#ci-msg")
     expect(msg).to_contain_text(HANDOFF_TEXT)
+    expect(msg).to_contain_text("Your clone cannot help with this.")  # rev 3 §3.1
     expect(page.locator("#ci-form")).to_be_hidden()
+    expect(page.locator("#clone-aside")).to_be_hidden()  # it replaces both columns
     assert page.evaluate("location.hash") == "#checkin"
     assert page.evaluate("document.activeElement.closest('#ci-msg') !== null")
     assert msg.locator("a").count() == 0, "the hand-off adds no link"
@@ -567,7 +605,7 @@ def test_next_before_any_saved_checkin_says_check_in_first(page: Page, base_url:
     msg = page.locator("#ns-msg")
     expect(msg).to_contain_text("Check in first")
     expect(page.locator("#ns-panel")).to_be_hidden()
-    expect(msg.locator("a[href='#checkin']")).to_have_count(1)
+    expect(msg.locator("a[href='#today']")).to_have_count(1)
     assert_axe_clean(page, axe_source, "#next 409")
 
 
@@ -798,7 +836,7 @@ def test_next_choice_post_failure(page: Page, base_url: str, axe_source: str, fa
     if failure == "409":
         expect(alert).to_contain_text("Check in first")
         expect(page.locator("#ns-panel")).to_be_hidden()
-        expect(msg.locator("a[href='#checkin']")).to_have_count(1)
+        expect(msg.locator("a[href='#today']")).to_have_count(1)
         assert_axe_clean(page, axe_source, "#next POST 409")
         return
     expect(alert).to_contain_text("error 500" if failure == "500" else "could not reach the server")
@@ -839,10 +877,178 @@ def test_flagged_proposal_correct_states_the_shown_field(
     assert_axe_clean(page, axe_source, where)
     assert_no_hscroll(page, where)
     page.click("#rv-submit")
-    expect(page.locator("#rv-msg")).to_contain_text("to your clone")
+    expect(page.locator("#rv-msg")).to_contain_text(SAVED)
     decision = json.loads(posted[-1])["decisions"][0]
     assert decision["action"] == "correct" and decision.get(field) == shown, (decision, shown)
     page.context.close()
 
 
 FLAG_LABELS = {"unit_assumed": "Unit assumed", "ambiguous_date": "Ambiguous date"}
+
+
+# ---------------------------------------------------------------- visual spec rev 3, member surface (HAC-38 P6.2)
+
+
+def _api(page: Page, base_url: str, path: str) -> Any:
+    return page.request.get(f"{base_url}api/journals/{_journal_id(page)}{path}").json()
+
+
+@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
+def test_rev3_today_seeded_landing_matches_the_api(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
+    """§2, §3.1: the persona chip, the greeting and every "Your clone" number come from the journal's own GETs."""
+    page = _new_page(browser, page_errors, viewport=viewport)
+    goto(page, base_url, "today")
+    wait_route_ready(page, "today")
+    aside = page.locator("#clone-aside")
+    expect(aside).to_be_visible()
+    persona = page.request.get(f"{base_url}api/personas").json()[0]
+    first = persona["display_name"].split()[0]
+    expect(page.locator("#h-today")).to_have_text(f"What matters today, {first}?")
+    tl, pp = _api(page, base_url, "/timeline"), _api(page, base_url, "/passport")
+    entries = tl["entries"]
+    days = len({e["as_of"][:10] for e in entries})
+    obs = sum(len(e["appends"]) for e in entries)
+    ready = sum(1 for c in pp["cards"] if c["status"] == "ready")
+    assert tl["omitted"] == 0
+    expect(page.locator("#clone-stats li")).to_have_text(
+        [f"{days} days of history", f"{len(entries)} saved check-ins", f"{obs} observations", f"{ready} cards ready"]
+    )
+    expect(page.locator("#persona")).to_have_text(f"{persona['display_name'][0]}{persona['display_name']} · {tl['member_id']}")
+    expect(page.locator("nav[aria-label=Member] a[aria-current=page]")).to_have_text(re.compile("Today$"))
+    assert page.evaluate("[...document.querySelectorAll('a[href]')].filter(a => /admin|dashboard/.test(a.getAttribute('href'))).length") == 0
+    where = f"#today seeded @ {viewport['width']}px"
+    assert_axe_clean(page, axe_source, where)
+    assert_no_hscroll(page, where)
+    page.context.close()
+
+
+def test_rev3_fresh_journal_today_has_no_aside_and_an_empty_timeline(page: Page, base_url: str, axe_source: str):
+    fresh_journal(page, base_url)
+    goto(page, base_url, "today")
+    wait_route_ready(page, "today")
+    expect(page.locator("#h-today")).to_have_text("What matters today?")
+    expect(page.locator("#clone-aside")).to_be_hidden()
+    expect(page.locator("#ci-date")).to_be_visible()
+    goto(page, base_url, "timeline")
+    msg = page.locator("#tl-msg")
+    expect(msg).to_contain_text("No updates yet")
+    expect(msg).to_contain_text("Your first saved check-in starts the timeline.")
+    expect(msg.locator("a[href='#today']")).to_have_text("Check in")
+    expect(page.locator("#tl-body")).to_be_hidden()
+    assert_axe_clean(page, axe_source, "#timeline empty")
+
+
+@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
+def test_rev3_timeline_days_entries_and_paging(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
+    """§3.6: newest first, grouped by day, the newest open and marked new, 7 days a page, and the C5 note."""
+    page = _new_page(browser, page_errors, viewport=viewport)
+    goto(page, base_url, "timeline")
+    wait_route_ready(page, "timeline")
+    tl = _api(page, base_url, "/timeline")
+    days = sorted({e["as_of"][:10] for e in tl["entries"]}, reverse=True)
+    expect(page.locator("#tl-note")).to_be_visible()
+    expect(page.locator("#tl-days section.tl-day")).to_have_count(min(7, len(days)))
+    expect(page.locator("#tl-days h2").first).to_contain_text("Today · ")
+    newest = tl["entries"][-1]
+    first = page.locator("#tl-days .tl > li").first
+    expect(first).to_have_class("is-new")
+    expect(first.locator("details")).to_have_attribute("open", "")
+    expect(first.locator(".tl-title")).to_have_text(f"Check-in saved · {len(newest['appends'])} observations")
+    chips = [f"↻ Updated: {c['title']}" for c in newest["passport_changes"] if c["change"] == "value_changed"]
+    expect(first.locator(".tl-chips li")).to_have_text(chips)
+    expect(page.locator("#tl-days details[open]")).to_have_count(1)
+    page.click("#tl-more")
+    expect(page.locator("#tl-days section.tl-day")).to_have_count(min(14, len(days)))
+    expect(page.locator("#tl-days h2").nth(7)).to_be_focused()
+    where = f"#timeline @ {viewport['width']}px"
+    assert_axe_clean(page, axe_source, where)
+    assert_no_hscroll(page, where)
+    page.context.close()
+
+
+@pytest.mark.parametrize("failure", ["502", "404"])
+def test_rev3_timeline_get_failure_states(page: Page, base_url: str, axe_source: str, failure: str):
+    goto(page, base_url, "today")
+    wait_route_ready(page, "today")
+    body = '{"error": "unknown_journal"}' if failure == "404" else '{"error": "bad_gateway"}'
+    page.route(re.compile(r".*/api/journals/[^/]+/timeline$"),
+               lambda route: route.fulfill(status=int(failure), content_type="application/json", body=body))
+    goto(page, base_url, "timeline")
+    if failure == "404":
+        expect(page.locator("#session-msg")).to_contain_text("This session has ended")
+    else:
+        expect(page.locator("#tl-msg")).to_contain_text("We had a problem on our side (error 502)")
+        expect(page.locator("#h-timeline")).to_be_focused()  # a failed GET leaves focus on the h1
+    expect(page.locator("#tl-body")).to_be_hidden()
+    assert_axe_clean(page, axe_source, f"#timeline {failure}")
+
+
+@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
+def test_rev3_clone_updated_moment(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
+    """§3.3: after a 200 save, the panel built from this check-in's timeline entry takes focus, animates once."""
+    page = _new_page(browser, page_errors, viewport=viewport, reduced_motion="no-preference")
+    saved_journal(page, base_url)
+    panel = page.locator("#rv-msg .clone-updated")
+    expect(panel).to_be_focused()
+    expect(panel).to_have_attribute("role", "status")
+    expect(panel).to_have_attribute("aria-labelledby", "cu-t")
+    expect(page.locator("#cu-t")).to_have_text("Your clone updated")
+    checkin = page.evaluate("location.hash").split("/", 1)[1]
+    entry = next(e for e in _api(page, base_url, "/timeline")["entries"] if e["checkin_id"] == checkin)
+    keys = (["Observed"] if entry["appends"] else []) + [
+        {"became_ready": "Card ready", "value_changed": "Updated", "now_observed": "Now observed", "withheld": "Withheld"}[c["change"]]
+        for kind in ("became_ready", "value_changed", "now_observed", "withheld") for c in entry["passport_changes"] if c["change"] == kind
+    ] + (["Next step"] if entry["next_step"]["changed"] else [])
+    expect(panel.locator("ul.delta > li > .k")).to_have_text(keys)
+    assert not re.search(r"\b0 (cards?|observations?)\b", panel.inner_text())
+    # one-shot motion: the rows rise once in 520 ms and nothing loops
+    anim = panel.locator("ul.delta > li").first.evaluate("e => [getComputedStyle(e).animationDuration, getComputedStyle(e).animationIterationCount]")
+    assert anim == ["0.52s", "1"], anim
+    where = f"clone updated @ {viewport['width']}px"
+    assert_axe_clean(page, axe_source, where)
+    assert_no_hscroll(page, where)
+    panel.get_by_role("link", name="View timeline").click()
+    wait_route_ready(page, "timeline")
+    expect(page.locator("#h-timeline")).to_be_focused()
+    page.context.close()
+
+
+def test_rev3_clone_updated_falls_back_when_the_timeline_get_fails(page: Page, base_url: str):
+    """§3.3: the save already happened, so a failed timeline GET shows the rev 2 saved notice, not an error."""
+    check_in_text(page, base_url)
+    wait_review(page)
+    page.route(re.compile(r".*/api/journals/[^/]+/timeline$"),
+               lambda route: route.fulfill(status=503, content_type="application/json", body='{"error": "unavailable"}'))
+    for radio in page.locator("#rv-list input[type=radio][value=confirm]").all():
+        radio.check()
+    page.click("#rv-submit")
+    msg = page.locator("#rv-msg")
+    expect(msg).to_contain_text(re.compile(r"Saved \d+ values? to your clone"))
+    expect(msg.locator(".clone-updated")).to_have_count(0)
+    expect(msg).not_to_contain_text("Something went wrong")
+    expect(msg.locator(".notice")).to_be_focused()
+
+
+def test_rev3_nav_route_changes_focus_each_h1_and_mark_the_page(page: Page, base_url: str):
+    goto(page, base_url, "today")
+    wait_route_ready(page, "today")
+    for route in ["timeline", "passport", "next", "review", "today"]:
+        page.locator(f"nav[aria-label=Member] a[href^='#{route}']").click()
+        expect(screen(page, route)).to_be_visible()
+        expect(page.locator(f"#h-{route}")).to_be_focused()
+        expect(page.locator("nav[aria-label=Member] a[aria-current=page]")).to_have_count(1)
+        expect(page.locator(f"nav[aria-label=Member] a[href^='#{route}']")).to_have_attribute("aria-current", "page")
+
+
+def test_rev3_skip_link_is_first_and_keeps_the_route(page: Page, base_url: str):
+    goto(page, base_url, "passport")
+    wait_route_ready(page, "passport")
+    first = page.evaluate("""() => [...document.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex="0"]')]
+      .find(e => e.offsetParent !== null || getComputedStyle(e).position === 'absolute')""" + "?.className")
+    assert first == "skip"  # the first stop in tab order
+    page.focus("a.skip")
+    expect(page.locator("a.skip")).to_be_in_viewport()  # it shows itself when focused
+    page.keyboard.press("Enter")
+    expect(page.locator("#main")).to_be_focused()
+    assert page.evaluate("location.hash") == "#passport"
+    expect(screen(page, "passport")).to_be_visible()

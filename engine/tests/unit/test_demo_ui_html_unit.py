@@ -19,9 +19,16 @@ from fastapi.testclient import TestClient  # noqa: E402
 from daypart.demo.app import create_app  # noqa: E402
 
 REAL_INPUT_PHRASE = "Your real input, evaluation from vetted sources"
-ALLOWED_HEX = {"183446", "2B6F8A", "E8F2F3", "247F72", "A65C16", "FFFFFF"}
+# Visual spec rev 3 §1 (HAC-68): the member and console palettes plus the shared provenance / warning hues.
+ALLOWED_HEX = {"070B14", "0F1729", "16213A", "EAF0FA", "A9B8D0", "5E7397", "24324F", "9AA8FF",  # member
+               "09090B", "111114", "18181C", "EDEDF0", "A6A6B0", "71717E", "26262C", "F08CF5",  # console
+               "4FD8C4", "F6B95C",  # observed (provenance), warn (system warning)
+               "000"}  # not a colour: the opaque mask layer of the .panel--glow gradient border
+# the decorative alpha variants: glows, the console grid, the panel highlight and the shadows
+ALLOWED_ALPHA_HEX = {"9AA8FF2E", "4FD8C41F", "F08CF526", "FFFFFF0A", "FFFFFF0D", "00000099", "000000CC"}
 # AM-2 D1 (G31): the member app at "/" and the research console at "/admin" are separate shells.
-MEMBER_SCREENS = ("checkin", "review", "passport", "next")
+# Rev 3 §2: the member screens are Today (was #checkin, kept as its alias), Review, Passport, Next, Timeline.
+MEMBER_SCREENS = ("today", "review", "passport", "next", "timeline")
 ADMIN_SCREENS = ("lab", "inventory", "research")
 SCREENS = MEMBER_SCREENS
 # AM-2 D2 (G32): the board removed these tags from both surfaces (HAC-66, 2026-11-10).
@@ -210,21 +217,25 @@ def _is_inside(node: _Node, ancestor: _Node) -> bool:
 
 
 def test_header_is_first_in_body_outside_main(html):
-    # AM-2 D2 (G32): the demo-mode banner is gone; the site header now opens the page.
+    # AM-2 D2 (G32): the demo-mode banner is gone. Rev 3 §5: a skip link comes first, then the member header.
     root = _tree(html)
     body = next(n for n in root.iter() if n.tag == "body")
-    first = next(c for c in body.children if isinstance(c, _Node))
-    assert first.tag == "header" and "site-head" in (first.attrs.get("class") or "").split()
+    first, second = [c for c in body.children if isinstance(c, _Node)][:2]
+    assert first.tag == "a" and first.attrs.get("class") == "skip" and first.attrs.get("href") == "#main"
+    assert second.tag == "header" and "m-head" in (second.attrs.get("class") or "").split()
     main = next(n for n in root.iter() if n.tag == "main")
-    assert not _is_inside(first, main)
+    assert main.attrs.get("id") == "main" and main.attrs.get("tabindex") == "-1"
+    assert not _is_inside(second, main)
 
 
-def test_step_nav_has_four_member_links(html):
-    # AM-2 D1: the learning lab moved to the research console, so the journey nav has 4 links.
+def test_member_nav_has_five_items(html):
+    # Rev 3 §2 (AM-2 D1): Today · Review · Passport · Next · Timeline (was a 4-link "Journey" step nav).
     root = _tree(html)
-    nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Journey")
-    hrefs = [n.attrs.get("href") for n in nav.iter() if n.tag == "a"]
-    assert hrefs == ["#checkin", "#review", "#passport", "#next"]
+    nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Member")
+    links = [n for n in nav.iter() if n.tag == "a"]
+    assert [a.attrs.get("href") for a in links] == ["#today", "#review", "#passport", "#next", "#timeline"]
+    assert [" ".join(a.text().split())[1:].strip() for a in links] == ["Today", "Review", "Passport", "Next", "Timeline"]
+    assert not any(n.attrs.get("aria-label") == "Journey" for n in root.iter() if n.tag == "nav")
 
 
 @pytest.mark.parametrize("surface", ["html", "admin"])
@@ -245,20 +256,24 @@ def test_footer_loinc_notice_and_no_disclaimer(surface, request):
 
 def test_t2_1_checkin_heading_labelled_textarea_and_warning(html):
     root = _tree(html)
-    sec = _by_id(root, "screen-checkin")
+    sec = _by_id(root, "screen-today")
     h1 = next(n for n in sec.iter() if n.tag == "h1")
-    assert h1.text().strip() == "What matters today?"
+    assert h1.text().strip() == "What matters today?"  # the fresh-journal text; a persona's adds the first name
     areas = [n for n in sec.iter() if n.tag == "textarea"]
     assert len(areas) == 1 and areas[0].attrs.get("maxlength") == "500"
     tid = areas[0].attrs.get("id")
     assert tid and any(n.tag == "label" and n.attrs.get("for") == tid for n in sec.iter())
-    # AM-2 D2: the "public demo" warning became a privacy note; the PII tripwire is unchanged.
-    assert "Keep personal details out" in sec.text()
-    assert "Do not enter real health data" not in sec.text() and "public demo" not in sec.text()
+    # Rev 3 §3.1 (AM-2 D2): the privacy notice became one neutral hint, still in aria-describedby; the PII
+    # refusal is unchanged (was: the "Keep personal details out" notice, #real-data-warning).
+    hint = _by_id(root, "ci-pii")
+    assert " ".join(hint.text().split()) == "Leave out names, e-mail addresses, phone numbers and dates of birth."
+    assert "ci-pii" in (areas[0].attrs.get("aria-describedby") or "").split()
+    assert "real-data-warning" not in html and "Keep personal details out" not in html
+    assert "Do not enter real health data" not in html and "public demo" not in sec.text()
 
 
 def test_t3_3_voice_and_video_disabled_not_available(html):
-    sec = _by_id(_tree(html), "screen-checkin")
+    sec = _by_id(_tree(html), "screen-today")
     buttons = [n for n in sec.iter() if n.tag == "button" and "disabled" in n.attrs]
     for word in ("Voice", "Video"):
         hits = [b for b in buttons if word in b.text()]
@@ -286,10 +301,13 @@ def test_t9_4_real_input_button_controls_a_live_region(admin):
 
 
 @pytest.mark.parametrize("surface", ["html", "admin"])
-def test_only_the_six_token_colours(surface, request):
+def test_only_the_rev3_token_colours(surface, request):
+    # Rev 3 §1 replaced the six rev 2 tokens with one palette per surface (both ship in the shared CSS).
     html = request.getfixturevalue(surface)
     found = {m.upper() for m in re.findall(r"(?<![&\w])#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b", html)}
-    assert found == ALLOWED_HEX, found - ALLOWED_HEX
+    assert found == ALLOWED_HEX, found ^ ALLOWED_HEX
+    alpha = {m.upper() for m in re.findall(r"(?<![&\w])#([0-9A-Fa-f]{8})\b", html)}
+    assert alpha == ALLOWED_ALPHA_HEX, alpha ^ ALLOWED_ALPHA_HEX
     assert not re.search(r"\b(rgba?|hsla?)\(", html)
 
 
@@ -542,9 +560,10 @@ _API = ["TIMEOUT_MS", "api", "code", "failed", "serverError", "showError", "isGo
 
 def test_rev2_css_brings_over_handoff_info_and_range_rules(html):
     css = _style(html)
-    assert re.search(r"\.notice--handoff\{border-color:var\(--ink\)\}", css)
-    assert ".notice--handoff .handoff-text" in css
-    assert ".notice:focus{" in css
+    # rev 3 §3.1: the hand-off bar is the surface text colour (was the rev 2 --ink token)
+    assert re.search(r"\.notice--handoff\{border-left-color:var\(--c-text\)\}", css)
+    assert ".handoff-text{font-weight:600}" in css
+    assert '.notice[tabindex="-1"]:focus,.clone-updated[tabindex="-1"]:focus{' in css
     assert ".ref-pop,.ref-src{display:block}" in css
     assert ".visually-hidden{" in css
     assert ".spec{" not in css and "[data-screen]{display:none}" not in css
@@ -555,10 +574,12 @@ def test_rev2_crisis_handoff_notice(html):
     hand = _section(js, "function showHandoff", "\n}\n")
     assert '"handoff"' in hand  # notice kind → .notice--handoff
     assert "Please talk to a person about this" in hand
-    assert "This app cannot help with this. Nothing from your check-in was saved." in hand
+    # rev 3 §3.1: the only copy change (was "This app cannot help with this.")
+    assert "Your clone cannot help with this. Nothing from your check-in was saved." in hand
     assert "Write a different check-in" in hand
     assert '"alert"' in hand and "focus" in hand
-    assert "real-data-warning" in hand and ".hidden = true" in hand
+    # it replaces both columns: the check-in form and the "Your clone" aside (was: the real-data notice)
+    assert "setAside(false)" in hand and ".hidden = true" in hand
     assert "A person can help with this" not in js and '"Start again"' not in hand
     # the UI adds no phone number, link or emergency copy of its own: the API text is the body
     assert "tel:" not in html
@@ -571,7 +592,7 @@ def test_rev2_crisis_handoff_notice(html):
 def test_rev2_checkin_server_copy(html):
     js = _script(html)
     assert "Something went wrong reading your check-in, so nothing was saved" in js
-    assert "This is a fault on our side, not in what you wrote. Try again, or import a file." in js
+    assert "This is a fault on our side, not in what you wrote. Try again, or add a file." in js  # rev 3 (was "import a file")
     assert "That is too long, so nothing was saved" in js
     assert "Keep your check-in to 500 characters." in js
     assert "extractor_output_invalid" in js
@@ -595,21 +616,25 @@ def test_rev2_generic_server_and_network_errors(html):
     assert re.search(r"^var TIMEOUT_MS = 15000;$", js, re.M)  # exactly 15 s (§3.8), not 150000
     # AM-2 D2: production copy (was "the demo server" / "The demo had a problem")
     assert "We could not reach the server. Check your connection and try again." in js
-    assert "The service had a problem on its side (error " in js and "Try again in a moment." in js
+    # rev 3 §3.8 (was "The service had a problem on its side (error N)")
+    assert "We had a problem on our side (error " in js and "Try again in a moment." in js
     low = " ".join(_string_literals(js)).lower()
     assert not re.search(r"\b(the|this|a) demo\b|demo (file|image|input|server|session)", low), low
     assert '"Try again"' in js
     assert "Something went wrong, so nothing was saved" not in js  # the network copy makes no saving claim
     assert "genericError" not in js
     # error notices never carry the server's body
-    assert not re.search(r"\bdetail\b", js)
+    assert not re.search(r"(?<!tl-)\bdetail\b", js)  # rev 3's timeline class .tl-detail is not a server field
 
 
 def test_rev2_get_failure_notice_sits_directly_under_h1(html, admin):
     # AM-2 D1: the lab is on the research console now; the inventory screen joins it there.
-    for page, s in ((html, "passport"), (html, "next"), (admin, "lab"), (admin, "inventory")):
+    # Rev 3 §3.4, §3.6: an eyebrow line may sit above the h1; the notice slot still follows the h1 directly.
+    for page, s in ((html, "passport"), (html, "next"), (html, "timeline"), (admin, "lab"), (admin, "inventory")):
         sec = _by_id(_tree(page), "screen-" + s)
         kids = [c for c in sec.children if isinstance(c, _Node)]
+        if kids[0].tag == "p" and kids[0].attrs.get("class") == "eyebrow":
+            kids = kids[1:]
         assert kids[0].tag == "h1", s
         assert kids[1].tag == "div" and (kids[1].attrs.get("id") or "").endswith("-msg"), s
 
@@ -888,11 +913,15 @@ def test_d4_stale_step_refetch_failure_takes_focus(second):
     assert got["role"] == "alert" and got["tabindex"] == "-1" and got["focused"]
 
 
+# rev 3: updateNav also draws the journal's identity (applyIdentity), and #today loads the "Your clone" aside
+_IDENTITY = ["WEEKDAYS", "fmtShortDay", "fmtWeekday", "firstName", "applyIdentity"]
+_TL = ["fmtValue", "shiftDate", "TL_CHIPS", "tlChanges", "tlAppends", "tlStep", "tlTitle", "tlChips", "tlAdded", "tlSentences",
+       "deltaRows", "tlDayLabel"]
 _CHECKIN = ["persist", "updateNav", "journalPending", "adoptJournal", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
-            "loadFixtures", "submitCheckin"]
+            "loadFixtures", "submitCheckin", "setAside", "cloneSeq", "loadClone", "renderClone"] + _IDENTITY + _TL
 _CI_DOM = """
 mk("ci-load-msg"); var body = mk("ci-body"); ["ci-files", "ci-images"].forEach(function (i) { var b = mk(i); b.append(el("ul")); });
-mk("nav-review", "a");
+mk("nav-review", "a"); mk("ci-grid"); mk("clone-aside", "aside"); mk("ci-form", "form");
 function state() { var n = $("ci-load-msg").querySelector(".notice");
   return { title: n && n.querySelector(".notice-title").textContent, role: n && n.getAttribute("role"),
            bodyHidden: $("ci-body").hidden, text: $("ci-load-msg").textContent }; }
@@ -928,9 +957,10 @@ def test_d5_checkin_fixture_list_failure_shows_the_generic_notice(resp):
 
 
 def test_d5_checkin_load_notice_sits_directly_under_h1(html):
-    sec = _by_id(_tree(html), "screen-checkin")
-    kids = [c for c in sec.children if isinstance(c, _Node)]
-    assert kids[0].tag == "h1" and kids[1].attrs.get("id") == "ci-load-msg"
+    # rev 3 §3.1: the h1 now sits in the left column of #today, under the eyebrow date
+    hero = _by_id(_tree(html), "ci-hero")
+    kids = [c for c in hero.children if isinstance(c, _Node)]
+    assert kids[0].attrs.get("id") == "ci-date" and kids[1].tag == "h1" and kids[2].attrs.get("id") == "ci-load-msg"
 
 
 def test_d6_inventory_copy_matches_spec():
@@ -995,7 +1025,7 @@ def _handoff_run() -> dict:
     return _run_page(
         _SUBMIT,
         """
-        ["ci-msg", "ci-count", "ci-intro", "real-data-warning", "session-msg", "nav-review"].forEach(function (i) { mk(i); });
+        ["ci-msg", "ci-count", "ci-intro", "ci-grid", "clone-aside", "session-msg", "nav-review"].forEach(function (i) { mk(i); });
         var form = mk("ci-form", "form"); var ta = el("textarea"); ta.id = "ci-text"; form.append(ta); var sb = el("button"); sb.id = "ci-submit"; form.append(sb);
         ta.value = "something the person wrote";
         location.hash = "#checkin";
@@ -1006,7 +1036,7 @@ def _handoff_run() -> dict:
           handoff: (box.querySelector(".handoff-text") || { textContent: null }).textContent,
           links: box.querySelectorAll("a").length, buttons: box.querySelectorAll("button").map(function (b) { return b.textContent; }),
           focused: document.activeElement === n, role: n && n.getAttribute("role"),
-          formHidden: $("ci-form").hidden, introHidden: $("ci-intro").hidden, warnHidden: $("real-data-warning").hidden,
+          formHidden: $("ci-form").hidden, introHidden: $("ci-intro").hidden, asideHidden: $("clone-aside").hidden,
           textarea: ta.value, checkins: Object.keys(S.checkins).length };
         """ % repr(_HANDOFF_TEXT).replace("'", '"'),
     )
@@ -1024,7 +1054,7 @@ def test_t1_handoff_response_routes_to_show_handoff_without_review_or_next():
 def test_t2_handoff_body_is_the_api_text_verbatim_and_the_form_is_gone(html):
     got = _handoff_run()
     assert got["handoff"] == _HANDOFF_TEXT  # verbatim, nothing added or replaced
-    assert got["formHidden"] and got["introHidden"] and got["warnHidden"]
+    assert got["formHidden"] and got["introHidden"] and got["asideHidden"]  # both columns (was: the real-data notice)
     assert got["textarea"] == ""
     # the UI adds no number, link or href of its own (substring bans: no word boundaries to slip past)
     hand = _section(_script(html), "function showHandoff", "\n}\n")
@@ -1272,7 +1302,7 @@ def test_k3_member_facing_api_labels_never_say_demo(client):
 
 def test_k2_persona_checkin_links_say_already_saved():
     got = _run_page(
-        _BASE + ["persist", "updateNav", "adoptJournal", "alreadySavedNotice", "savedNotice", "rvSeq", "rvCurrent", "showReview"],
+        _BASE + _IDENTITY + ["persist", "updateNav", "adoptJournal", "alreadySavedNotice", "savedNotice", "rvSeq", "rvCurrent", "showReview"],
         """
         mk("nav-review", "a"); mk("rv-intro", "p"); mk("rv-msg"); mk("rv-form", "form"); mk("rv-list");
         var sessionStorage = { setItem: function () {} };
@@ -1318,7 +1348,7 @@ def test_t9_fresh_journal_during_the_first_load_is_fresh():
     """QG P6.1 T9 (regression for O1, b2f3ace): "Start a fresh journal" pressed while the persona
     journal is still being created ends on a fresh, empty journal, never the persona's."""
     got = _run_page(
-        _BASE + _API + ["persist", "updateNav", "adoptJournal", "journalPending", "createJournal", "ensureJournal",
+        _BASE + _API + _IDENTITY + ["persist", "updateNav", "adoptJournal", "journalPending", "createJournal", "ensureJournal",
                         "resetCheckin", "startAgain", "sessionEnded"],
         """
         mk("nav-review", "a"); mk("session-msg");
@@ -1344,3 +1374,339 @@ def test_t9_fresh_journal_during_the_first_load_is_fresh():
         """,
     )
     assert got[0] == "jf" and got[1] is None and got[2] == ["POST", "/api/journals", {"member_id": "syn-001"}]
+
+
+# --- HAC-38 P6.2 part A: visual spec rev 3 on the member app (HAC-68) ------------------------------
+
+
+def test_rev3_each_surface_sets_its_palette_on_body(html, admin):
+    for page, surface in ((html, "member"), (admin, "admin")):
+        bodies = [n for n in _tree(page).iter() if n.tag == "body"]
+        assert len(bodies) == 1 and bodies[0].attrs.get("data-surface") == surface, surface
+    css = _style(html)
+    assert '[data-surface="member"]{' in css and '[data-surface="admin"]{' in css
+    assert "[data-shell]" not in css and "SPEC ·" not in css  # the mockup-only rules are dropped
+
+
+def test_rev3_member_shell_header_persona_and_footer(html):
+    root = _tree(html)
+    head = next(n for n in root.iter() if n.tag == "header")
+    assert "m-head" in head.attrs.get("class", "")
+    assert any("orb" in (n.attrs.get("class") or "") for n in head.iter())
+    text = " ".join(head.text().split())
+    assert "Clinical Human Clone" in text and "HEALTH CLONE PASSPORT" in text
+    persona = _by_id(root, "persona")
+    assert _is_inside(persona, head) and "hidden" in persona.attrs  # filled from the journal, never a placeholder
+    foot = next(n for n in root.iter() if n.tag == "footer")
+    assert "m-foot" in foot.attrs.get("class", "")
+    assert [n.tag for n in foot.iter() if n.tag in ("p", "a", "button")] == ["p", "a", "a"]  # the LOINC notice only
+
+
+def test_rev3_member_render_links_no_console_dashboard_or_real_input(html):
+    root = _tree(html)
+    hrefs = [n.attrs.get("href") or "" for n in root.iter() if n.tag == "a"]
+    assert not [h for h in hrefs if "admin" in h or "dashboard" in h or h.startswith("/") and h != "/"], hrefs
+    shipped = re.sub(r"<!--.*?-->", "", html, flags=re.S)  # markup and script, not the source comments
+    assert "/admin" not in shipped and "/dashboard" not in shipped
+    ids = {n.attrs.get("id") for n in root.iter()}
+    assert not ids & {"ri-btn", "ri-panel", "screen-lab", "screen-research", "screen-inventory"}
+    assert not [n for n in root.iter() if n.tag in ("a", "button") and "Real input" in n.text()]
+
+
+def test_rev3_nav_marks_the_page_and_checkin_is_an_alias_of_today(html):
+    js = _script(html)
+    rt = _section(js, "function route()", "\n}\n")
+    assert '"page"' in rt and ".mnav a" in rt
+    got = _run_page(
+        ["$", "SCREENS", "ALIASES", "parseHash"],
+        """
+        var out = [];
+        ["#checkin", "#today", "#checkin/x", "#timeline", "#nope", "", "#review/c1"].forEach(function (h) {
+          location.hash = h; var r = parseHash(); out.push([r.base, r.rest]); });
+        return out;
+        """,
+    )
+    assert got == [["today", ""], ["today", ""], ["today", "x"], ["timeline", ""], ["today", ""], ["today", ""], ["review", "c1"]]
+
+
+def test_rev3_member_copy_is_neutral(html):
+    js = _script(html)
+    for s in ("Add a file", "Add an image", "Only the bundled files can be used", "Write a sentence or add a file",
+              "Your clone cannot help with this.", "We had a problem on our side (error ",
+              "We could not reach the server.", "This session has ended", "What your clone knows", "View timeline"):
+        assert s in html, s
+    for s in ("Import a device file", "Import a photo", "This app cannot help", "The service had a problem on its side",
+              "What the clone knows", "Continue to the learning lab"):
+        assert s not in html, s
+    assert '"Mode"' not in js  # rev 3 §3.4: no Mode row on the passport
+    low = " ".join(_string_literals(js)).lower()
+    assert not re.search(r"\bdemo\b", low.replace("not_a_demo_fixture", "")), low
+
+
+def test_rev3_timeline_screen_markup_and_c5_note(html):
+    root = _tree(html)
+    sec = _by_id(root, "screen-timeline")
+    kids = [c for c in sec.children if isinstance(c, _Node)]
+    assert [k.tag for k in kids[:4]] == ["p", "h1", "div", "p"]
+    assert kids[1].attrs.get("id") == "h-timeline" and kids[1].text() == "How your clone changed"
+    assert kids[2].attrs.get("id") == "tl-msg"
+    note = kids[3]
+    assert note.attrs.get("id") == "tl-note" and "muted" in note.attrs.get("class", "")
+    # C5 (P6.1): an entry shows what its save changed on that save's day; no day-only entries are drawn
+    assert " ".join(note.text().split()) == "Each entry shows what one saved check-in added and changed, on the day it was saved."
+    more = _by_id(root, "tl-more")
+    assert more.tag == "button" and more.text() == "Show earlier days" and "btn--secondary" in more.attrs.get("class", "")
+
+
+def test_rev3_today_aside_and_two_columns(html):
+    root = _tree(html)
+    grid = _by_id(root, "ci-grid")
+    aside = _by_id(root, "clone-aside")
+    assert aside.tag == "aside" and _is_inside(aside, grid) and "hidden" in aside.attrs  # fresh journal: no aside
+    assert aside.attrs.get("aria-labelledby") == "h-clone" and _by_id(root, "h-clone").text() == "Your clone"
+    form = _by_id(root, "ci-form")
+    assert "panel--glow" in form.attrs.get("class", "")
+    assert "panel--glow" in _by_id(root, "ns-panel").attrs.get("class", "")
+    assert _by_id(root, "fresh-btn").text() == "Start a fresh journal"
+
+
+_ENTRY = """{ index: 2, checkin_id: "c2", as_of: "2026-09-29T12:00:00Z",
+  appends: [{ display: "Sleep duration", value: 7.5, unit: "h" }, { display: "Steps", value: 9360, unit: "{steps}" }],
+  passport_changes: [
+    { title: "Heart rate", change: "became_ready" }, { title: "Sleep duration (hours)", change: "value_changed" },
+    { title: "Body weight", change: "now_observed" }, { title: "Pulse", change: "withheld" }, { title: "X", change: "bogus" }],
+  next_step: { before: { text: "old" }, after: { text: "Would you like to walk after lunch?" }, changed: true } }"""
+_QUIET = """{ index: 3, checkin_id: "c3", as_of: "2026-09-29T12:00:00Z", appends: [], passport_changes: [],
+  next_step: { before: { text: "same" }, after: { text: "same" }, changed: false } }"""
+
+
+def test_rev3_timeline_entry_maps_each_api_field_once():
+    got = _run_page(
+        _BASE + _TL,
+        f"""
+        var e = {_ENTRY}, q = {_QUIET};
+        var first = Object.assign({{}}, e, {{ index: 1, next_step: {{ before: null, after: {{ text: "First." }}, changed: true }} }});
+        return {{ title: tlTitle(e), firstTitle: tlTitle(first), quietTitle: tlTitle(q),
+          chips: tlChips(e).children.map(function (c) {{ return [c.className, c.textContent]; }}),
+          firstChip: tlChips(first).children.map(function (c) {{ return c.textContent; }}).pop(),
+          quietChips: tlChips(q), sentences: tlSentences(e), quiet: tlSentences(q) }};
+        """,
+    )
+    assert got["title"] == "Check-in saved · 2 observations"
+    assert got["firstTitle"] == "First check-in saved · 2 observations"
+    assert got["quietTitle"] == "Check-in saved"
+    assert got["chips"] == [
+        ["tag tag--ready", "✓ Card ready: Heart rate"],
+        ["tag", "↻ Updated: Sleep duration (hours)"],
+        ["tag tag--observed", "● Now observed: Body weight"],
+        ["tag tag--withheld", "○ Withheld: Pulse"],
+        ["tag tag--live", "→ New next step"],
+    ]  # an unknown change kind gets no chip
+    assert got["firstChip"] == "→ First next step"
+    assert got["quietChips"] is None  # no change: no chip list, never a "0 cards" chip
+    assert got["sentences"][0] == "Added: Sleep duration 7.5 h, Steps 9360 steps."
+    assert got["sentences"][-1] == "Next step changed to “Would you like to walk after lunch?”"
+    assert got["quiet"] == ["No passport card changed.", "Next step unchanged."]
+    banned = re.compile(r"\b(high|low|normal|abnormal|better|worse|improv\w*|up|down|increas\w*|decreas\w*)\b", re.I)
+    for s in got["sentences"]:
+        assert not banned.search(s), s  # a value change states that it changed, never its direction
+
+
+def _clone_updated(entry: str, written: int = 2, records: int = 3) -> dict:
+    return _run_page(
+        _BASE + _TL + ["savedLine", "cloneUpdated"],
+        f"""
+        var r = {{ written: Array({written}).fill("e"), records: Array({records}).fill("r") }};
+        var box = cloneUpdated(r, {entry});
+        var ul = box.querySelector("ul.delta");
+        return {{ role: box.getAttribute("role"), tabindex: box.getAttribute("tabindex"), labelled: box.getAttribute("aria-labelledby"),
+          h2: box.querySelector("h2").id + "|" + box.querySelector("h2").textContent, line: box.querySelector("p.small").textContent,
+          ring: box.querySelector("span.cu-ring").getAttribute("aria-hidden"),
+          rows: ul ? ul.children.map(function (li) {{ return [li.children[0].textContent, li.children[1].textContent]; }}) : null,
+          label: ul ? ul.getAttribute("aria-label") : null,
+          links: box.querySelectorAll("a").map(function (a) {{ return [a.href, a.textContent, a.className]; }}) }};
+        """,
+    )
+
+
+def test_rev3_clone_updated_panel_is_built_from_the_entry():
+    got = _clone_updated(_ENTRY)
+    assert (got["role"], got["tabindex"], got["labelled"]) == ("status", "-1", "cu-t")
+    assert got["h2"] == "cu-t|Your clone updated" and got["ring"] == "true"
+    assert got["line"] == "Saved 2 values · 1 saved as unmapped · discarded values were not stored"
+    assert got["label"] == "What changed"
+    assert got["rows"] == [
+        ["Observed", "2 new observations added: Sleep duration 7.5 h, Steps 9360 steps"],
+        ["Card ready", "Heart rate now has enough data and is ready on your passport."],
+        ["Updated", "Sleep duration (hours) now shows your latest value."],
+        ["Now observed", "Body weight now shows a value you saved, not a simulated one."],
+        ["Withheld", "Pulse is withheld on your passport for now."],
+        ["Next step", "New suggestion: “Would you like to walk after lunch?”"],
+    ]
+    assert got["links"] == [["#passport", "Open your passport", "btn btn--primary"],
+                            ["#next", "See your next step", "btn btn--secondary"],
+                            ["#timeline", "View timeline", "btn btn--secondary"]]
+
+
+def test_rev3_clone_updated_omits_empty_kinds_and_never_says_zero():
+    got = _clone_updated(_QUIET, written=1, records=1)
+    assert got["rows"] is None and got["label"] is None
+    assert got["line"] == "Saved 1 value · discarded values were not stored"
+    assert not re.search(r"\b0 ", got["line"])
+
+
+_SAVE = _BASE + _API + _REVIEW + _TL + ["savedLine", "cloneUpdated"]
+
+
+def _save_then(timeline: str) -> dict:
+    return _run_page(
+        _SAVE,
+        f"""
+        S.checkins = {{ c2: {{ proposals: [], status: "pending_review", result: null }} }};
+        ["rv-intro", "rv-msg", "rv-list", "session-msg"].forEach(function (i) {{ mk(i); }});
+        mk("rv-form", "form"); mk("rv-submit", "button");
+        var sessionStorage = {{ setItem: function () {{}} }};
+        rvCurrent = "c2";
+        RESP.push([200, {{ status: "saved", written: ["e1"], records: ["r1"] }}], {timeline});
+        await submitReview({{ preventDefault: function () {{}} }});
+        var n = $("rv-msg").children[0];
+        return {{ cls: n.className, role: n.getAttribute("role"), focused: document.activeElement === n, text: n.textContent,
+          calls: CALLS.map(function (c) {{ return c[0] + " " + c[1]; }}), formHidden: $("rv-form").hidden }};
+        """,
+    )
+
+
+def test_rev3_save_shows_clone_updated_from_this_checkins_entry():
+    got = _save_then(f'[200, {{ entries: [{_QUIET}, {_ENTRY}] }}]')
+    assert got["cls"] == "clone-updated" and got["role"] == "status" and got["focused"] and got["formHidden"]
+    assert "Your clone updated" in got["text"] and "Heart rate now has enough data" in got["text"]  # c2's entry, not c3's
+    assert got["calls"] == ["POST /api/checkins/c2/review", "GET /api/journals/j1/timeline"]
+
+
+@pytest.mark.parametrize("timeline", ['[503, null]', '"network"', '[200, { entries: [] }]'])
+def test_rev3_save_falls_back_to_the_saved_notice_without_an_error(timeline):
+    got = _save_then(timeline)
+    assert got["cls"] == "notice notice--ok" and got["role"] == "status" and got["focused"]
+    assert "Saved 1 value to your clone" in got["text"]
+    assert "Something went wrong" not in got["text"] and "error" not in got["text"]
+
+
+_TIMELINE = _BASE + _API + _TL + ["journalPending", "ensureJournal", "sessionEnded", "TL_PAGE", "showTimeline", "tlMore", "tlEntry"]
+_TL_DOM = """
+["tl-msg", "tl-body", "tl-days", "tl-omitted", "tl-more-row", "session-msg"].forEach(function (i) { mk(i); });
+S.today = "2026-09-29";
+function day(n) { var d = new Date(Date.UTC(2026, 8, 29 - n, 12)); return d.toISOString().slice(0, 10); }
+function entry(i, d) { return { index: i, checkin_id: "c" + i, as_of: d + "T12:00:00Z", appends: [{ display: "Steps", value: 9000 + i, unit: "{steps}" }],
+  passport_changes: [], next_step: { before: { text: "a" }, after: { text: "a" }, changed: false } }; }
+"""
+
+
+def test_rev3_timeline_groups_days_newest_first_and_pages_by_7():
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var es = []; for (var i = 1; i <= 10; i++) es.push(entry(i, day(i === 10 ? 0 : 10 - i)));  // 10 saves on 10 days, save order
+        es.splice(9, 0, entry(99, day(0)));  // two saves today
+        RESP.push([200, { entries: es, omitted: 0 }]);
+        await showTimeline();
+        function heads() { return $("tl-days").querySelectorAll("h2").map(function (h) { return h.textContent; }); }
+        var first = { heads: heads(), moreHidden: $("tl-more-row").hidden, bodyHidden: $("tl-body").hidden,
+          items: $("tl-days").querySelectorAll("details").map(function (d) { return [d.open === true, d.parentNode.className]; }).slice(0, 3),
+          today: $("tl-days").querySelectorAll("section")[0].querySelectorAll("li").filter(function (li) { return li.className !== "tag"; }).length };
+        tlMore(true);
+        return { first: first, heads: heads(), moreHidden: $("tl-more-row").hidden, focused: document.activeElement.textContent };
+        """,
+    )
+    f = got["first"]
+    assert f["heads"] == ["Today · 29 Sep", "Yesterday · 28 Sep", "27 Sep", "26 Sep", "25 Sep", "24 Sep", "23 Sep"]
+    assert f["moreHidden"] is False and f["bodyHidden"] is False
+    assert f["items"] == [[True, "is-new"], [False, ""], [False, ""]]  # only the newest is open, with the teal node
+    assert got["heads"][7:] == ["22 Sep", "21 Sep", "20 Sep"] and got["moreHidden"] is True
+    assert got["focused"] == "22 Sep"  # "Show earlier days" moves focus to the first day it added
+
+
+def test_rev3_timeline_empty_failed_and_ended_states():
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var out = {};
+        globalThis.startAgain = function () {};
+        RESP.push([200, { entries: [] }]); await showTimeline();
+        var n = $("tl-msg").children[0];
+        out.empty = [n.className, n.querySelector(".notice-title").textContent, n.textContent,
+                     n.querySelectorAll("a").map(function (a) { return a.href + "|" + a.textContent; }), $("tl-body").hidden];
+        RESP.push([502, null]); await showTimeline();
+        n = $("tl-msg").children[0];
+        out.failed = [n.getAttribute("role"), n.textContent, $("tl-body").hidden];
+        RESP.push([404, { error: "unknown_journal" }]); await showTimeline();
+        out.ended = [$("session-msg").textContent, $("tl-body").hidden];
+        return out;
+        """,
+    )
+    assert got["empty"][0] == "notice notice--info" and got["empty"][1] == "No updates yet"
+    assert "Your first saved check-in starts the timeline." in got["empty"][2]
+    assert got["empty"][3] == ["#today|Check in"] and got["empty"][4] is True
+    assert got["failed"][0] == "alert" and "We had a problem on our side (error 502)" in got["failed"][1] and got["failed"][2]
+    assert "This session has ended" in got["ended"][0] and got["ended"][1]
+
+
+_CLONE = _BASE + _API + _IDENTITY + _TL + ["setAside", "cloneSeq", "loadClone", "renderClone", "sessionEnded"]
+_CLONE_DOM = """
+["ci-grid", "clone-built", "clone-stats", "clone-latest", "session-msg"].forEach(function (i) { mk(i); });
+mk("clone-aside", "aside").hidden = true; mk("ci-form", "form");
+function tiles() { return $("clone-stats").children.map(function (li) { return li.textContent; }); }
+"""
+
+
+def test_rev3_clone_aside_stats_come_from_the_api_only():
+    got = _run_page(
+        _CLONE,
+        _CLONE_DOM + f"""
+        var e1 = Object.assign({{}}, {_QUIET}, {{ index: 1, as_of: "2026-09-28T12:00:00Z", appends: [{{ display: "Steps", value: 1, unit: "1" }}] }});
+        RESP.push([200, {{ entries: [e1, {_ENTRY}], omitted: 0 }}], [200, {{ cards: [{{ status: "ready" }}, {{ status: "withheld" }}, {{ status: "ready" }}] }}]);
+        await loadClone();
+        var full = {{ tiles: tiles(), built: $("clone-built").textContent, hidden: $("clone-aside").hidden, grid: $("ci-grid").className,
+          latest: $("clone-latest").textContent }};
+        RESP.push([200, {{ entries: [{_ENTRY}], omitted: 60 }}], [503, null]);
+        await loadClone();
+        var partial = {{ tiles: tiles(), built: $("clone-built").textContent }};
+        RESP.push([200, {{ entries: [] }}], [200, {{ cards: [] }}]);
+        await loadClone();
+        return {{ full: full, partial: partial, fresh: [$("clone-aside").hidden, $("ci-grid").className] }};
+        """,
+    )
+    assert got["full"]["tiles"] == ["2 days of history", "2 saved check-ins", "3 observations", "2 cards ready"]
+    assert got["full"]["built"] == "Built from 2 days of your saved check-ins. Last updated 29 Sep 2026."
+    assert got["full"]["hidden"] is False and got["full"]["grid"] == "grid-2"
+    assert got["full"]["latest"].startswith("Check-in saved · 2 observations") and "✓ Card ready: Heart rate" in got["full"]["latest"]
+    # 60 older saves left out: the day and observation totals are unknown and the passport failed, so those tiles go
+    assert got["partial"]["tiles"] == ["61 saved check-ins"]
+    assert got["partial"]["built"] == "Built from your saved check-ins. Last updated 29 Sep 2026."
+    assert got["fresh"] == [True, ""]  # no saved check-in: no aside, one column
+
+
+def test_rev3_identity_greets_by_first_name_and_names_the_passport():
+    got = _run_page(
+        _BASE + _IDENTITY,
+        """
+        ["persona-txt", "ci-date", "pp-eyebrow"].forEach(function (i) { mk(i); }); mk("persona", "p"); mk("persona-av", "span");
+        mk("h-today", "h1"); mk("h-passport", "h1");
+        function look() { return [$("h-today").textContent, $("ci-date").hidden ? null : $("ci-date").textContent, $("h-passport").textContent,
+          $("pp-eyebrow").hidden, $("persona").hidden, $("persona-av").textContent, $("persona-txt").textContent]; }
+        S.displayName = "Rowan Ellis"; S.memberId = "syn-007"; S.today = "2026-09-29";
+        applyIdentity(); var persona = look();
+        S.displayName = null; S.memberId = "syn-001"; S.today = null;
+        applyIdentity(); return [persona, look()];
+        """,
+    )
+    assert got[0] == ["What matters today, Rowan?", "Tuesday 29 Sep", "Rowan's passport", False, False, "R", "Rowan Ellis · syn-007"]
+    assert got[1] == ["What matters today?", None, "Health Clone Passport", True, False, "", "syn-001"]
+
+
+def test_rev3_member_api_strings_never_reach_an_html_sink(html):
+    js = _script(html)
+    for start, end in (("/* ---------- #timeline", "/* ---------- #lab"), ("function cloneUpdated", "\n}\n"),
+                       ("async function loadClone", "/* Fills the bundled-file pickers"), ("function applyIdentity", "\n}\n")):
+        part = _section(js, start, end)
+        for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
+            assert sink not in part, (start, sink)
