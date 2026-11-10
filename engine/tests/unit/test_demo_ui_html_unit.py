@@ -29,8 +29,9 @@ ALLOWED_ALPHA_HEX = {"9AA8FF2E", "4FD8C41F", "F08CF526", "FFFFFF0A", "FFFFFF0D",
 # AM-2 D1 (G31): the member app at "/" and the research console at "/admin" are separate shells.
 # Rev 3 §2: the member screens are Today (was #checkin, kept as its alias), Review, Passport, Next, Timeline.
 MEMBER_SCREENS = ("today", "review", "passport", "next", "timeline")
-# Rev 3 §4 (G36): the console screens, hash routes under /admin (#research is the playground's alias).
-ADMIN_SCREENS = ("pipeline", "lab", "inventory", "playground", "input")
+# Rev 3 §4 (G36): the console screens, hash routes under /admin. HAC-76: the real-input screen is gone and
+# the playground is #sessions (#playground and #research are its aliases).
+ADMIN_SCREENS = ("pipeline", "lab", "inventory", "sessions")
 SCREENS = MEMBER_SCREENS
 # AM-2 D2 (G32): the board removed these tags from both surfaces (HAC-66, 2026-11-10).
 REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
@@ -119,11 +120,11 @@ def _by_id(root: _Node, ident: str) -> _Node:
     return found[0]
 
 
-def _without_research(html: str) -> str:  # the admin console minus its playground section
-    """The page source with the ``<section id="screen-playground">`` element (and everything in it) cut out
-    (rev 3 §4.4 renamed the route #research → #playground; G38)."""
-    m = re.search(r'<section\b[^>]*\bid="screen-playground"[^>]*>', html)
-    assert m, "no <section id=\"screen-playground\">"
+def _without_research(html: str) -> str:  # the admin console minus its simulated-sessions section
+    """The page source with the ``<section id="screen-sessions">`` element (and everything in it) cut out
+    (rev 3 §4.4 renamed #research → #playground; HAC-76 renamed it #sessions)."""
+    m = re.search(r'<section\b[^>]*\bid="screen-sessions"[^>]*>', html)
+    assert m, "no <section id=\"screen-sessions\">"
     depth, i = 1, m.end()
     tag = re.compile(r"<(/?)section\b[^>]*>")
     while depth:
@@ -134,6 +135,13 @@ def _without_research(html: str) -> str:  # the admin console minus its playgrou
     return html[: m.start()] + html[i:]
 
 
+def _visible(page: str) -> str:
+    """The words a reader sees: the page minus its <script> and <style> blocks and comments."""
+    page = re.sub(r"<(script|style)\b.*?</\1>", " ", page, flags=re.S)
+    page = re.sub(r"<!--.*?-->", " ", page, flags=re.S)
+    return " ".join(_tree(page).text().split())
+
+
 # --- T1.1 ---------------------------------------------------------------------------------------
 
 
@@ -142,14 +150,17 @@ def test_t1_1_names_and_no_research_words_outside_research(html, admin):
     assert "Health Clone Passport" in html
     assert "pattern passport" not in (html + admin).lower()  # nowhere, the research console included
     # AM-2 D1: the member app carries no research markup at all (was: research section cut out)
-    assert 'id="screen-research"' not in html and 'id="screen-playground"' not in html
+    for gone in ('id="screen-research"', 'id="screen-playground"', 'id="screen-sessions"'):
+        assert gone not in html, gone
     assert "Daypart playground" not in html
     assert not re.search(r"\bIntent\b", html)
     assert not re.search(r"\bDraft\b", html)
-    research = _by_id(_tree(admin), "screen-playground").text()
-    assert "Research playground" in research
-    assert re.search(r"\bIntent\b", research) and re.search(r"\bDraft\b", research)
-    assert "Daypart playground" not in _without_research(admin)
+    # HAC-76: the sessions screen is in plain words: no playground, episode, intent, draft or membrane
+    sessions = _visible(_section(admin, '<section id="screen-sessions"', "<script>"))
+    assert "Simulated coaching sessions" in sessions and "Coaching approach" in sessions
+    for word in ("playground", "Episode", "Intent", "Draft", "membrane", "Horizon"):
+        assert not re.search(rf"\b{word}\b", sessions, re.I), word
+    assert "Daypart playground" not in admin
 
 
 def test_am2_d1_member_app_has_no_admin_screens_and_admin_has_no_journey(html, admin):
@@ -159,7 +170,9 @@ def test_am2_d1_member_app_has_no_admin_screens_and_admin_has_no_journey(html, a
         assert "screen-" + s not in member_ids and "screen-" + s in admin_ids
     for s in MEMBER_SCREENS:
         assert "screen-" + s in member_ids and "screen-" + s not in admin_ids
-    assert "ri-btn" not in member_ids and "ri-btn" in admin_ids  # the real-input control is admin-only
+    # HAC-76: the real-input screen and its request control are gone from both surfaces
+    for gone in ("screen-input", "ri-btn", "ri-panel"):
+        assert gone not in member_ids and gone not in admin_ids, gone
 
 
 def test_am2_d1_member_never_links_the_research_console(html):
@@ -171,14 +184,14 @@ def test_am2_d1_member_never_links_the_research_console(html):
 
 
 def test_am2_d1_admin_console_links_back_to_the_member_app(admin):
-    # Rev 3 §4 (G38): the console nav is Pipeline · Learning lab · Inventory · Playground · Real input ·
-    # Dashboard ↗ (was #lab, #inventory, #research); "← Member app" sits under it.
+    # HAC-76: the console nav is Overview · Results · Health areas · Simulated sessions · Charts ↗ (the
+    # real-input item is gone); "← Member app" sits under it.
     root = _tree(admin)
     nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Research console")
     links = [n for n in nav.iter() if n.tag == "a"]
-    assert [n.attrs.get("href") for n in links] == ["#pipeline", "#lab", "#inventory", "#playground", "#input", "/results"]
+    assert [n.attrs.get("href") for n in links] == ["#pipeline", "#lab", "#inventory", "#sessions", "/results"]
     assert [" ".join(a.text().split())[1:].strip() for a in links] == [
-        "Pipeline", "Learning lab", "Inventory", "Playground", "Real input", "Dashboard (opens in a new tab)"]
+        "Overview", "Results", "Health areas", "Simulated sessions", "Charts (opens in a new tab)"]
     dash = links[-1]
     assert dash.attrs.get("target") == "_blank" and dash.attrs.get("rel") == "noopener"
     hidden = [n for n in dash.iter() if "visually-hidden" in (n.attrs.get("class") or "")]
@@ -301,18 +314,17 @@ def test_t8_4_lab_footnote(admin):
     assert "Simulated outcomes are not patient outcomes." in sec.text()
 
 
-def test_t9_4_real_input_button_controls_a_live_region(admin):
-    # AM-2 D2: the real-input control lives in the research console only. Rev 3 §4.5 (G38): on its own
-    # #input screen, labelled "Request real input" (was a "Real input" button in the console footer).
-    root = _tree(admin)
-    btns = [n for n in root.iter() if n.tag == "button" and "real input" in n.text().lower()]
-    assert len(btns) == 1
-    b = btns[0]
-    assert b.text().strip() == "Request real input" and _is_inside(b, _by_id(root, "screen-input"))
-    assert not [n for n in root.iter() if n.tag == "footer" and _is_inside(b, n)]
-    assert b.attrs.get("aria-expanded") == "false"
-    panel = _by_id(root, b.attrs.get("aria-controls") or "")
-    assert panel.attrs.get("aria-live") == "polite"
+def test_hac76_no_real_input_or_mode_toggle_on_either_surface(html, admin):
+    """HAC-76 (board, HAC-74): a production prototype advertises no real-input request or mode toggle.
+    The server still refuses real input (AD7); the page just stops offering it."""
+    for page in (html, admin):
+        root = _tree(page)
+        assert not [n for n in root.iter() if n.tag == "button" and "real input" in n.text().lower()]
+        text = _visible(page).lower()
+        for phrase in ("real input", "demonstration", "playground", "judges?", "demo mode"):
+            assert not re.search(rf"\b{phrase}\b", text), phrase
+        js = _script(page)
+        assert "/api/mode" not in js and "realInput" not in js
 
 
 # --- palette and escaping ----------------------------------------------------------------------------
@@ -358,7 +370,8 @@ def test_t1_5_openapi_title_and_description(client):
     d = info["description"].lower()
     # P6.2 (G38): production-style wording, as P6.1 did for the UI copy (was "Synthetic data only … Not
     # for clinical use"); the synthetic-data disclosure is in docs/daypart/submission/assumptions-limits.md.
-    assert "not medical advice" in d and "real input is off" in d
+    # HAC-76: the description no longer advertises the real-input request (POST /api/mode still refuses it)
+    assert "not medical advice" in d and "real input" not in d and "playground" not in d
     for word in ("synthetic", "demo", "not for clinical use", "clinically", "fda", "regulat", "approved", "reviewed by"):
         assert word not in d, word
 
@@ -454,7 +467,7 @@ def test_safe_href_links_same_origin_api_paths_only() -> None:
 
 def _script(html: str) -> str:
     """The journey script (the last <script> block), research view excluded."""
-    src = _without_research(html) if 'id="screen-playground"' in html else html
+    src = _without_research(html) if 'id="screen-sessions"' in html else html
     blocks = re.findall(r"<script>(.*?)</script>", src, re.S)
     assert blocks, "no journey script"
     return blocks[-1]
@@ -850,9 +863,9 @@ def test_b4_member_never_links_any_console_route():
     alias as the console's, so an evidence link to any of them is text, never a link."""
     import json
 
-    from daypart.demo.app import ADMIN_ROUTES
+    from daypart.demo.app import ADMIN_ROUTE_ALIASES, ADMIN_ROUTES
 
-    console = list(ADMIN_ROUTES) + ["research"]
+    console = list(ADMIN_ROUTES) + list(ADMIN_ROUTE_ALIASES)
     got = _run_page(_BASE + ["ADMIN_CONSOLE_ROUTES", "ADMIN_HASH", "memberLink"], f"""
         var c = {json.dumps(console)};
         return {{ routes: ADMIN_CONSOLE_ROUTES, bare: c.map(function (r) {{ return memberLink("#" + r); }}),
@@ -878,14 +891,15 @@ def test_c5_simulated_source_is_never_called_a_check_in():
     assert own[0]["links"] == [["#review/ci-1", "view check-in ci-1"]]
 
 
-_LAB = ["ROW_NAMES", "cell", "parts", "rate", "labRow"]
+_LAB = ["ROW_NAMES", "ROW_SHORT", "cell", "parts", "pct", "pts", "count", "intOrNull", "mismatched", "mismatchTag",
+        "rowPct", "envName", "stepName", "runAnchor", "modelRow", "envRow", "recordRow"]
 
 
 def test_c6_lab_base_row_shows_the_file_digest_as_text():
     got = _run_page(
         _BASE + _LAB,
         """
-        var tr = labRow({ row: "base", kind: "model", status: "ok", run_id: "tag/base", file_digest: "0123456789ab",
+        var tr = recordRow({ row: "base", kind: "model", status: "ok", run_id: "tag/base", file_digest: "0123456789ab",
           split: { prompt_set_version: "v1", n: 10 }, seed: 0, failures: 1, degenerate: 0, metrics: {} });
         var id = tr.children[1];
         var mono = id.querySelectorAll("code").filter(function (c) { return c.textContent === "0123456789ab"; });
@@ -894,7 +908,7 @@ def test_c6_lab_base_row_shows_the_file_digest_as_text():
         """,
     )
     assert "file digest 0123456789ab" in got["text"]
-    assert got["mono"] == ["mono"]
+    assert got["mono"] == ["mono run-id"]  # the only cells that may break anywhere (G5)
     assert "0123456789ab" not in got["links"]  # text only, never a link
 
 
@@ -1111,32 +1125,76 @@ def test_t2_handoff_body_is_the_api_text_verbatim_and_the_form_is_gone(html):
 
 def test_k1_lab_mismatch_and_missing_seed_rows_render_the_a_and_d_words():
     """QG P3 K1: A&D §4.8 / T8.3 and G25: an adapter mismatch row shows "provenance mismatch" (the API
-    ``status``, verbatim) and no number; a missing seed renders "not recorded" (T8.3's UI half)."""
+    ``status``, verbatim) and no number; a missing seed renders "not recorded" (T8.3's UI half). HAC-76:
+    the plain results row and the run record both hold to it."""
     got = _run_page(
         _BASE + _LAB,
         """
-        var mm = labRow({ row: "sft", kind: "model", status: "provenance mismatch", run_id: "tag/sft",
+        var mmr = { row: "sft", kind: "model", status: "provenance mismatch", run_id: "tag/sft",
           split: { prompt_set_version: "v1", n: 10, training_rows: 99, data_sha256: "abcdefabcdef0000" },
-          seed: 3, failures: 1, degenerate: 0, metrics: { boundary_pass_rate: 0.9, rubric_pass_rate: 0.8 } });
-        var ns = labRow({ row: "base", kind: "model", status: "ok", run_id: "tag/base",
+          seed: 3, failures: 1, degenerate: 0, metrics: { boundary_pass_rate: 0.9, rubric_pass_rate: 0.8 } };
+        var ns = recordRow({ row: "base", kind: "model", status: "ok", run_id: "tag/base",
           split: { prompt_set_version: "v1", n: 10 }, seed: null, failures: 1, degenerate: 0, metrics: {} });
-        var gp = labRow({ row: "grpo", kind: "proposed", status: "proposed, not built", reason: "not run" });
+        var gpr = { row: "grpo", kind: "proposed", status: "proposed, not built", reason: "not run" };
         function cells(tr) { return tr.children.map(function (c) { return [c.getAttribute("data-label"), c.textContent]; }); }
-        return { mm: cells(mm), ns: cells(ns), gp: cells(gp) };
+        return { mm: cells(modelRow(mmr)), mmrec: cells(recordRow(mmr)), ns: cells(ns), gp: cells(modelRow(gpr)), gprec: cells(recordRow(gpr)) };
         """,
     )
     mm = dict(got["mm"])
-    assert "provenance mismatch" in mm["Run ID"]  # the A&D's words, case and all
-    assert "n =" not in mm["Split"] and "training rows" not in mm["Split"]
-    for label in ("Seed", "Failures", "Metric"):
+    assert mm["Safety rule pass rate"] == "⚠ provenance mismatch" and mm["Coaching quality pass rate"] == "⚠ provenance mismatch"
+    assert "provenance mismatch" in mm["Outcome"]
+    for label in ("Trained on", "Safety rule pass rate", "Coaching quality pass rate", "Outcome"):
         assert not re.search(r"\d", mm[label]), (label, mm[label])
-    assert "not shown" in mm["Metric"]
+    rec = dict(got["mmrec"])
+    assert "provenance mismatch" in rec["Run ID"]  # the A&D's words, case and all
+    assert "n =" not in rec["Test set"] and "training rows" not in rec["Test set"]
+    for label in ("Seed", "Failures"):
+        assert not re.search(r"\d", rec[label]), (label, rec[label])
     assert dict(got["ns"])["Seed"] == "not recorded"
     gp = dict(got["gp"])
-    assert "proposed, not built" in gp["Run ID"] and gp["Metric"] == "No number. Reason: not run"
-    assert not re.search(r"\d", gp["Metric"])
-    for row in (got["mm"], got["ns"], got["gp"]):
+    assert gp["Training step"] == "Step 3 · Practice with simulated members"
+    assert gp["Outcome"] == "○ Planned, not builtnot run"  # the reason verbatim from the API, on its own line
+    assert gp["Safety rule pass rate"] == "Not built yet" and not re.search(r"\d", gp["Coaching quality pass rate"])
+    assert "proposed, not built" in dict(got["gprec"])["Run ID"]
+    for row in (got["mm"], got["mmrec"], got["ns"], got["gp"], got["gprec"]):
         assert all(label for label, _ in row)  # every cell has data-label (the 375 px stacked layout)
+
+
+def test_hac76_results_tables_speak_plain_language_and_read_every_number_from_the_api():
+    """HAC-76: the results tables name each step and approach in words and show each rate as a percentage
+    of the API's own number; nothing is rounded twice or invented."""
+    from daypart.demo import lab
+    import json
+
+    t = lab.lab_rows().model_dump(mode="json")
+    got = _run_page(
+        _BASE + _LAB,
+        """
+        var t = LAB;
+        function cells(tr) { return tr.children.map(function (c) { return c.textContent; }); }
+        return { models: t.rows.filter(function (r) { return r.kind !== "env_baseline"; }).map(function (r) { return cells(modelRow(r)); }),
+          envs: t.rows.filter(function (r) { return r.kind === "env_baseline"; }).map(function (r) { return cells(envRow(r)); }) };
+        """.replace("LAB", json.dumps(t)),
+    )
+    rows = {r["row"]: r for r in t["rows"]}
+    pc = lambda v: f"{v * 100:.1f}%"  # noqa: E731
+    pt = lambda v: ("+" if v >= 0 else "−") + f"{abs(v * 100):.1f} points"  # noqa: E731
+    base, sft, dpo = rows["base"], rows["sft"], rows["dpo"]
+    assert got["models"][0] == ["Starting model, before training", "General model, no coaching training",
+                                pc(base["metrics"]["boundary_pass_rate"]), pc(base["metrics"]["rubric_pass_rate"]),
+                                "Reference point for the steps below"]
+    assert got["models"][1][:4] == ["Step 1 · Learning from example replies", f"{sft['split']['training_rows']:,} example replies",
+                                    pc(sft["metrics"]["boundary_pass_rate"]), pc(sft["metrics"]["rubric_pass_rate"])]
+    assert got["models"][1][4] == f"✓ Passed its checkSafety {pt(sft['gate']['delta'])} · vs. starting model"
+    assert got["models"][2][1] == f"{dpo['split']['training_rows']:,} pairs of better and worse replies"
+    assert got["models"][2][4] == (f"✓ Passed its checkQuality {pt(dpo['gate']['rubric_delta'])} · vs. step 1 · "
+                                   f"safety regressions: {dpo['gate']['boundary_regressions']}")
+    envs = [r for r in t["rows"] if r["kind"] == "env_baseline"]
+    for r, row in zip(envs, got["envs"]):
+        assert row[1] == pc(r["metrics"]["mean_adherence"]) and row[2] == pc(r["metrics"]["episode_violation_rate"])
+        assert row[3] == f"{r['split']['n']} sessions{r['split']['n_scenarios']} members, {r['split']['horizon']} days each"
+        assert "env_" not in row[0] and "_" not in row[0]
+    assert {row[0] for row in got["envs"]} >= {"No coaching message", "A random approach each day"}
 
 
 def test_k6_footer_carries_the_attribution_loinc_notice_verbatim(html):
@@ -1924,38 +1982,47 @@ def test_rev3_console_shell_skip_link_sidebar_and_brand(admin):
     assert "site-head" not in admin and 'class="steps"' not in admin
 
 
-def test_rev3_console_page_header_crumb_h1_and_source(admin):
+def test_hac76_console_page_header_has_a_plain_h1_and_lede_and_no_route_or_api_labels(admin):
+    """HAC-76 (board, HAC-74): no route path crumb and no ``GET /api/...`` label on screen; each console
+    page opens with a plain h1 and a one-line explanation."""
     root = _tree(admin)
-    sources = {"pipeline": "GET /api/lab", "lab": "GET /api/lab", "inventory": "GET /api/inventory",
-               "playground": "POST /api/episodes", "input": "POST /api/mode"}
     for s in ADMIN_SCREENS:
         top = next(n for n in _by_id(root, "screen-" + s).iter() if n.attrs.get("class") == "a-top")
-        crumb = [n for n in top.iter() if n.attrs.get("class") == "a-crumb"]
-        assert len(crumb) == 1 and crumb[0].text() == "/admin/" + s, s
         h1 = [n for n in top.iter() if n.tag == "h1"]
         assert len(h1) == 1 and h1[0].attrs.get("id") == "h-" + s, s
-        src = [n for n in top.iter() if "mono" in (n.attrs.get("class") or "").split() and n is not crumb[0]]
-        assert [n.text() for n in src] == [sources[s]], s
+        lede = [n for n in top.iter() if n.attrs.get("class") == "a-lede"]
+        assert len(lede) == 1 and len(lede[0].text().split()) >= 8, s
+        assert not [n for n in top.iter() if "mono" in (n.attrs.get("class") or "").split()], s
+    text = _visible(admin)
+    assert not re.search(r"\b(GET|POST) /api/", text) and "/admin/" not in text
+    assert 'class="a-crumb"' not in admin
+    for jargon in ("p95", "DSL", "Layer 0", "Membrane", "EventLog", "Learning lab", "Concept inventory", "Vertical"):
+        assert jargon not in text, jargon
 
 
 def test_rev3_console_router_routes_aliases_and_default(admin):
     js = _script(admin)
-    assert 'var SCREENS = ["pipeline", "lab", "inventory", "playground", "input"];' in js  # SCREENS[0] is the default
-    assert 'var ALIASES = { research: "playground" };' in js  # the API's #research evidence link still resolves
+    assert 'var SCREENS = ["pipeline", "lab", "inventory", "sessions"];' in js  # SCREENS[0] is the default
+    # the API's #research evidence link and older #playground bookmarks still resolve
+    assert 'var ALIASES = { research: "sessions", playground: "sessions" };' in js
     rt = _section(js, "function route()", "\n}\n")
     assert ".a-nav a" in rt and '"page"' in rt and '"step"' not in rt
-    assert "pipeline: showPipeline" in rt and "playground:" in rt and "input:" in rt
-    from daypart.demo.app import ADMIN_ROUTES
+    assert "pipeline: showPipeline" in rt and "sessions:" in rt and "input:" not in rt
+    from daypart.demo.app import ADMIN_ROUTE_ALIASES, ADMIN_ROUTES
 
-    assert ADMIN_ROUTES == ADMIN_SCREENS  # /admin/<route> is served for exactly these
+    assert ADMIN_ROUTES == ADMIN_SCREENS  # /admin/<route> is served for exactly these, plus the aliases
+    assert ADMIN_ROUTE_ALIASES == ("playground", "research")
 
 
 def test_rev3_console_path_routes_serve_the_shell(client, admin):
-    for s in ADMIN_SCREENS:
+    for s in ADMIN_SCREENS + ("playground", "research"):
         r = client.get(f"/admin/{s}")
         assert r.status_code == 200 and r.text == admin, s
     assert client.get("/admin/nope").status_code == 404
     assert client.get("/admin/today").status_code == 404  # never a member route
+    assert client.get("/admin/input").status_code == 404  # HAC-76: the real-input screen is gone
+    # AD7 stays server-side: the request is still refused
+    assert client.post("/api/mode", json={"real_input": True}).status_code == 403
     js = _script(admin)
     assert 'history.replaceState(null, "", "/admin#" + m[1]' in js
 
@@ -1964,43 +2031,39 @@ def test_rev3_pipeline_lanes_stage_counts_and_copy(admin):
     root = _tree(admin)
     sec = _by_id(root, "screen-pipeline")
     live = _by_id(root, "pipe-live")
-    assert live.tag == "ol" and live.attrs.get("aria-label") == "Live loop, 5 stages"
+    assert live.tag == "ol" and live.attrs.get("aria-label") == "Every check-in, 5 steps"
     stages = [c for c in live.children if isinstance(c, _Node)]
     assert len(stages) == 5 and all(c.tag == "li" for c in stages)
     names = [next(n for n in li.iter() if n.attrs.get("class") == "stage-name").text() for li in stages]
-    assert names == ["Check-in", "Review", "EventLog", "Passport recompute", "Next-step policy"]
-    for li in stages:
-        assert [n.text() for n in li.iter() if n.attrs.get("class") == "tag tag--live"] == ["live"]
+    assert names == ["Member checks in", "Member reviews", "Saved to the record", "Passport updated", "Next step suggested"]
+    for li in stages:  # HAC-76: one plain sentence per step, no version codes
+        desc = [n.text() for n in li.iter() if n.attrs.get("class") == "stage-desc"]
+        assert len(desc) == 1 and desc[0].endswith("."), desc
+        assert not [n for n in li.iter() if n.tag == "dl"]
     text = " ".join(sec.text().split())
-    assert "↺ loop: the next saved check-in starts again at stage 1. No model is called in this loop." in text
-    assert "● runs on every saved check-in" in text and "○ offline · not run per check-in" in text
+    assert "↺ The next check-in starts again at step 1. No AI model is used in this loop." in text
+    assert "● automatic, every saved check-in" in text and "○ offline, not on each check-in" in text
     assert "Simulated outcomes are not patient outcomes." in text
     off = _by_id(root, "pipe-offline")
     assert off.tag == "ol" and not [c for c in off.children if isinstance(c, _Node)]  # drawn from /api/lab only
-    for ident in ("pipe-kpis", "lane-offline"):  # hidden until /api/lab answers
+    for ident in ("pipe-results", "pipe-kpis", "lane-offline"):  # hidden until /api/lab answers
         assert "hidden" in _by_id(root, ident).attrs, ident
     assert "hidden" not in _by_id(root, "lane-live").attrs  # the live lane is static and always shown
 
 
 def test_rev3_pipeline_live_lane_names_only_code_that_exists():
-    """§4.1: each live stage's versions are the running code's own constants, and the next-step policy
-    selects by rules and checks with the membrane: nothing in the loop imports a model client."""
+    """§4.1: the check-in lane states only what the running code does (HAC-76: in words): the freshness
+    window is the passport's own constant, and the next-step policy selects by rules and checks with the
+    safety rules: nothing in the loop imports a model client."""
     from daypart.checkin import next_step
-    from daypart.checkin.models import METHOD_FIXTURE, METHOD_TEXT
-    from daypart.memory.registry import SLICE_VERSION
     from daypart.passport.view import READY_WINDOW_DAYS
 
     src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
     live = _section(src, '<ol class="pipe" id="pipe-live"', "</ol>")
-    # QG P6.2 B1 (G36): the Check-in stage states only what runs: text takes rules-v1 and the PII and
-    # crisis screens; a bundled file takes the fixture sidecar, gated by the sha256 allow-list
-    checkin = _section(live, '<span class="stage-name">Check-in</span>', "</dl>")
-    assert (f"<dt>text</dt><dd>{METHOD_TEXT}</dd><dt>screen</dt><dd>PII + crisis</dd>"
-            f"<dt>file</dt><dd>{METHOD_FIXTURE}</dd><dt>gate</dt><dd>sha256 allow-list</dd>") in checkin
-    assert "bundled file" not in checkin  # no claim that a file passes the text screens
-    assert f"<dd>{SLICE_VERSION}</dd>" in live
-    assert f"<dd>value ≤ {READY_WINDOW_DAYS} days old</dd>" in live
-    assert f"<dd>{next_step.POLICY_VERSION} (rules)</dd>" in live and "<dd>membrane post()</dd>" in live
+    checkin = _section(live, '<span class="stage-name">Member checks in</span>', "</p>")
+    assert "personal details and crisis language are screened" in checkin
+    assert f"A value counts as current for {READY_WINDOW_DAYS} days." in live
+    assert "A rule-based suggestion, checked against the safety rules" in live
     loop = Path(next_step.__file__).read_text()
     for client in ("anthropic", "openai", "httpx", "requests", "modal", "transformers", "torch", "muse"):
         assert not re.search(rf"^\s*(import|from)\s+{client}\b", loop, re.M), client
@@ -2046,11 +2109,11 @@ def test_rev3_console_has_no_hard_coded_lab_numbers(admin):
 
 
 _PIPE = ["$", "el", "attrs", "safeHref", "link", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError",
-         "parts", "fix3", "delta3", "labRowNamed", "mismatched", "mismatchTag", "rowRate", "intOrNull", "envName", "kpi",
-         "pipeKpis", "OFFLINE", "runLink", "withDelta", "offlineStage", "pipeOffline", "pipeSeq", "showPipeline"]
+         "parts", "pct", "pts", "intOrNull", "labRowNamed", "mismatched", "mismatchTag", "rowPct", "envName", "runAnchor",
+         "kpi", "pipeKpis", "OFFLINE", "withPts", "offlineStage", "pipeOffline", "pipeSeq", "showPipeline"]
 _PIPE_BODY = """
-mk("pipe-msg"); var kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
-kp.hidden = true; lane.hidden = true;
+mk("pipe-msg"); var res = mk("pipe-results", "section"), kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
+res.hidden = true; kp.hidden = true; lane.hidden = true;
 RESP.push(RESPONSE);
 await showPipeline();
 function txt(e) { return e.textContent; }
@@ -2059,8 +2122,16 @@ return { kpis: kp.children.map(function (li) { return li.children.map(txt); }),
     li.querySelectorAll("span.tag").map(txt), li.querySelectorAll("dt").map(txt), li.querySelectorAll("dd").map(txt),
     li.querySelectorAll("a").map(function (a) { return [a.textContent, a.href, a.title]; })]; }),
   label: ol.getAttribute("aria-label"), note: $("pipe-note").textContent,
-  hidden: [kp.hidden, lane.hidden], msg: $("pipe-msg").textContent };
+  hidden: [res.hidden, kp.hidden, lane.hidden], msg: $("pipe-msg").textContent };
 """
+
+
+def _pc(v: float) -> str:  # the page's percentage: one decimal
+    return f"{v * 100:.1f}%"
+
+
+def _pt(v: float) -> str:  # the page's change in percentage points, with its own sign
+    return ("+" if v >= 0 else "−") + f"{abs(v * 100):.1f} points"
 
 
 def _pipeline(response: object) -> dict:
@@ -2072,51 +2143,41 @@ def _pipeline(response: object) -> dict:
 
 
 def test_rev3_pipeline_maps_every_lab_field_1_to_1():
+    """Every overview number is one /api/lab field, as a percentage (HAC-76: was 3 decimals), under a
+    plain-language label with a one-line explanation."""
     from daypart.demo import lab
 
     t = lab.lab_rows().model_dump(mode="json")
     rows = {r["row"]: r for r in t["rows"]}
     base, sft, dpo, grpo = rows["base"], rows["sft"], rows["dpo"], rows["grpo"]
-
-    def f(v: float) -> str:
-        return f"{v:.3f}"
-
-    def d(v: float) -> str:
-        return ("+" if v >= 0 else "") + f"{v:.3f}"
-
     envs = [r for r in t["rows"] if r["kind"] == "env_baseline"]
     best = max(envs, key=lambda r: r["metrics"]["mean_adherence"])
     got = _pipeline([200, t])
-    assert got["hidden"] == [False, False] and got["msg"] == ""
-    assert got["kpis"] == [
-        ["boundary pass · dpo", f(dpo["metrics"]["boundary_pass_rate"]),
-         f"base {f(base['metrics']['boundary_pass_rate'])} · n = {dpo['split']['n']}"],
-        ["rubric pass · dpo", f(dpo["metrics"]["rubric_pass_rate"]),
-         f"sft {f(sft['metrics']['rubric_pass_rate'])} · base {f(base['metrics']['rubric_pass_rate'])}"],
-        ["builder check I1", "✓ passed" if t["i1_passed"] else "⚠ not passed", f"member failures {t['member_failure_count']}"],
-        ["best env adherence", f(best["metrics"]["mean_adherence"]),
-         f"{best['row'].removeprefix('env_').replace('_', ' ')} · {best['split']['n']} episodes"],
-    ]
-    assert got["label"] == "Offline training, 4 stages"
+    assert got["hidden"] == [False, False, False] and got["msg"] == ""
+    k1, k2, k3, k4 = got["kpis"]
+    assert k1[:2] == ["Safety rule pass rate", _pc(dpo["metrics"]["boundary_pass_rate"])]
+    assert k1[3] == f"Before training: {_pc(base['metrics']['boundary_pass_rate'])}"
+    assert k2[:2] == ["Coaching quality pass rate", _pc(dpo["metrics"]["rubric_pass_rate"])]
+    assert k2[3] == f"Before training: {_pc(base['metrics']['rubric_pass_rate'])}"
+    assert k3[:2] == ["Test members kept out of training", "✓ Passed" if t["i1_passed"] else "⚠ Not passed"] and len(k3) == 3
+    assert k4[:2] == ["Best simulated adherence", _pc(best["metrics"]["mean_adherence"])]
+    assert k4[3] == "Approach: " + ("Always " + best["row"].removeprefix("env_always_").replace("_", " ")
+                                    if best["row"].startswith("env_always_") else k4[3].split(": ", 1)[1])
+    for k in got["kpis"]:  # one plain sentence under every number
+        assert k[2].endswith(".") and len(k[2].split()) >= 6, k
+    assert got["label"] == "Training, 4 steps"
     b, s, p, g = got["stages"]
-    assert b[:4] == ["", "Base", ["offline"], ["run", "boundary", "rubric", "failures"]]
-    assert b[4][1:] == [f(base["metrics"]["boundary_pass_rate"]), f(base["metrics"]["rubric_pass_rate"]),
-                        f"{base['failures']} · {base['degenerate']} degenerate"]
-    assert b[5] == [["…/base", "#lab/" + base["run_id"], base["run_id"]]]
-    assert s[2] == ["offline", "✓ gate r3"] and s[3] == ["run", "rows", "boundary", "rubric"]
-    assert s[4][1:] == [str(sft["split"]["training_rows"]),
-                        f"{f(sft['metrics']['boundary_pass_rate'])} (Δ {d(sft['gate']['delta'])})", f(sft["metrics"]["rubric_pass_rate"])]
-    assert s[5][0][0] == "…/" + sft["run_id"].rsplit("/", 1)[1]
-    assert p[2] == ["offline", "✓ gate r4"] and p[3] == ["run", "pairs", "boundary", "rubric"]
-    assert p[4][1:] == [str(dpo["split"]["training_rows"]),
-                        f"{f(dpo['metrics']['boundary_pass_rate'])} · {dpo['gate']['boundary_regressions']} regressions",
-                        f"{f(dpo['metrics']['rubric_pass_rate'])} (Δ {d(dpo['gate']['rubric_delta'])})"]
-    assert g[:4] == ["is-proposed", "GRPO", ["○ proposed, not built"], ["run", "reason"]]
-    assert g[4] == ["not recorded", grpo["reason"]] and g[5] == []  # the reason verbatim from the API
-    prefix = base["run_id"].rsplit("/", 1)[0]
-    sp = base["split"]
-    assert got["note"] == (f"Runs {prefix}/*. Eval split {sp['prompt_set_version']}, n = {sp['n']}, seed {base['seed']}. "
-                           "Trained adapters are evaluated here; the live loop above does not call them in this build.")
+    assert b[:4] == ["", "Starting model", [], ["Safety rules", "Quality"]]
+    assert b[4] == [_pc(base["metrics"]["boundary_pass_rate"]), _pc(base["metrics"]["rubric_pass_rate"])]
+    assert b[5] == [["Run record", "#lab/" + base["run_id"], base["run_id"]]]
+    assert s[1:3] == ["Learning from example replies", ["✓ Passed its check"]]
+    assert s[4] == [f"{_pc(sft['metrics']['boundary_pass_rate'])} ({_pt(sft['gate']['delta'])})", _pc(sft["metrics"]["rubric_pass_rate"])]
+    assert p[1:3] == ["Learning from preferred replies", ["✓ Passed its check"]]
+    assert p[4] == [_pc(dpo["metrics"]["boundary_pass_rate"]), f"{_pc(dpo['metrics']['rubric_pass_rate'])} ({_pt(dpo['gate']['rubric_delta'])})"]
+    assert g == ["is-proposed", "Practice with simulated members", ["○ Planned, not built"], [], [], []]
+    assert grpo["reason"]  # drawn verbatim under the planned step (checked by the hard-coded-number test)
+    assert got["note"] == (f"Each step is tested on the same {base['split']['n']} held-out practice prompts. "
+                           "The trained model is evaluated here only; the check-in loop above does not use it in this prototype.")
 
 
 def test_rev3_pipeline_nulls_and_provenance_mismatch():
@@ -2137,28 +2198,27 @@ def test_rev3_pipeline_nulls_and_provenance_mismatch():
     t["rows"] = [r for r in t["rows"] if r["kind"] != "env_baseline"]
     got = _pipeline([200, t])
     k1, k2, k3, k4 = got["kpis"]
-    assert k1[1] == "⚠ provenance mismatch" and k1[2].endswith("n = not recorded")
-    assert k2[1] == "⚠ provenance mismatch"
-    assert k3[1:] == ["not recorded", "member failures not recorded"]
-    assert k4[1:] == ["not recorded", "not recorded · not recorded"]
+    assert k1[1] == "⚠ provenance mismatch" and k2[1] == "⚠ provenance mismatch"
+    assert k3[1] == "not recorded"
+    assert k4[1] == "not recorded" and k4[3] == "Approach: not recorded"
     _b, s, p, g = got["stages"]
-    assert s[2] == ["offline", "⚠ gate r3 not passed"] and s[4][2] == "not recorded"  # no Δ without a boundary number
-    assert p[2] == ["offline", "⚠ provenance mismatch"] and p[3] == ["run"]  # no number, no gate
-    assert g[4] == ["not recorded", "not recorded"]
+    assert s[2] == ["⚠ Did not pass its check"] and s[4][0] == "not recorded"  # no change shown without a number
+    assert p[2] == ["⚠ provenance mismatch"] and p[3] == [] and p[5] == []  # no number, no gate, no link
+    assert g[2] == ["○ Planned, not built"]
 
 
 @pytest.mark.parametrize("resp", [[500, {"error": "internal"}], "network", [200, {"rows": "x"}]])
 def test_rev3_pipeline_failed_lab_get_hides_numbers(resp):
     got = _pipeline(resp)
-    assert got["hidden"] == [True, True] and got["kpis"] == [] and got["stages"] == []
+    assert got["hidden"] == [True, True, True] and got["kpis"] == [] and got["stages"] == []
     assert "Something went wrong" in got["msg"]
     assert ("error 500" in got["msg"]) if resp[0] == 500 else True
 
 
 def test_rev3_pipeline_delta_signs():
-    """QG P6.2 K13: a gate Δ carries its own sign at 3 decimals; zero is "+0.000"; a null is no Δ."""
-    got = _run_js(["fix3", "delta3"], "[delta3(-0.021), delta3(0.0214), delta3(0), delta3(null)]")
-    assert got == ["-0.021", "+0.021", "+0.000", None]
+    """QG P6.2 K13 (HAC-76: in points): a change carries its own sign; zero is "+0.0 points"; a null is none."""
+    got = _run_js(["pct", "pts"], "[pts(-0.021), pts(0.0214), pts(0), pts(null), pct(0.319149), pct(1), pct(null)]")
+    assert got == ["−2.1 points", "+2.1 points", "+0.0 points", None, "31.9%", "100.0%", None]
 
 
 def test_rev3_only_the_newest_pipeline_load_draws():
@@ -2172,7 +2232,7 @@ def test_rev3_only_the_newest_pipeline_load_draws():
     got = _run_page(
         _PIPE,
         """
-        mk("pipe-msg"); var kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
+        mk("pipe-msg"); mk("pipe-results", "section"); var kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
         kp.hidden = true; lane.hidden = true;
         var answers = [];
         fetch = function () { return new Promise(function (resolve) { answers.push(resolve); }); };
@@ -2189,18 +2249,27 @@ def test_rev3_only_the_newest_pipeline_load_draws():
 
 def test_rev3_lab_deep_link_marks_the_row_and_keeps_stacking(admin):
     js = _script(admin)
-    lab = _section(js, "async function showLab", "\nfunction labRow")
-    assert 'setAttribute("aria-current", "true")' in lab
+    lab = _section(js, "async function showLab", "\nfunction modelRow")
+    assert 'setAttribute("aria-current", "true")' in lab and '$("lab-records").open = true' in lab
     css = _style(admin)
     assert 'table.stack tr[aria-current="true"] td{background:var(--a-raised)}' in css
     assert "@media (max-width:40rem){\n  table.stack thead" in css and "content:attr(data-label)" in css
+
+
+def test_hac76_g5_table_text_breaks_at_spaces_only(admin):
+    """G5 (HAC-74): the body's overflow-wrap:anywhere broke lab cells mid-word at 1280; table text now
+    wraps at spaces and only run ids and digests may break anywhere."""
+    css = _style(admin)
+    assert "table.stack th,table.stack td{overflow-wrap:normal;word-break:normal;" in css
+    assert "table.stack .run-id{overflow-wrap:anywhere}" in css
+    assert ".gates{" not in css.split("HAC-76 readability pass")[1]  # the gates list went with the real-input screen
 
 
 def test_rev3_inventory_table_maps_the_api_and_has_no_cards_column(admin, client):
     root = _tree(admin)
     sec = _by_id(root, "screen-inventory")
     heads = [" ".join(n.text().split()) for n in sec.iter() if n.tag == "th"]
-    assert heads == ["Vertical", "Concepts", "Status"]  # /api/inventory has no card count, so no Cards column
+    assert heads == ["Health area", "Measures", "Status"]  # /api/inventory has no card count, so no Cards column
     assert "cards" not in " ".join(str(k) for k in client.get("/api/inventory").json())
     got = _run_page(["$", "el", "nr", "clear", "notice", "TIMEOUT_MS", "api", "serverError", "cell", "MONTHS", "fmtDay", "reviewLabel",
                      "invSeq", "showInventory"], """
@@ -2212,8 +2281,8 @@ def test_rev3_inventory_table_maps_the_api_and_has_no_cards_column(admin, client
     """.replace("INV", __import__("json").dumps(client.get("/api/inventory").json())))
     inv = client.get("/api/inventory").json()
     assert got[0] is False
-    want = [["", f"Vertical={v['label']}", f"Concepts={len(v['concepts'])}", "Status=✓ covered"] for v in inv["verticals"]]
-    want += [["proposed", f"Vertical={g}", "Concepts=0", "Status=○ gap"] for g in inv["gap_labels"]]
+    want = [["", f"Health area={v['label']}", f"Measures={len(v['concepts'])}", "Status=✓ Covered"] for v in inv["verticals"]]
+    want += [["proposed", f"Health area={g}", "Measures=0", "Status=○ Not covered yet"] for g in inv["gap_labels"]]
     assert got[1] == want
 
 
@@ -2228,12 +2297,16 @@ def test_b2_only_the_newest_lab_load_draws():
     """QG P6.2 B2: #lab/A then quickly #lab/B: the slow first /api/lab answer never redraws the table
     or marks run A."""
     got = _run_page(
-        ["$", "el", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError", "labSeq", "showLab"],
+        ["$", "el", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError", "labRowNamed", "mismatched",
+         "labSeq", "showLab"],
         _GATED + """
-        mk("lab-msg"); mk("lab-body"); mk("lab-meta", "dl"); var rows = mk("lab-rows", "tbody");
+        mk("lab-msg"); mk("lab-body"); mk("lab-meta", "dl"); mk("lab-cap-sub", "span"); mk("env-wrap"); mk("lab-records", "details");
+        var rows = mk("lab-rows", "tbody"); mk("env-rows", "tbody"); mk("rec-rows", "tbody");
         var drawn = 0;
-        globalThis.labRow = function (r) { drawn++; var tr = el("tr"); tr.dataset.runId = r.run_id; return tr; };
-        var t = { rows: [{ run_id: "A" }, { run_id: "B" }], i1_passed: true, member_failure_count: 0 };
+        function row(r) { var tr = el("tr"); tr.dataset.runId = r.run_id; return tr; }
+        globalThis.modelRow = function (r) { drawn++; return row(r); };
+        globalThis.envRow = row; globalThis.recordRow = function () { return el("tr"); };
+        var t = { rows: [{ run_id: "A", kind: "model" }, { run_id: "B", kind: "model" }], i1_passed: true, member_failure_count: 0 };
         var first = showLab("A"), second = showLab("B");
         await new Promise(function (r) { setTimeout(r, 10); });
         gates[1](t); await second;   // the newer load answers first
@@ -2262,8 +2335,8 @@ def test_b2_only_the_newest_inventory_load_draws():
     assert got == ["new"]
 
 
-def test_rev3_playground_has_no_optional_chip_or_synthetic_tag(admin):
-    sec = _by_id(_tree(admin), "screen-playground")
+def test_rev3_sessions_have_no_optional_chip_or_synthetic_tag(admin):
+    sec = _by_id(_tree(admin), "screen-sessions")
     text = " ".join(sec.text().split())
     assert "(optional)" not in text and "synthetic" not in text.lower() and "Research console" not in text
     assert "research-label" not in admin
@@ -2271,57 +2344,19 @@ def test_rev3_playground_has_no_optional_chip_or_synthetic_tag(admin):
         _by_id(_tree(admin), ident)
 
 
-def test_rev3_real_input_screen_lists_gates_from_the_api(admin, client):
+def test_rev3_real_input_stays_refused_server_side(client):
+    """HAC-76 removed the real-input screen; AD7 still holds: the build cannot allow real input and the
+    API refuses every request with the open gates."""
     from daypart.governance import real_input
 
     assert real_input.REAL_INPUT_BUILD_ALLOWED is False
-    root = _tree(admin)
-    sec = _by_id(root, "screen-input")
-    panel = _by_id(root, "ri-panel")
-    assert _is_inside(panel, sec) and panel.attrs.get("aria-live") == "polite" and not panel.children
     r = client.post("/api/mode", json={"real_input": True})
     assert r.status_code == 403 and len(r.json()["open_gates"]) == 12
-    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
-    for g in r.json()["open_gates"]:
-        assert g["label"] not in src, g["label"]  # the gate labels come from the API, never the page
-    ri = _section(_script(admin), "async function realInput", "\n}\n")
-    assert '"POST", "/api/mode"' in ri and "res.status === 403" in ri and 'el("ol", "gates' in ri
-    assert ".gates{columns:1" in _style(admin) and "@media (min-width:48rem){.gates{columns:2}}" in _style(admin)
-
-
-@pytest.mark.parametrize("fail", [[500, {"error": "internal"}], "network"])
-def test_rev3_real_input_failure_notice_takes_focus_and_try_again_shows_the_gates(fail):
-    """QG P6.2 K6: a non-403 answer (5xx or no network) shows the §3.8 notice, which takes focus; its
-    Try again re-sends the request and, on the 403, opens the gate list with aria-expanded="true"."""
-    import json
-
-    got = _run_page(
-        ["$", "el", "attrs", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError", "showError", "riBusy", "realInput"],
-        """
-        var b = mk("ri-btn", "button"), panel = mk("ri-panel");
-        b.setAttribute("aria-expanded", "false");
-        RESP.push(FAIL);
-        await realInput();
-        var n = panel.children[0], out = { role: n.getAttribute("role"), text: n.textContent, focused: document.activeElement === n,
-          expanded: b.getAttribute("aria-expanded") };
-        RESP.push([403, { open_gates: [{ label: "Gate one", owner: "Owner" }, { label: "Gate two", owner: "Owner" }] }]);
-        panel.querySelector("button").click();
-        await new Promise(function (r) { setTimeout(r, 10); });
-        out.after = [panel.querySelector("h2").textContent, panel.querySelectorAll("li").map(function (li) { return li.textContent; }),
-          b.getAttribute("aria-expanded"), CALLS.length];
-        return out;
-        """.replace("FAIL", json.dumps(fail)),
-    )
-    assert got["role"] == "alert" and got["focused"] and got["expanded"] == "true"
-    assert "Something went wrong" in got["text"] and "Try again" in got["text"]
-    assert ("error 500" in got["text"]) if fail != "network" else ("could not reach the server" in got["text"])
-    assert got["after"] == ["Real input is off and cannot be turned on in this build",
-                            ["Gate one · open · Owner", "Gate two · open · Owner"], "true", 2]
 
 
 def test_rev3_console_api_strings_never_reach_an_html_sink(admin):
     js = _script(admin)
-    for start, end in (("/* ---------- #pipeline", "/* ---------- #input"), ("/* ---------- #input", "/* ---------- wiring")):
+    for start, end in (("/* ---------- #lab", "/* ---------- #inventory"), ("/* ---------- #inventory", "/* ---------- wiring")):
         part = _section(js, start, end)
         for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
             assert sink not in part, (start, sink)

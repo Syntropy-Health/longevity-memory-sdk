@@ -39,7 +39,10 @@ from daypart.simmember.dynamics import INTENTS
 log = logging.getLogger("daypart.demo")
 
 # The research console's routes (visual spec rev 3 §4; G36), the same list as the admin SCREENS in index.html.
-ADMIN_ROUTES = ("pipeline", "lab", "inventory", "playground", "input")
+# HAC-76: the real-input screen is gone (real input stays refused server-side, AD7) and the episode
+# playground is "sessions"; its old names stay served as aliases so earlier links still open it.
+ADMIN_ROUTES = ("pipeline", "lab", "inventory", "sessions")
+ADMIN_ROUTE_ALIASES = ("playground", "research")
 
 IntentName = Annotated[str, Field(json_schema_extra={"enum": list(INTENTS)})]
 
@@ -142,9 +145,8 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
         title="Clinical Human Clone API",
         description=(
             "Clinical Human Clone and Health Clone Passport API: the member check-in journey (check-in, "
-            "review, passport, next step, timeline) and the research console (learning lab, inventory, "
-            "episode playground). Real input is off in this build; GET /api/mode lists its open gates. "
-            "Not medical advice."
+            "review, passport, next step, timeline) and the research console (training results, health "
+            "areas, simulated coaching sessions). All members are simulated. Not medical advice."
         ),
         version="0.1.0",
     )
@@ -179,7 +181,7 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     def admin_route(route: str) -> str:
         # G36: the console routes are hashes under /admin; a path form (/admin/lab#<run_id>) gets the same
         # shell, whose script rewrites it to /admin#lab/<run_id> before routing.
-        if route not in ADMIN_ROUTES:
+        if route not in ADMIN_ROUTES and route not in ADMIN_ROUTE_ALIASES:
             raise HTTPException(status_code=404, detail="unknown console route")
         return admin_html
 

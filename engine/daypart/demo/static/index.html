@@ -387,6 +387,51 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
 .day.n{border-style:dashed}
 .rlog{list-style:none;padding:0;margin:0;font-family:var(--mono)}
 .rlog li{border-top:var(--bw) solid var(--c-hair);padding:var(--s2) 0;font-size:var(--fs-xs)}
+/* HAC-76 readability pass (research console): sans labels, plain headings, readable tables, presentation
+   width. Overrides only; role tokens only. */
+[data-surface="admin"] .a-main{width:100%;max-width:100rem;margin:0 auto}
+@media (min-width:100rem){[data-surface="admin"]{font-size:1.0625rem}}
+.a-lede{margin:var(--s2) 0 0;color:var(--a-muted);max-width:var(--measure)}
+.a-block{margin-bottom:var(--s6)}
+.a-block>h2,.lane-head h2{font:650 var(--fs-lg)/1.2 var(--font);letter-spacing:-.01em;margin:0 0 var(--s3)}
+.lane-head h2{margin:0}
+.lane{margin-bottom:var(--s6)}
+.kpis{gap:var(--s3);margin-bottom:0}
+.kpis li{display:flex;flex-direction:column;gap:var(--s1);padding:var(--s4)}
+.kpi-k{font:650 var(--fs-sm)/1.3 var(--font);text-transform:none;letter-spacing:0;color:var(--a-text)}
+.kpi-v{font:700 var(--fs-2xl)/1.1 var(--font);margin-top:var(--s1)}
+.kpi-v .tag{font-size:var(--fs-sm)}
+.kpi-d{font-size:var(--fs-sm);line-height:1.4;color:var(--a-muted)}
+.kpi-s{font:var(--fs-sm)/1.3 var(--font);margin-top:auto;padding-top:var(--s2)}
+.stage-name{font-size:var(--fs-md)}
+.stage-desc{margin:0;font-size:var(--fs-sm);line-height:1.45;color:var(--a-muted);overflow-wrap:normal}
+.stage .stage-meta{margin-top:var(--s3);font:var(--fs-sm)/1.5 var(--font)}
+.stage-link{margin:var(--s2) 0 0;font-size:var(--fs-sm)}
+.loop-back{font:var(--fs-sm)/1.45 var(--font)}
+.meta.panel{margin-bottom:var(--s5)}
+table.stack caption{font:650 var(--fs-md)/1.3 var(--font)}
+.cap-sub{display:block;font:400 var(--fs-sm)/1.4 var(--font);color:var(--a-muted);margin-top:var(--s1)}
+table.stack th{font:650 var(--fs-sm)/1.3 var(--font);text-transform:none;letter-spacing:0}
+/* G5: table text wraps at spaces only (the body's overflow-wrap:anywhere broke words mid-word at 1280);
+   only the long ids and digests may break anywhere */
+table.stack th,table.stack td{overflow-wrap:normal;word-break:normal;padding:var(--s3)}
+table.stack .run-id{overflow-wrap:anywhere}
+table.data td.num{font:700 var(--fs-md)/1.4 var(--font);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.data td.num .tag{font-weight:650;white-space:normal}
+table.data td.num .nr,table.data td.num .muted{font-weight:400;font-size:var(--fs-sm);white-space:normal}
+.cell-sub{display:block}
+.table-wrap+.table-wrap,.records{margin-top:var(--s5)}
+.records>summary{font-weight:650}
+.records .table-wrap{margin-top:var(--s3)}
+@media (max-width:40rem){
+  table.stack td{grid-template-columns:9rem minmax(0,1fr)}
+  table.stack td::before{font-family:var(--font);text-transform:none}
+  table.stack caption{display:block}
+  table.data td.num{white-space:normal}
+  table.stack td>div,table.stack td>.cell-sub{grid-column:2}
+  [data-surface="admin"] .meta{grid-template-columns:minmax(0,1fr);gap:0}
+  [data-surface="admin"] .meta dd+dt{margin-top:var(--s3)}
+}
 
 /* motion: entrance only, one-shot; reduced motion removes all of it */
 @media (prefers-reduced-motion:reduce){
@@ -425,12 +470,11 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
   <a class="a-brand" href="#pipeline"><span class="sq" aria-hidden="true"></span><b>Clinical Human Clone</b><span class="tag tag--console">Research console</span></a>
   <nav class="a-nav" aria-label="Research console">
     <ol>
-      <li><a href="#pipeline"><span class="g" aria-hidden="true">⇢</span>Pipeline</a></li>
-      <li><a href="#lab"><span class="g" aria-hidden="true">▦</span>Learning lab</a></li>
-      <li><a href="#inventory"><span class="g" aria-hidden="true">≡</span>Inventory</a></li>
-      <li><a href="#playground"><span class="g" aria-hidden="true">▷</span>Playground</a></li>
-      <li><a href="#input"><span class="g" aria-hidden="true">⊘</span>Real input</a></li>
-      <li><a href="/results" target="_blank" rel="noopener"><span class="g" aria-hidden="true">↗</span>Dashboard<span class="visually-hidden"> (opens in a new tab)</span></a></li>
+      <li><a href="#pipeline"><span class="g" aria-hidden="true">⇢</span>Overview</a></li>
+      <li><a href="#lab"><span class="g" aria-hidden="true">▦</span>Results</a></li>
+      <li><a href="#inventory"><span class="g" aria-hidden="true">≡</span>Health areas</a></li>
+      <li><a href="#sessions"><span class="g" aria-hidden="true">▷</span>Simulated sessions</a></li>
+      <li><a href="/results" target="_blank" rel="noopener"><span class="g" aria-hidden="true">↗</span>Charts<span class="visually-hidden"> (opens in a new tab)</span></a></li>
     </ol>
   </nav>
   <p class="a-side-foot"><a href="/">← Member app</a><a href="/docs">API reference</a></p>
@@ -551,107 +595,128 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
 </section>
 
 <!--/@member--><!--@admin-->
-<!-- ================= PIPELINE (rev 3 §4.1): the live loop is static copy; every number is GET /api/lab ================= -->
+<!-- ================= OVERVIEW (#pipeline; rev 3 §4.1, HAC-76 plain-language pass): the check-in loop is static copy; every number is GET /api/lab ================= -->
 <section id="screen-pipeline" data-screen="pipeline" aria-labelledby="h-pipeline" hidden>
-  <div class="a-top"><div><p class="a-crumb">/admin/pipeline</p><h1 id="h-pipeline" tabindex="-1">Adaptation pipeline</h1></div><span class="small muted mono">GET /api/lab</span></div>
+  <div class="a-top"><div><h1 id="h-pipeline" tabindex="-1">How the clone learns</h1>
+    <p class="a-lede">What happens each time a member checks in, how the coaching model is trained, and where its results stand today.</p></div></div>
   <div id="pipe-msg"></div>
-  <ul class="kpis" id="pipe-kpis" aria-label="Key results" hidden></ul>
+  <section class="a-block" id="pipe-results" aria-labelledby="pipe-kpis-h" hidden>
+    <h2 id="pipe-kpis-h">Headline results</h2>
+    <ul class="kpis" id="pipe-kpis" aria-labelledby="pipe-kpis-h" hidden></ul>
+  </section>
   <section class="lane" id="lane-live" aria-labelledby="lane-live-h">
-    <div class="lane-head"><h2 id="lane-live-h">Live loop</h2><span class="tag tag--live">● runs on every saved check-in</span></div>
-    <ol class="pipe" id="pipe-live" aria-label="Live loop, 5 stages">
+    <div class="lane-head"><h2 id="lane-live-h">What happens on every check-in</h2><span class="tag tag--live">● automatic, every saved check-in</span></div>
+    <ol class="pipe" id="pipe-live" aria-label="Every check-in, 5 steps">
       <li><div class="node"><span class="dot" aria-hidden="true">1</span><span class="wire" aria-hidden="true"></span></div>
-        <div class="stage"><div class="stage-top"><span class="stage-name">Check-in</span><span class="tag tag--live">live</span></div>
-          <dl class="stage-meta"><dt>text</dt><dd>rules-v1</dd><dt>screen</dt><dd>PII + crisis</dd><dt>file</dt><dd>fixture-sidecar-v1</dd><dt>gate</dt><dd>sha256 allow-list</dd></dl></div></li>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Member checks in</span></div>
+          <p class="stage-desc">A sentence or a file. Rules read the values; personal details and crisis language are screened first.</p></div></li>
       <li><div class="node"><span class="dot" aria-hidden="true">2</span><span class="wire" aria-hidden="true"></span></div>
-        <div class="stage"><div class="stage-top"><span class="stage-name">Review</span><span class="tag tag--live">live</span></div>
-          <dl class="stage-meta"><dt>by</dt><dd>member</dd><dt>ops</dt><dd>confirm · correct · discard · unmapped</dd></dl></div></li>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Member reviews</span></div>
+          <p class="stage-desc">The member confirms, corrects or discards each value. Nothing is saved before this.</p></div></li>
       <li><div class="node"><span class="dot" aria-hidden="true">3</span><span class="wire" aria-hidden="true"></span></div>
-        <div class="stage"><div class="stage-top"><span class="stage-name">EventLog</span><span class="tag tag--live">live</span></div>
-          <dl class="stage-meta"><dt>write</dt><dd>append-only</dd><dt>store</dt><dd>journal memory</dd></dl></div></li>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Saved to the record</span></div>
+          <p class="stage-desc">Confirmed values are added to the member's health record. Earlier entries are never overwritten.</p></div></li>
       <li><div class="node"><span class="dot" aria-hidden="true">4</span><span class="wire" aria-hidden="true"></span></div>
-        <div class="stage"><div class="stage-top"><span class="stage-name">Passport recompute</span><span class="tag tag--live">live</span></div>
-          <dl class="stage-meta"><dt>ontology</dt><dd>core-v1+u1</dd><dt>ready</dt><dd>value ≤ 14 days old</dd></dl></div></li>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Passport updated</span></div>
+          <p class="stage-desc">The passport is recalculated. A value counts as current for 14 days.</p></div></li>
       <li><div class="node"><span class="dot" aria-hidden="true">5</span><span class="wire" aria-hidden="true"></span></div>
-        <div class="stage"><div class="stage-top"><span class="stage-name">Next-step policy</span><span class="tag tag--live">live</span></div>
-          <dl class="stage-meta"><dt>policy</dt><dd>next-step-v1 (rules)</dd><dt>safety</dt><dd>membrane post()</dd></dl></div></li>
+        <div class="stage"><div class="stage-top"><span class="stage-name">Next step suggested</span></div>
+          <p class="stage-desc">A rule-based suggestion, checked against the safety rules before the member sees it.</p></div></li>
     </ol>
-    <p class="loop-back">↺ loop: the next saved check-in starts again at stage 1. <strong>No model is called in this loop.</strong></p>
+    <p class="loop-back">↺ The next check-in starts again at step 1. <strong>No AI model is used in this loop.</strong></p>
   </section>
   <section class="lane" id="lane-offline" aria-labelledby="lane-off-h" hidden>
-    <div class="lane-head"><h2 id="lane-off-h">Offline training</h2><span class="tag tag--offline">○ offline · not run per check-in</span></div>
+    <div class="lane-head"><h2 id="lane-off-h">How the coaching model is trained</h2><span class="tag tag--offline">○ offline, not on each check-in</span></div>
     <ol class="pipe pipe--offline" id="pipe-offline"></ol>
     <p class="loop-back" id="pipe-note"></p>
   </section>
   <p class="footnote">Simulated outcomes are not patient outcomes.</p>
 </section>
 
-<!-- ================= LEARNING LAB ================= -->
+<!-- ================= RESULTS (#lab) ================= -->
 <section id="screen-lab" data-screen="lab" aria-labelledby="h-lab" hidden>
-  <div class="a-top"><div><p class="a-crumb">/admin/lab</p><h1 id="h-lab" tabindex="-1">Learning lab</h1></div><span class="small muted mono">GET /api/lab</span></div>
+  <div class="a-top"><div><h1 id="h-lab" tabindex="-1">Training and evaluation results</h1>
+    <p class="a-lede">How each training step of the coaching model scored on held-out practice prompts, and how each coaching approach did with simulated members.</p></div></div>
   <div id="lab-msg"></div>
   <div id="lab-body" hidden>
-  <p class="screen-intro muted">Results from committed training and evaluation runs. Each run id links to its row.</p>
   <dl class="meta panel" id="lab-meta"></dl>
   <div class="table-wrap" tabindex="0" role="region" aria-labelledby="lab-cap">
-  <table class="stack">
-    <caption id="lab-cap">Runs</caption>
-    <thead><tr><th scope="col">Row</th><th scope="col">Run ID</th><th scope="col">Split</th><th scope="col">Seed</th><th scope="col">Failures</th><th scope="col">Metric</th></tr></thead>
+  <table class="stack data">
+    <caption id="lab-cap">Coaching model, step by step<span class="cap-sub" id="lab-cap-sub"></span></caption>
+    <thead><tr><th scope="col">Training step</th><th scope="col">Trained on</th><th scope="col">Safety rule pass rate</th><th scope="col">Coaching quality pass rate</th><th scope="col">Outcome</th></tr></thead>
     <tbody id="lab-rows"></tbody>
   </table>
   </div>
+  <div class="table-wrap" id="env-wrap" tabindex="0" role="region" aria-labelledby="env-cap">
+  <table class="stack data">
+    <caption id="env-cap">Coaching approaches with simulated members<span class="cap-sub">Each approach coached the same simulated members. Adherence is the share of days a member logged.</span></caption>
+    <thead><tr><th scope="col">Coaching approach</th><th scope="col">Average adherence</th><th scope="col">Sessions with a safety-rule breach</th><th scope="col">Tested on</th></tr></thead>
+    <tbody id="env-rows"></tbody>
+  </table>
+  </div>
+  <details class="thread records" id="lab-records">
+    <summary>Run records, for reviewers</summary>
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="rec-cap">
+    <table class="stack">
+      <caption id="rec-cap">Run records</caption>
+      <thead><tr><th scope="col">Step or approach</th><th scope="col">Run ID</th><th scope="col">Test set</th><th scope="col">Seed</th><th scope="col">Failures</th></tr></thead>
+      <tbody id="rec-rows"></tbody>
+    </table>
+    </div>
+  </details>
   <p class="footnote">Simulated outcomes are not patient outcomes.</p>
   </div>
 </section>
 
-<!-- ================= INVENTORY (the concept registry; admin only, so h-inventory is unique per surface) ================= -->
+<!-- ================= HEALTH AREAS (#inventory; the concept registry; admin only, so h-inventory is unique per surface) ================= -->
 <section id="screen-inventory" data-screen="inventory" aria-labelledby="h-inventory" hidden>
-  <div class="a-top"><div><p class="a-crumb">/admin/inventory</p><h1 id="h-inventory" tabindex="-1">Concept inventory</h1></div><span class="small muted mono">GET /api/inventory</span></div>
+  <div class="a-top"><div><h1 id="h-inventory" tabindex="-1">Health areas the clone can record</h1>
+    <p class="a-lede">Every health area the clone records, how many measures it holds, and the areas it does not cover yet.</p></div></div>
   <div id="ainv-msg"></div>
   <div id="ainv-body" hidden>
-    <p class="screen-intro muted">Every area the clone can record, how many concepts it holds, and the areas it does not cover yet.</p>
     <dl class="meta panel" id="ainv-meta"></dl>
     <div class="table-wrap" tabindex="0" role="region" aria-labelledby="inv-cap">
-    <table class="stack">
-      <caption id="inv-cap">Verticals</caption>
-      <thead><tr><th scope="col">Vertical</th><th scope="col">Concepts</th><th scope="col">Status</th></tr></thead>
+    <table class="stack data">
+      <caption id="inv-cap">Health areas</caption>
+      <thead><tr><th scope="col">Health area</th><th scope="col">Measures</th><th scope="col">Status</th></tr></thead>
       <tbody id="ainv-rows"></tbody>
     </table>
     </div>
-    <details class="thread" id="ainv-codes"><summary>Concept codes by vertical</summary><div id="ainv-list"></div></details>
+    <details class="thread" id="ainv-codes"><summary>Measure codes by health area</summary><div id="ainv-list"></div></details>
   </div>
 </section>
 
-<!-- ================= PLAYGROUND (the only place the playground words appear; #research is its alias) ================= -->
-<section id="screen-playground" data-screen="playground" aria-labelledby="h-playground" hidden>
-  <div class="a-top"><div><p class="a-crumb">/admin/playground</p><h1 id="h-playground" tabindex="-1">Research playground</h1></div><span class="small muted mono">POST /api/episodes</span></div>
-  <p class="muted measure">The episode playground for researchers (formerly the Daypart playground). Run a generated member through an episode and test drafts against the membrane.</p>
+<!-- ================= SIMULATED SESSIONS (#sessions; #playground and #research are its aliases) ================= -->
+<section id="screen-sessions" data-screen="sessions" aria-labelledby="h-sessions" hidden>
+  <div class="a-top"><div><h1 id="h-sessions" tabindex="-1">Simulated coaching sessions</h1>
+    <p class="a-lede">Coach a simulated member day by day and see how the safety check responds to each message. Every member here is generated; none is a real person.</p></div></div>
 
   <div class="stack">
   <div class="panel" role="region" aria-labelledby="r-ep-h">
-    <h2 id="r-ep-h">Episode</h2>
-    <div class="field"><label for="r-member">Generated member</label><select id="r-member"></select>
+    <h2 id="r-ep-h">Session</h2>
+    <div class="field"><label for="r-member">Simulated member</label><select id="r-member"></select>
       <p id="r-member-info" class="hint"></p></div>
-    <div class="field"><label for="r-seed">Seed</label><input id="r-seed" type="number" value="0"></div>
-    <div class="field"><label for="r-horizon">Horizon (days)</label><input id="r-horizon" type="number" value="14" min="1" max="42"></div>
-    <button class="btn btn--secondary" type="button" id="r-start">Start episode</button>
+    <div class="field"><label for="r-seed">Scenario number <span class="hint">The same number replays the same session</span></label><input id="r-seed" type="number" value="0"></div>
+    <div class="field"><label for="r-horizon">Length (days)</label><input id="r-horizon" type="number" value="14" min="1" max="42"></div>
+    <button class="btn btn--secondary" type="button" id="r-start">Start session</button>
     <p id="r-obs" class="snippet r-gap" hidden></p>
 
-    <h3 class="r-gap">Step</h3>
-    <div class="field"><label for="r-intent">Intent</label><select id="r-intent"></select></div>
-    <div class="field"><label for="r-text">Draft <span class="hint">Edit to test the membrane</span></label><textarea id="r-text"></textarea></div>
-    <button class="btn btn--secondary" type="button" id="r-step" disabled>Send draft</button>
+    <h3 class="r-gap">Today's message</h3>
+    <div class="field"><label for="r-intent">Coaching approach</label><select id="r-intent"></select></div>
+    <div class="field"><label for="r-text">Message to the member <span class="hint">Edit it to see how the safety check responds</span></label><textarea id="r-text"></textarea></div>
+    <button class="btn btn--secondary" type="button" id="r-step" disabled>Send message</button>
     <div id="r-err" role="alert"></div>
 
-    <h3 class="r-gap">Last step</h3>
-    <dl id="r-last" class="meta"><dt>Status</dt><dd class="muted">No step yet.</dd></dl>
-    <h3>Adherence</h3>
-    <ul id="r-days" class="days" aria-label="Adherence by day"></ul>
-    <h3 class="r-gap">Log</h3>
+    <h3 class="r-gap">Latest day</h3>
+    <dl id="r-last" class="meta"><dt>Status</dt><dd class="muted">No message sent yet.</dd></dl>
+    <h3>Days logged</h3>
+    <ul id="r-days" class="days" aria-label="Days logged"></ul>
+    <h3 class="r-gap">Session log</h3>
     <ol id="r-log" class="rlog"></ol>
   </div>
 
   <div class="panel" role="region" aria-labelledby="r-pp-h">
-    <h2 id="r-pp-h">Member passport (research)</h2>
+    <h2 id="r-pp-h">Simulated member's passport</h2>
     <div class="field"><label for="r-pday">As of day</label><input id="r-pday" type="number" value="41" min="0" max="42"></div>
     <button class="btn btn--secondary" type="button" id="r-ppbtn">Show passport</button>
     <p id="r-pp-meta" class="muted small r-gap"></p>
@@ -660,7 +725,9 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
   </div>
 
 <script>
-/* Research view: the original episode playground, restyled. Loaded on the first visit only. */
+/* Simulated sessions (was the episode playground). Loaded on the first visit only. */
+/* a non-pass safety decision in words (the API's decision string, underscores spaced) */
+function safetyWord(d) { return String(d).replaceAll("_", " "); }
 var research = (function () {
   var started = false, bound = false, intents = [], members = [], episode = null;
   function $(id) { return document.getElementById(id); }
@@ -678,8 +745,8 @@ var research = (function () {
   }
   function memberInfo() {
     var m = members.find(function (x) { return x.member_id === $("r-member").value; });
-    $("r-member-info").textContent = m ? "Motivation " + m.motivation + " · barrier " + String(m.barrier_type).replaceAll("_", " ") +
-      " · literacy " + m.literacy + " · " + String(m.engagement_pattern).replaceAll("_", " ") : "";
+    $("r-member-info").textContent = m ? "Motivation " + m.motivation + " · main barrier: " + String(m.barrier_type).replaceAll("_", " ") +
+      " · health literacy " + m.literacy + " · " + String(m.engagement_pattern).replaceAll("_", " ") : "";
   }
   function setDefaultText() {
     var i = intents.find(function (x) { return x.intent === $("r-intent").value; });
@@ -700,18 +767,19 @@ var research = (function () {
     var dl = $("r-last"); dl.replaceChildren();
     function add(k, v) { dl.append(el("dt", null, k)); var dd = el("dd"); if (typeof v === "string") dd.textContent = v; else dd.append(v); dl.append(dd); }
     add("Day", s.state.day + " / " + episode.horizon);
-    add("Draft", String(s.draft));
-    add("Membrane", el("span", "tag " + (s.membrane.decision === "pass" ? "tag--ready" : "tag--flag"),
-      (s.membrane.decision === "pass" ? "✓ " : "⚠ ") + s.membrane.decision));
-    add("Layer 0", String(s.membrane.layer0.outcome));
+    add("Message sent", String(s.draft));
+    add("Safety check", el("span", "tag " + (s.membrane.decision === "pass" ? "tag--ready" : "tag--flag"),
+      s.membrane.decision === "pass" ? "✓ Passed" : "⚠ " + safetyWord(s.membrane.decision)));
+    add("Hard-rule screen", String(s.membrane.layer0.outcome).replaceAll("_", " "));
     var hits = el("span");
     if (s.dsl_hits.length) s.dsl_hits.forEach(function (v) { hits.append(el("code", "tag tag--flag", String(v)), " "); });
     else hits.textContent = "none";
-    add("DSL hits", hits);
-    add("Reward", Number(s.reward).toFixed(1));
-    add("Member", String(s.reply));
-    $("r-log").prepend(el("li", null, "Day " + s.state.day + " · " + s.intent + " · " + s.membrane.decision +
-      " · reward " + Number(s.reward).toFixed(1) + (s.done ? " · done" : "")));
+    add("Safety rules triggered", hits);
+    add("Session score", Number(s.reward).toFixed(1));
+    add("Member's reply", String(s.reply));
+    $("r-log").prepend(el("li", null, "Day " + s.state.day + " · " + String(s.intent).replaceAll("_", " ") + " · safety check " +
+      (s.membrane.decision === "pass" ? "passed" : safetyWord(s.membrane.decision)) +
+      " · score " + Number(s.reward).toFixed(1) + (s.done ? " · session ended" : "")));
     renderDays(s.state);
     $("r-step").disabled = s.done;
   }
@@ -721,7 +789,7 @@ var research = (function () {
       episode = await call("/api/episodes", { member_id: $("r-member").value, seed: Number($("r-seed").value), horizon: Number($("r-horizon").value) });
       $("r-obs").hidden = false; $("r-obs").textContent = episode.observation;
       $("r-log").replaceChildren();
-      $("r-last").replaceChildren(el("dt", null, "Status"), el("dd", "muted", "Episode started."));
+      $("r-last").replaceChildren(el("dt", null, "Status"), el("dd", "muted", "Session started."));
       renderDays(episode.state); $("r-step").disabled = false;
       passport();
     } catch (e) { err(e); }
@@ -735,7 +803,7 @@ var research = (function () {
     err();
     try {
       var p = await call("/api/members/" + encodeURIComponent($("r-member").value) + "/passport?day=" + Number($("r-pday").value));
-      $("r-pp-meta").textContent = p.member_id + " · day " + p.day + " · ontology " + p.ontology_version;
+      $("r-pp-meta").textContent = p.member_id + " · day " + p.day + " · measure set " + p.ontology_version;
       var box = $("r-cards"); box.replaceChildren();
       p.flags.forEach(function (f) {
         var ready = f.status === "ready";
@@ -749,7 +817,7 @@ var research = (function () {
         } else {
           c.append(el("p", "withheld-msg", f.message));
         }
-        c.append(el("p", "small muted", f.code + " · pending " + f.pending.join(", ")));
+        c.append(el("p", "small muted", f.code + (f.pending.length ? " · waiting for " + f.pending.join(", ") : "")));
         box.append(c);
       });
     } catch (e) { err(e); }
@@ -779,13 +847,6 @@ var research = (function () {
 </script>
 </section>
 
-<!-- ================= REAL INPUT (rev 3 §4.5; moved here from the console footer, AM-2 D2) ================= -->
-<section id="screen-input" data-screen="input" aria-labelledby="h-input" hidden>
-  <div class="a-top"><div><p class="a-crumb">/admin/input</p><h1 id="h-input" tabindex="-1">Real input</h1></div><span class="small muted mono">POST /api/mode</span></div>
-  <p class="muted measure">Real input is off in this build and the server refuses every request to turn it on. Requesting it shows the gates that are still open.</p>
-  <button class="btn btn--secondary" type="button" id="ri-btn" aria-controls="ri-panel" aria-expanded="false">Request real input</button>
-  <div id="ri-panel" class="ri-panel" aria-live="polite"></div>
-</section>
 <!--/@admin-->
 
 <!--@member--></main>
@@ -1058,14 +1119,15 @@ var SCREENS = ["today", "review", "passport", "next", "timeline"];
 /* #checkin (API evidence links, older bookmarks) opens #today */
 var ALIASES = { checkin: "today" };
 /*/@member*//*@admin*/
-/* rev 3 §4 (G36): hash routes under /admin, #pipeline by default; #research (the API's simulated-source
-   evidence link and older bookmarks) opens the playground. /admin/<route> paths are served too and
-   rewritten to /admin#<route> before the first route() (an old #<run_id> fragment is kept). */
-var SCREENS = ["pipeline", "lab", "inventory", "playground", "input"];
-var ALIASES = { research: "playground" };
+/* rev 3 §4 (G36): hash routes under /admin, #pipeline (the overview) by default; #research (the API's
+   simulated-source evidence link) and #playground (older bookmarks) open #sessions. /admin/<route> paths
+   are served too and rewritten to /admin#<route> before the first route() (an old #<run_id> fragment is
+   kept). HAC-76: the real-input screen is gone, so #input falls back to the overview. */
+var SCREENS = ["pipeline", "lab", "inventory", "sessions"];
+var ALIASES = { research: "sessions", playground: "sessions" };
 (function () {
   var m = /^\/admin\/([a-z]+)\/?$/.exec(location.pathname);
-  if (m && SCREENS.indexOf(m[1]) >= 0) {
+  if (m && (SCREENS.indexOf(m[1]) >= 0 || Object.prototype.hasOwnProperty.call(ALIASES, m[1]))) {
     history.replaceState(null, "", "/admin#" + m[1] + (location.hash.length > 1 ? "/" + location.hash.slice(1) : ""));
   }
 })();
@@ -1093,8 +1155,7 @@ function route() {
   var focusInventory = r.base === "passport" && r.rest === "inventory";
   if (!focusInventory) $("h-" + r.base).focus();
   var render = { today: showCheckin, review: showReview, passport: showPassport, next: showNext, timeline: showTimeline,
-    pipeline: showPipeline, lab: showLab, inventory: showInventory, playground: function () { research.init(); },
-    input: function () { /* static: the request is made on click */ } }[r.base];
+    pipeline: showPipeline, lab: showLab, inventory: showInventory, sessions: function () { research.init(); } }[r.base];
   Promise.resolve(render(r.rest)).catch(function () { /* each screen renders its own errors */ });
 }
 
@@ -1725,7 +1786,7 @@ function rangeCell(r) {
 /* AM-2 D1 (G31): the member app never links into the research console; such an evidence-thread link
    is shown as its text only. The list is every console route (app.ADMIN_ROUTES) plus the #research
    alias, so a later link to any of them stays text too (QG P6.2 B4; a unit test pins the list). */
-var ADMIN_CONSOLE_ROUTES = ["pipeline", "lab", "inventory", "playground", "input", "research"];
+var ADMIN_CONSOLE_ROUTES = ["pipeline", "lab", "inventory", "sessions", "playground", "research"];
 var ADMIN_HASH = new RegExp("^#(" + ADMIN_CONSOLE_ROUTES.join("|") + ")(/|$)");
 function memberLink(u) { return safeHref(u) !== null && !ADMIN_HASH.test(u); }
 function viewText(u) { return u.indexOf("/api/fixtures/") === 0 ? "view file" : "view"; }
@@ -2014,8 +2075,12 @@ function tlEntry(e, newest) {
   return li;
 }
 
-/* ---------- #lab ---------- */
-var ROW_NAMES = { base: "Base", sft: "SFT", dpo: "DPO", grpo: "GRPO" };
+/* ---------- #lab (Results; HAC-76): two plain-language tables and a collapsed run-record table ----------
+   Every number is one field of a GET /api/lab row. A rate is shown as a percentage with one decimal; a
+   null is "— not recorded"; a provenance mismatch shows its status verbatim (A&D T8.3) and no number. */
+var ROW_NAMES = { base: "Starting model, before training", sft: "Step 1 · Learning from example replies",
+  dpo: "Step 2 · Learning from preferred replies", grpo: "Step 3 · Practice with simulated members" };
+var ROW_SHORT = { base: "Starting model", sft: "Step 1", dpo: "Step 2", grpo: "Step 3" };
 function cell(label, cls) { var td = el("td", cls || null); td.setAttribute("data-label", label); return td; }
 function parts(td, list) {
   /* list: [label, value] pairs; a null value renders "— not recorded" */
@@ -2025,7 +2090,37 @@ function parts(td, list) {
     td.append(p[1] === null || p[1] === undefined ? nr() : typeof p[1] === "object" ? p[1] : String(p[1]));
   });
 }
-function rate(v) { return typeof v === "number" && isFinite(v) ? String(v) : null; }
+/* a 0..1 rate as "68.1%" */
+function pct(v) { return typeof v === "number" && isFinite(v) ? (v * 100).toFixed(1) + "%" : null; }
+/* a 0..1 difference as "+68.1 points" */
+function pts(v) { return typeof v === "number" && isFinite(v) ? (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1) + " points" : null; }
+function count(n) { return typeof n === "number" && isFinite(n) ? n.toLocaleString("en-US") : null; }
+function intOrNull(v) { return typeof v === "number" && isFinite(v) ? String(v) : null; }
+function labRowNamed(rows, name) { return rows.find(function (r) { return r && r.row === name; }) || null; }
+function mismatched(r) { return !!r && r.status === "provenance mismatch"; }
+function mismatchTag(r) { return el("span", "tag tag--flag", "⚠ " + r.status); } /* the status verbatim */
+/* a row's rate as a percentage: its tag on a mismatch, null (not recorded) when the row or the field is missing */
+function rowPct(r, key) {
+  if (!r) return null;
+  if (mismatched(r)) return mismatchTag(r);
+  return pct(r.metrics && typeof r.metrics === "object" ? r.metrics[key] : null);
+}
+/* an environment baseline's policy in words: env_always_<intent>, env_always_none, env_random_intent */
+function envName(r) {
+  var k = String(r.row).replace(/^env_/, "");
+  if (k === "always_none") return "No coaching message";
+  if (k === "random_intent") return "A random approach each day";
+  if (k.indexOf("always_") === 0) { var w = k.slice(7).replaceAll("_", " "); return "Always " + w; }
+  return k.replaceAll("_", " ");
+}
+function stepName(r) { return ROW_NAMES[r.row] || (r.kind === "env_baseline" ? envName(r) : String(r.row)); }
+function runAnchor(r, text) {
+  if (typeof r.run_id !== "string") return null;
+  var a = link("#lab/" + r.run_id, null, "mono run-id");
+  a.textContent = text || r.run_id;
+  a.title = r.run_id;
+  return a;
+}
 var labSeq = 0;
 async function showLab(runId) {
   var seq = ++labSeq, msg = clear($("lab-msg")), labBody = $("lab-body");
@@ -2036,180 +2131,209 @@ async function showLab(runId) {
   }
   labBody.hidden = false;
   var t = res.data, meta = clear($("lab-meta"));
-  meta.append(el("dt", null, "Data-generation failures"));
-  var dd = el("dd"); dd.append(typeof t.member_failure_count === "number" ? plural(t.member_failure_count, "member", "members") : nr()); meta.append(dd);
-  meta.append(el("dt", null, "Builder check (I1)"));
+  meta.append(el("dt", null, "Test members kept out of training"));
   var i1 = el("dd");
-  if (t.i1_passed === true) i1.append(el("span", "tag tag--ready", "✓ Passed"));
+  if (t.i1_passed === true) i1.append(el("span", "tag tag--ready", "✓ Passed"), " No held-out test member appears in any training data.");
   else if (t.i1_passed === false) i1.append(el("span", "tag tag--flag", "⚠ Not passed"), " The held-out member check did not pass for this build.");
   else i1.append(nr());
   meta.append(i1);
+  meta.append(el("dt", null, "Simulated members that failed to generate"));
+  var dd = el("dd"); dd.append(typeof t.member_failure_count === "number" ? plural(t.member_failure_count, "member", "members") : nr()); meta.append(dd);
+  var models = t.rows.filter(function (r) { return r && (r.kind === "model" || r.kind === "proposed"); });
+  var envs = t.rows.filter(function (r) { return r && r.kind === "env_baseline"; });
+  var base = labRowNamed(t.rows, "base"), bs = base && !mismatched(base) && base.split ? base.split : null;
+  var sub = clear($("lab-cap-sub"));
+  sub.append(bs && typeof bs.n === "number" ? "Every step was tested on the same " + bs.n + " held-out practice prompts, none used in training." :
+    "Every step was tested on the same held-out practice prompts, none used in training.");
   var body = clear($("lab-rows"));
-  t.rows.forEach(function (r) { body.append(labRow(r)); });
+  models.forEach(function (r) { body.append(modelRow(r)); });
+  var env = clear($("env-rows"));
+  envs.forEach(function (r) { env.append(envRow(r)); });
+  $("env-wrap").hidden = envs.length === 0;
+  var rec = clear($("rec-rows"));
+  t.rows.forEach(function (r) { rec.append(recordRow(r)); });
   if (runId) {
     var hit = null;
-    body.querySelectorAll("tr").forEach(function (tr) { if (tr.dataset.runId === runId) hit = tr; });
-    if (hit) { hit.setAttribute("aria-current", "true"); hit.scrollIntoView({ block: "center" }); }
+    [body, env, rec].forEach(function (tb) {
+      tb.querySelectorAll("tr").forEach(function (tr) {
+        if (tr.dataset.runId === runId) { tr.setAttribute("aria-current", "true"); if (!hit) hit = tr; }
+      });
+    });
+    if (hit) { $("lab-records").open = true; hit.scrollIntoView({ block: "center" }); }
   }
 }
-function labRow(r) {
+function modelRow(r) {
   var tr = el("tr", r.kind === "proposed" ? "proposed" : null);
   if (typeof r.run_id === "string") tr.dataset.runId = r.run_id;
-  var name = cell("Row");
-  name.append(el("strong", null, ROW_NAMES[r.row] || (r.kind === "env_baseline" ? "Env baseline · " + String(r.row).replace(/^env_/, "").replaceAll("_", " ") : String(r.row))));
-  var id = cell("Run ID"), split = cell("Split"), seed = cell("Seed", "num"), fail = cell("Failures", "num"), metric = cell("Metric", "num");
+  var name = cell("Training step"), trained = cell("Trained on"), safe = cell("Safety rule pass rate", "num"),
+    qual = cell("Coaching quality pass rate", "num"), out = cell("Outcome");
+  name.append(el("strong", null, stepName(r)));
   if (r.kind === "proposed") {
-    id.append(el("span", "tag tag--withheld", "○ proposed, not built"));
-    split.append(nr()); seed.append(nr()); fail.append(nr());
-    metric.append("No number. Reason: " + (r.reason ? String(r.reason) : "not recorded"));
-    tr.append(name, id, split, seed, fail, metric);
+    [trained, safe, qual].forEach(function (td) { td.append(el("span", "muted", "Not built yet")); });
+    out.append(el("span", "tag tag--withheld", "○ Planned, not built"));
+    if (r.reason) out.append(el("div", "small muted", String(r.reason)));
+    tr.append(name, trained, safe, qual, out);
     return tr;
   }
-  var mismatch = r.status === "provenance mismatch";
-  if (mismatch) id.append(el("span", "tag tag--flag", "⚠ " + r.status), " ");  /* A&D T8.3: the status verbatim */
-  if (typeof r.run_id === "string") { var a = link("#lab/" + r.run_id, null, "mono"); a.textContent = r.run_id; id.append(a); }
-  else if (!mismatch) id.append(nr());
+  var s = r.split || {}, g = r.gate && typeof r.gate === "object" ? r.gate : null, mismatch = mismatched(r);
+  if (r.row === "base") trained.append("General model, no coaching training");
+  else if (mismatch) trained.append(nr());
+  else {
+    var n = count(s.training_rows);
+    trained.append(n === null ? nr() : n + (r.row === "dpo" ? " pairs of better and worse replies" : " example replies"));
+  }
+  safe.append(rowPct(r, "boundary_pass_rate") || nr());
+  qual.append(rowPct(r, "rubric_pass_rate") || nr());
+  if (mismatch) out.append(mismatchTag(r));
+  else if (r.row === "base") out.append(el("span", "muted", "Reference point for the steps below"));
+  else if (g) {
+    var ok = g.passed === true;
+    out.append(el("span", "tag " + (ok ? "tag--ready" : g.passed === false ? "tag--flag" : "tag--withheld"),
+      ok ? "✓ Passed its check" : g.passed === false ? "⚠ Did not pass its check" : "○ Check not recorded"));
+    var why = el("div", "small muted");
+    if (r.row === "sft") parts(why, [["Safety", pts(g.delta)], ["", "vs. starting model"]]);
+    else if (r.row === "dpo") parts(why, [["Quality", pts(g.rubric_delta)], ["", "vs. step 1"], ["safety regressions:", intOrNull(g.boundary_regressions)]]);
+    if (why.childNodes.length) out.append(why);
+  } else out.append(nr());
+  tr.append(name, trained, safe, qual, out);
+  return tr;
+}
+function envRow(r) {
+  var tr = el("tr");
+  if (typeof r.run_id === "string") tr.dataset.runId = r.run_id;
+  var name = cell("Coaching approach"), adh = cell("Average adherence", "num"), vio = cell("Sessions with a safety-rule breach", "num"), on = cell("Tested on");
+  name.append(el("strong", null, envName(r)));
+  var m = r.metrics || {}, s = r.split || {}, mismatch = mismatched(r);
+  adh.append(mismatch ? mismatchTag(r) : pct(m.mean_adherence) || nr());
+  vio.append(mismatch ? nr() : pct(m.episode_violation_rate) || nr());
+  if (typeof s.n === "number") {
+    on.append(plural(s.n, "session", "sessions"));
+    if (typeof s.n_scenarios === "number" && typeof s.horizon === "number") on.append(el("span", "small muted cell-sub", s.n_scenarios + " members, " + s.horizon + " days each"));
+  } else on.append(nr());
+  tr.append(name, adh, vio, on);
+  return tr;
+}
+function recordRow(r) {
+  var tr = el("tr", r.kind === "proposed" ? "proposed" : null);
+  if (typeof r.run_id === "string") tr.dataset.runId = r.run_id;
+  var name = cell("Step or approach"), id = cell("Run ID"), split = cell("Test set"), seed = cell("Seed", "num"), fail = cell("Failures", "num");
+  name.append(el("strong", null, r.kind === "env_baseline" ? envName(r) : (ROW_SHORT[r.row] || String(r.row))));
+  if (r.kind === "proposed") {
+    id.append(el("span", "tag tag--withheld", "○ " + (r.status || "proposed, not built")));
+    split.append(nr()); seed.append(nr()); fail.append(nr());
+    tr.append(name, id, split, seed, fail);
+    return tr;
+  }
+  var mismatch = mismatched(r);
+  if (mismatch) id.append(mismatchTag(r), " ");  /* A&D T8.3: the status verbatim */
+  var a = runAnchor(r);
+  if (a) id.append(a); else if (!mismatch) id.append(nr());
   if (r.row === "base" && typeof r.file_digest === "string") {
     /* A&D §4.8: sha256(boundary_eval.json)[:12], shown only as a file digest (text, not a link) */
-    var fd = el("div", "small"); fd.append("file digest ", el("code", "mono", r.file_digest)); id.append(fd);
+    var fd = el("div", "small"); fd.append("file digest ", el("code", "mono run-id", r.file_digest)); id.append(fd);
   }
   var s = r.split || {};
   if (r.kind === "env_baseline") {
-    parts(split, [["scenarios", s.n_scenarios], ["episodes", s.n], ["horizon (days)", s.horizon]]);
+    parts(split, [["scenarios", s.n_scenarios], ["sessions", s.n], ["days", s.horizon]]);
   } else {
     var list = [["prompt set", s.prompt_set_version]];
     if (!mismatch) list.push(["n =", s.n]);
     if (r.row !== "base") { if (!mismatch) list.push(["training rows", s.training_rows]); list.push(["data sha256", typeof s.data_sha256 === "string" ? s.data_sha256.slice(0, 12) : null]); }
     parts(split, list);
   }
-  if (mismatch) { seed.append(nr()); fail.append(nr()); metric.append(nr("not shown")); tr.append(name, id, split, seed, fail, metric); return tr; }
+  if (mismatch) { seed.append(nr()); fail.append(nr()); tr.append(name, id, split, seed, fail); return tr; }
   var seeds = Array.isArray(r.seed) ? r.seed.join(", ") : (typeof r.seed === "number" ? String(r.seed) : null);
   var sp = [["", seeds]];
   if (r.kind === "model" && r.row !== "base") sp.push(["cohort", r.cohort_seed]);
   parts(seed, sp);
-  if (r.kind === "env_baseline") parts(fail, [["", r.failures === null || r.failures === undefined ? null : plural(r.failures, "episode", "episodes")]]);
-  else parts(fail, [["", r.failures === null || r.failures === undefined ? null : r.failures + " boundary"], ["degenerate", r.degenerate]]);
-  var m = r.metrics || {};
-  if (r.kind === "env_baseline") parts(metric, [["mean adherence", rate(m.mean_adherence)], ["violation rate", rate(m.episode_violation_rate)]]);
-  else parts(metric, [["boundary pass", rate(m.boundary_pass_rate)], ["rubric pass", rate(m.rubric_pass_rate)]]);
-  if (r.gate && typeof r.gate === "object") {
-    var g = el("div", "small"), gate = r.row === "sft" ? "r3" : r.row === "dpo" ? "r4" : "gate";
-    g.append("Gate " + gate + ": " + (r.gate.passed === true ? "passed" : r.gate.passed === false ? "not passed" : "not recorded"));
-    metric.append(g);
-  }
-  tr.append(name, id, split, seed, fail, metric);
+  if (r.kind === "env_baseline") parts(fail, [["", r.failures === null || r.failures === undefined ? null : plural(r.failures, "session", "sessions")]]);
+  else parts(fail, [["", r.failures === null || r.failures === undefined ? null : r.failures + " outside the rules"], ["unusable replies", r.degenerate]]);
+  tr.append(name, id, split, seed, fail);
   return tr;
 }
 
-/* ---------- #pipeline (rev 3 §4.1): KPIs and the offline lane from GET /api/lab, read per request ----------
-   Every number below is one field of a lab row, mapped 1:1 (3 decimals for a rate); a null is "— not
-   recorded" and a provenance mismatch shows its tag and no number. The live lane is static markup. */
-function fix3(v) { return typeof v === "number" && isFinite(v) ? v.toFixed(3) : null; }
-function delta3(v) { var s = fix3(v); return s === null ? null : (v >= 0 ? "+" : "") + s; }
-function labRowNamed(rows, name) { return rows.find(function (r) { return r && r.row === name; }) || null; }
-function mismatched(r) { return !!r && r.status === "provenance mismatch"; }
-function mismatchTag(r) { return el("span", "tag tag--flag", "⚠ " + r.status); } /* the status verbatim, as #lab */
-/* a row's rate: its tag on a mismatch, null (not recorded) when the row or the field is missing */
-function rowRate(r, key) {
-  if (!r) return null;
-  if (mismatched(r)) return mismatchTag(r);
-  return fix3(r.metrics && typeof r.metrics === "object" ? r.metrics[key] : null);
-}
-function intOrNull(v) { return typeof v === "number" && isFinite(v) ? String(v) : null; }
-function envName(r) { return String(r.row).replace(/^env_/, "").replaceAll("_", " "); }
-function kpi(key, value, sub) {
+/* ---------- #pipeline (Overview; rev 3 §4.1, HAC-76): headline tiles and the training lane from GET /api/lab ----------
+   Every number below is one field of a lab row, read per request; a null is "— not recorded" and a
+   provenance mismatch shows its tag and no number. The check-in lane is static markup. */
+function kpi(key, value, desc, sub) {
   var li = el("li"), v = el("span", "kpi-v"), s = el("span", "kpi-s");
   v.append(value === null || value === undefined ? nr() : value);
-  li.append(el("span", "kpi-k", key), v);
+  li.append(el("span", "kpi-k", key), v, el("span", "kpi-d", desc));
   if (sub) { parts(s, sub); li.append(s); }
   return li;
 }
 function pipeKpis(t) {
-  var rows = t.rows, base = labRowNamed(rows, "base"), sft = labRowNamed(rows, "sft"), dpo = labRowNamed(rows, "dpo");
+  var rows = t.rows, base = labRowNamed(rows, "base"), dpo = labRowNamed(rows, "dpo");
   var box = clear($("pipe-kpis"));
-  var dn = dpo && !mismatched(dpo) && dpo.split ? intOrNull(dpo.split.n) : null;
-  box.append(kpi("boundary pass · dpo", rowRate(dpo, "boundary_pass_rate"), [["base", rowRate(base, "boundary_pass_rate")], ["n =", dn]]));
-  box.append(kpi("rubric pass · dpo", rowRate(dpo, "rubric_pass_rate"), [["sft", rowRate(sft, "rubric_pass_rate")], ["base", rowRate(base, "rubric_pass_rate")]]));
-  var i1 = t.i1_passed === true ? "✓ passed" : t.i1_passed === false ? "⚠ not passed" : null;
-  box.append(kpi("builder check I1", i1, [["member failures", intOrNull(t.member_failure_count)]]));
+  box.append(kpi("Safety rule pass rate", rowPct(dpo, "boundary_pass_rate"),
+    "Share of practice replies that stayed inside the coaching safety rules.",
+    [["Before training:", rowPct(base, "boundary_pass_rate")]]));
+  box.append(kpi("Coaching quality pass rate", rowPct(dpo, "rubric_pass_rate"),
+    "Share of practice replies that met the coaching quality checklist.",
+    [["Before training:", rowPct(base, "rubric_pass_rate")]]));
+  var i1 = t.i1_passed === true ? "✓ Passed" : t.i1_passed === false ? "⚠ Not passed" : null;
+  box.append(kpi("Test members kept out of training", i1,
+    "Checks that no held-out test member appears in any training data.", null));
   var best = null;
   rows.forEach(function (r) {
-    var m = r && r.kind === "env_baseline" && r.metrics ? fix3(r.metrics.mean_adherence) : null;
+    var m = r && r.kind === "env_baseline" && r.metrics ? pct(r.metrics.mean_adherence) : null;
     if (m !== null && (best === null || r.metrics.mean_adherence > best.metrics.mean_adherence)) best = r;
   });
-  box.append(kpi("best env adherence", best ? fix3(best.metrics.mean_adherence) : null,
-    [["", best ? envName(best) : null], ["", best && best.split && intOrNull(best.split.n) !== null ? best.split.n + " episodes" : null]]));
+  box.append(kpi("Best simulated adherence", best ? pct(best.metrics.mean_adherence) : null,
+    "Share of days simulated members logged, under the best coaching approach.",
+    [["Approach:", best ? envName(best) : null]]));
 }
-var OFFLINE = [["base", "B", "Base"], ["sft", "S", "SFT"], ["dpo", "D", "DPO"], ["grpo", "G", "GRPO"]];
-function runLink(r) {
-  if (typeof r.run_id !== "string") return null;
-  var i = r.run_id.lastIndexOf("/"), a = link("#lab/" + r.run_id, i < 0 ? r.run_id : "…" + r.run_id.slice(i), "mono");
-  a.title = r.run_id; /* the full id; the note below names the run prefix */
-  return a;
-}
-/* a rate followed by "(Δ <signed delta>)" when its gate is recorded */
-function withDelta(rate, gate, key) {
-  if (rate === null || typeof rate === "object" || !gate || typeof gate !== "object") return rate;
-  var d = delta3(gate[key]), sp = el("span", null, rate + " (Δ ");
-  sp.append(d === null ? nr() : d, ")");
-  return sp;
-}
+var OFFLINE = [["base", "0", "Starting model", "A general language model before any coaching training."],
+  ["sft", "1", "Learning from example replies", "Trained on example coaching replies that follow the safety rules."],
+  ["dpo", "2", "Learning from preferred replies", "Shown pairs of a better and a worse reply, and trained to prefer the better one."],
+  ["grpo", "3", "Practice with simulated members", "Would learn from simulated members' responses over many days."]];
 function offlineStage(spec, r) {
   var proposed = r.kind === "proposed", mismatch = mismatched(r);
   var li = el("li", proposed ? "is-proposed" : null), node = el("div", "node");
   node.append(attrs(el("span", "dot", spec[1]), { "aria-hidden": "true" }), attrs(el("span", "wire"), { "aria-hidden": "true" }));
   var st = el("div", "stage"), top = el("div", "stage-top");
   top.append(el("span", "stage-name", spec[2]));
-  if (proposed) top.append(el("span", "tag tag--proposed", "○ " + r.status));
-  else top.append(el("span", "tag tag--offline", "offline"));
+  if (proposed) top.append(el("span", "tag tag--proposed", "○ Planned, not built"));
   if (mismatch) top.append(mismatchTag(r));
-  var gname = r.row === "sft" ? "r3" : r.row === "dpo" ? "r4" : null;
-  if (gname && !mismatch && r.gate && typeof r.gate === "object") {
-    if (r.gate.passed === true) top.append(el("span", "tag tag--ready", "✓ gate " + gname));
-    else if (r.gate.passed === false) top.append(el("span", "tag tag--flag", "⚠ gate " + gname + " not passed"));
+  var g = r.gate && typeof r.gate === "object" ? r.gate : null;
+  if (!proposed && !mismatch && g && r.row !== "base") {
+    if (g.passed === true) top.append(el("span", "tag tag--ready", "✓ Passed its check"));
+    else if (g.passed === false) top.append(el("span", "tag tag--flag", "⚠ Did not pass its check"));
   }
-  var meta = [["run", runLink(r)]], s = r.split || {}, g = r.gate;
-  if (proposed) meta.push(["reason", typeof r.reason === "string" ? r.reason : null]);
-  else if (!mismatch) {
-    var fails = null;
-    if (r.row === "base") {
-      fails = el("span");
-      parts(fails, [["", intOrNull(r.failures)], ["", r.degenerate === null || r.degenerate === undefined ? null : r.degenerate + " degenerate"]]);
-      meta.push(["boundary", rowRate(r, "boundary_pass_rate")], ["rubric", rowRate(r, "rubric_pass_rate")], ["failures", fails]);
-    } else if (r.row === "sft") {
-      meta.push(["rows", intOrNull(s.training_rows)], ["boundary", withDelta(rowRate(r, "boundary_pass_rate"), g, "delta")],
-        ["rubric", rowRate(r, "rubric_pass_rate")]);
-    } else {
-      var b = rowRate(r, "boundary_pass_rate");
-      if (b !== null && g && typeof g === "object") {
-        var reg = intOrNull(g.boundary_regressions), bs = el("span", null, b + " · ");
-        bs.append(reg === null ? nr() : reg, " regressions");
-        b = bs;
-      }
-      meta.push(["pairs", intOrNull(s.training_rows)], ["boundary", b], ["rubric", withDelta(rowRate(r, "rubric_pass_rate"), g, "rubric_delta")]);
-    }
+  st.append(top, el("p", "stage-desc", spec[3]));
+  if (!proposed && !mismatch) {
+    var dl = el("dl", "stage-meta");
+    var meta = [["Safety rules", rowPct(r, "boundary_pass_rate")], ["Quality", rowPct(r, "rubric_pass_rate")]];
+    if (r.row === "sft" && g) meta[0][1] = withPts(meta[0][1], g.delta);
+    if (r.row === "dpo" && g) meta[1][1] = withPts(meta[1][1], g.rubric_delta);
+    meta.forEach(function (m) {
+      var dd = el("dd");
+      dd.append(m[1] === null || m[1] === undefined ? nr() : m[1]);
+      dl.append(el("dt", null, m[0]), dd);
+    });
+    st.append(dl);
+    var a = runAnchor(r, "Run record");
+    if (a) { var p = el("p", "stage-link"); p.append(a); st.append(p); }
+  } else if (proposed && typeof r.reason === "string") {
+    st.append(el("p", "stage-desc small", "Not built: " + r.reason));
   }
-  var dl = el("dl", "stage-meta");
-  meta.forEach(function (m) {
-    var dd = el("dd");
-    dd.append(m[1] === null || m[1] === undefined ? nr() : m[1]);
-    dl.append(el("dt", null, m[0]), dd);
-  });
-  st.append(top, dl);
   li.append(node, st);
   return li;
+}
+/* a percentage followed by "(+x points)" when its gate records the change */
+function withPts(p, d) {
+  if (p === null || typeof p === "object") return p;
+  var x = pts(d);
+  return x === null ? p : p + " (" + x + ")";
 }
 function pipeOffline(t) {
   var ol = clear($("pipe-offline")), n = 0;
   OFFLINE.forEach(function (spec) { var r = labRowNamed(t.rows, spec[0]); if (r) { ol.append(offlineStage(spec, r)); n++; } });
-  ol.setAttribute("aria-label", "Offline training, " + plural(n, "stage", "stages"));
+  ol.setAttribute("aria-label", "Training, " + plural(n, "step", "steps"));
   var base = labRowNamed(t.rows, "base"), note = clear($("pipe-note"));
-  var id = base && typeof base.run_id === "string" ? base.run_id : null, cut = id ? id.lastIndexOf("/") : -1;
   var s = base && base.split ? base.split : {};
-  note.append("Runs ", cut > 0 ? id.slice(0, cut) + "/*" : nr(), ". Eval split ",
-    typeof s.prompt_set_version === "string" ? s.prompt_set_version : nr(), ", n = ", intOrNull(s.n) || nr(),
-    ", seed ", base ? intOrNull(base.seed) || nr() : nr(),
-    ". Trained adapters are evaluated here; the live loop above does not call them in this build.");
+  note.append("Each step is tested on the same ", intOrNull(s.n) || nr(), " held-out practice prompts. ",
+    "The trained model is evaluated here only; the check-in loop above does not use it in this prototype.");
 }
 var pipeSeq = 0;
 async function showPipeline() {
@@ -2217,7 +2341,8 @@ async function showPipeline() {
   var res = await api("GET", "/api/lab");
   if (seq !== pipeSeq) return; /* a newer load started while this one waited */
   var ok = res.ok && res.data && Array.isArray(res.data.rows);
-  /* §4.1 states: a failed GET keeps the static live lane and hides the numbers */
+  /* §4.1 states: a failed GET keeps the static check-in lane and hides the numbers */
+  $("pipe-results").hidden = !ok;
   $("pipe-kpis").hidden = !ok;
   $("lane-offline").hidden = !ok;
   if (!ok) { msg.append(serverError(res, showPipeline)); return; }
@@ -2236,14 +2361,14 @@ async function showInventory() {
   if (!res.ok || !res.data || !Array.isArray(res.data.verticals)) { body.hidden = true; msg.append(serverError(res, showInventory)); return; }
   var inv = res.data, meta = clear($("ainv-meta"));
   function row(k, v) { meta.append(el("dt", null, k)); var dd = el("dd"); dd.append(v === null || v === undefined ? nr() : String(v)); meta.append(dd); }
-  row("LOINC", inv.loinc_version);
-  row("Sign-off", reviewLabel(inv.reviewer_status));
+  row("Code system (LOINC version)", inv.loinc_version);
+  row("Clinical sign-off", reviewLabel(inv.reviewer_status));
   var rows = clear($("ainv-rows")), list = clear($("ainv-list"));
   function tr(label, concepts, covered) {
-    var r = el("tr", covered ? null : "proposed"), v = cell("Vertical"), c = cell("Concepts", "num"), st = cell("Status");
+    var r = el("tr", covered ? null : "proposed"), v = cell("Health area"), c = cell("Measures", "num"), st = cell("Status");
     v.append(el("strong", null, label));
     c.append(concepts);
-    st.append(el("span", "tag " + (covered ? "tag--ready" : "tag--withheld"), covered ? "✓ covered" : "○ gap"));
+    st.append(el("span", "tag " + (covered ? "tag--ready" : "tag--withheld"), covered ? "✓ Covered" : "○ Not covered yet"));
     r.append(v, c, st);
     rows.append(r);
   }
@@ -2264,35 +2389,6 @@ async function showInventory() {
   body.hidden = false;
 }
 
-/* ---------- #input (research console): the real-input request, always refused ---------- */
-var riBusy = false;
-async function realInput() {
-  var b = $("ri-btn"), panel = $("ri-panel");
-  if (b.getAttribute("aria-expanded") === "true") { b.setAttribute("aria-expanded", "false"); clear(panel); return; }
-  if (riBusy) return;
-  riBusy = true;
-  try {
-    var res = await api("POST", "/api/mode", { real_input: true });
-    clear(panel);
-    if (res.status === 403 && res.data && Array.isArray(res.data.open_gates)) {
-      var gates = res.data.open_gates, ol = el("ol", "gates small");
-      gates.forEach(function (g) { ol.append(el("li", null, String(g.label) + " · open · " + String(g.owner))); });
-      var n = el("div", "notice"); attrs(n, { role: "region", "aria-labelledby": "ri-t" });
-      var ico = el("span", "ico", "⊘"); ico.setAttribute("aria-hidden", "true");
-      var box = el("div"), h = el("h2", "notice-title", "Real input is off and cannot be turned on in this build");
-      h.id = "ri-t";
-      box.append(h, el("p", null, plural(gates.length, "gate is", "gates are") + " open:"), ol);
-      n.append(ico, box);
-      panel.append(n);
-    } else {
-      showError(panel, serverError(res, function () { b.setAttribute("aria-expanded", "false"); realInput(); }, { focus: true }));
-    }
-    b.setAttribute("aria-expanded", "true");
-  } finally {
-    riBusy = false;
-  }
-}
-
 /* ---------- wiring ---------- */
 /*@member*/
 $("ci-text").addEventListener("input", updateCount);
@@ -2305,9 +2401,7 @@ $("tl-more").addEventListener("click", function () { tlMore(true); });
 restore();
 updateNav();
 updateCount();
-/*/@member*//*@admin*/
-$("ri-btn").addEventListener("click", realInput);
-/*/@admin*/
+/*/@member*/
 /* the skip link moves focus to the content; it never changes the route hash */
 $("skip").addEventListener("click", function (ev) { ev.preventDefault(); $("main").focus(); });
 addEventListener("hashchange", route);
