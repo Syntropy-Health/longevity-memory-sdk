@@ -12,8 +12,15 @@ Standard library only, so CI runs it without the engine's dependencies::
     uv run --no-project python tools/smoke_journey.py https://supermomo668--daypart-demo-playground.us-east.modal.run
 
 Run from ``engine/``, as the ``deploy-demo`` CI job does. Exit status 0 when every step passes, 1 on
-the first failure: a wrong status, a network error or a malformed body prints ``FAIL <step>: …``.
+failure: a wrong status, a network error or a malformed body prints ``FAIL <step>: …``.
 The journey is synthetic and writes only to an in-memory demo journal (A&D D-A3).
+
+Rollover (P5.2, CTO hand-back 83506a31): right after ``modal deploy`` the old and new containers
+both serve for a while, and journals live in memory per container, so a call can reach a container
+that never saw the journal and get 404 ``unknown_journal`` (or ``unknown_checkin``). Only that miss
+and a network error are retried: the whole journey starts over with a fresh journal, up to
+``TRIES`` times with growing back-off inside a ``BUDGET_S`` wall-clock budget. A 500, any other
+wrong status, a wrong value or a malformed body fails on the first try.
 """
 
 from __future__ import annotations
@@ -21,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -34,8 +42,23 @@ EXPECTED_VALUES = (6.0, 8000.0)
 Transport = Callable[[str, str, Any], tuple[int, Any]]
 
 
+# A 404 with one of these codes means the call reached a container without the journal (rollover).
+ROLLOVER_ERRORS = frozenset({"unknown_journal", "unknown_checkin"})
+TRIES = 5
+BACKOFF_S = (10.0, 20.0, 30.0, 40.0)  # sleeps between tries; 100 s total
+BUDGET_S = 180.0
+
+# Indirection so tests can drive the clock and skip real sleeps.
+_sleep = time.sleep
+_clock = time.monotonic
+
+
 class SmokeFailure(AssertionError):
     pass
+
+
+class RolloverMiss(SmokeFailure):
+    """A failure the rollover can explain: retry the journey with a fresh journal."""
 
 
 def http_transport(base: str, timeout: float = 180.0) -> Transport:
@@ -64,8 +87,10 @@ def _expect(step: str, call: Transport, method: str, path: str, body: Any, statu
     try:
         code, data = call(method, path, body)
     except (OSError, ValueError) as e:  # URLError, TimeoutError, connection reset, bad URL
-        raise SmokeFailure(f"{step}: {type(e).__name__}: {e}") from e
+        raise RolloverMiss(f"{step}: {type(e).__name__}: {e}") from e
     if code != status:
+        if code == 404 and isinstance(data, dict) and data.get("error") in ROLLOVER_ERRORS:
+            raise RolloverMiss(f"{step}: expected {status}, got 404: {json.dumps(data)[:500]}")
         raise SmokeFailure(f"{step}: expected {status}, got {code}: {json.dumps(data)[:500]}")
     if not isinstance(data, dict):
         raise SmokeFailure(f"{step}: expected a JSON object, got {json.dumps(data)[:500]}")
@@ -78,6 +103,21 @@ def run(call: Transport) -> None:
         _run(call)
     except (KeyError, TypeError, ValueError, AttributeError) as e:  # a 2xx body without the fields
         raise SmokeFailure(f"malformed response: {type(e).__name__}: {e}") from e
+
+
+def run_with_retry(call: Transport, tries: int = TRIES, budget: float = BUDGET_S) -> None:
+    """Run the journey; on a rollover miss start over with a fresh journal, within tries and budget."""
+    start = _clock()
+    for attempt in range(1, tries + 1):
+        try:
+            run(call)
+            return
+        except RolloverMiss as e:
+            delay = BACKOFF_S[min(attempt - 1, len(BACKOFF_S) - 1)]
+            if attempt == tries or _clock() - start + delay > budget:
+                raise SmokeFailure(f"{e} (after {attempt} tries)") from e
+            print(f"retry {attempt}/{tries - 1} in {delay:.0f}s (deploy rollover?): {e}")
+            _sleep(delay)
 
 
 def _run(call: Transport) -> None:
@@ -113,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds per request (cold starts are slow)")
     args = ap.parse_args(argv)
     try:
-        run(http_transport(args.base_url, args.timeout))
+        run_with_retry(http_transport(args.base_url, args.timeout))
     except SmokeFailure as e:
         print(f"FAIL {e}", file=sys.stderr)
         return 1
