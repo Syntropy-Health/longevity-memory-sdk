@@ -1252,3 +1252,19 @@ def test_b2_overlapping_review_loads_render_each_card_once():
         """,
     )
     assert got == {"cards": 2, "dup": [], "gets": 1}
+
+
+def test_k3_member_facing_api_labels_never_say_demo(client):
+    """QG P6.1 C6 (AM-2 D2): strings the member app renders from the API (the import pickers and the
+    passport card source) use production wording too, not only the page's own copy."""
+    fx = client.get("/api/fixtures").json()
+    assert fx and not [f["label"] for f in fx if "demo" in f["label"].lower()]
+    member = client.get("/api/members").json()[0]["member_id"]
+    jid = client.post("/api/journals", json={"member_id": member}).json()["journal_id"]
+    ci = client.post("/api/checkins", json={"journal_id": jid, "fixture_id": "demo-scale-photo"}).json()
+    decisions = [{"proposal_id": p["proposal_id"], "action": "discard" if p["blocking"] else "confirm"} for p in ci["proposals"]]
+    assert client.post(f"/api/checkins/{ci['checkin_id']}/review", json={"decisions": decisions}).status_code == 200
+    pp = client.get(f"/api/journals/{jid}/passport").json()
+    labels = {c["source"] for c in pp["cards"]} | {c["thread"]["steps"][0]["label"] for c in pp["cards"]}
+    assert "Imported photo" in labels
+    assert not [s for s in labels if "demo" in s.lower()], labels

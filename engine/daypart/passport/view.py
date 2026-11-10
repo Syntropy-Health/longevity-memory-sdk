@@ -62,7 +62,8 @@ GAP_LABELS: Mapping[str, str] = {
     "care history": "Care history",
     "preventive care": "Screenings and check-ups",
 }
-_SOURCE_LABELS = {"text": "Your text check-in", "file_fixture": "Demo fixture file", "image_fixture": "Demo fixture image"}
+# AM-2 D2 (QG P6.1 C6): production wording, matching the review screen's "Device file" / "Photo".
+_SOURCE_LABELS = {"text": "Your text check-in", "file_fixture": "Imported device file", "image_fixture": "Imported photo"}
 _SIMULATED_SOURCE = "Simulated cohort series"
 _NO_SOURCE = "No record yet"
 _OBSERVED_LIMIT = "Self-reported in your journal; not checked against a device or a record."
