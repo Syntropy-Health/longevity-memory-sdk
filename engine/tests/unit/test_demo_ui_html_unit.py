@@ -2095,7 +2095,7 @@ def test_rev3_inventory_table_maps_the_api_and_has_no_cards_column(admin, client
     assert heads == ["Vertical", "Concepts", "Status"]  # /api/inventory has no card count, so no Cards column
     assert "cards" not in " ".join(str(k) for k in client.get("/api/inventory").json())
     got = _run_page(["$", "el", "nr", "clear", "notice", "TIMEOUT_MS", "api", "serverError", "cell", "MONTHS", "fmtDay", "reviewLabel",
-                     "showInventory"], """
+                     "invSeq", "showInventory"], """
       mk("ainv-msg"); var body = mk("ainv-body"); body.hidden = true; mk("ainv-meta", "dl"); var rows = mk("ainv-rows", "tbody"); mk("ainv-list");
       RESP.push([200, INV]);
       await showInventory();
@@ -2107,6 +2107,51 @@ def test_rev3_inventory_table_maps_the_api_and_has_no_cards_column(admin, client
     want = [["", f"Vertical={v['label']}", f"Concepts={len(v['concepts'])}", "Status=✓ covered"] for v in inv["verticals"]]
     want += [["proposed", f"Vertical={g}", "Concepts=0", "Status=○ gap"] for g in inv["gap_labels"]]
     assert got[1] == want
+
+
+_GATED = """
+var gates = [];
+fetch = function (path) { return new Promise(function (resolve) { gates.push(function (body) {
+  resolve({ status: 200, ok: true, json: async function () { return body; } }); }); }); };
+"""
+
+
+def test_b2_only_the_newest_lab_load_draws():
+    """QG P6.2 B2: #lab/A then quickly #lab/B: the slow first /api/lab answer never redraws the table
+    or marks run A."""
+    got = _run_page(
+        ["$", "el", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError", "labSeq", "showLab"],
+        _GATED + """
+        mk("lab-msg"); mk("lab-body"); mk("lab-meta", "dl"); var rows = mk("lab-rows", "tbody");
+        var drawn = 0;
+        globalThis.labRow = function (r) { drawn++; var tr = el("tr"); tr.dataset.runId = r.run_id; return tr; };
+        var t = { rows: [{ run_id: "A" }, { run_id: "B" }], i1_passed: true, member_failure_count: 0 };
+        var first = showLab("A"), second = showLab("B");
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[1](t); await second;   // the newer load answers first
+        gates[0](t); await first;    // then the stale one
+        return [drawn, rows.children.filter(function (tr) { return tr.getAttribute("aria-current") === "true"; })
+          .map(function (tr) { return tr.dataset.runId; })];
+        """,
+    )
+    assert got == [2, ["B"]]
+
+
+def test_b2_only_the_newest_inventory_load_draws():
+    got = _run_page(
+        ["$", "el", "nr", "clear", "notice", "TIMEOUT_MS", "api", "serverError", "cell", "MONTHS", "fmtDay", "reviewLabel",
+         "invSeq", "showInventory"],
+        _GATED + """
+        mk("ainv-msg"); mk("ainv-body"); mk("ainv-meta", "dl"); var rows = mk("ainv-rows", "tbody"); mk("ainv-list");
+        function inv(label) { return { loinc_version: "2.80", reviewer_status: null, verticals: [{ label: label, concepts: [] }], gap_labels: [] }; }
+        var first = showInventory(), second = showInventory();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[1](inv("new")); await second;
+        gates[0](inv("old")); await first;
+        return rows.children.map(function (tr) { return tr.children[0].textContent; });
+        """,
+    )
+    assert got == ["new"]
 
 
 def test_rev3_playground_has_no_optional_chip_or_synthetic_tag(admin):
