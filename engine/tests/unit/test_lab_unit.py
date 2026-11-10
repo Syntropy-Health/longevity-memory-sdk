@@ -130,11 +130,27 @@ def test_header_and_footer():
 # --- T8.2 ----------------------------------------------------------------------------------------
 
 
-def test_t8_2_grpo_is_proposed_with_no_numbers():
+def test_t8_2_grpo_ran_is_a_policy_row_with_its_env_numbers():
+    """HAC-75: the committed grpo arm ran, so its row carries the env numbers like a baseline."""
     mx = _load(RESULTS, "metrics.json")
+    arm = next(a for a in mx["arms"] if a["name"] == "grpo")
+    assert arm["status"] == "ok"
     g = _rows(lab_rows(RESULTS))["grpo"]
+    assert (g.kind, g.status, g.reason) == ("policy", "ok", None)
+    assert g.metrics == {"mean_adherence": arm["metrics"]["mean_adherence"],
+                         "episode_violation_rate": arm["metrics"]["episode_violation_rate"]}
+    assert g.seed == arm["metrics"]["seeds"] and g.split.n_scenarios == arm["metrics"]["n_scenarios"]
+    assert g.run_id.endswith("/grpo")
+
+
+def test_t8_2_grpo_not_run_is_proposed_with_no_numbers(copy):
+    def not_run(d):
+        _arm(d, "grpo").update(status="not_run", reason="needs a trained reward model", metrics=None)
+
+    _edit(copy, "metrics.json", not_run)
+    g = _rows(lab_rows(copy))["grpo"]
     assert g.status == PROPOSED == "proposed, not built"
-    assert g.reason == next(a for a in mx["arms"] if a["name"] == "grpo")["reason"]
+    assert g.reason == "needs a trained reward model"
     assert _numbers(g.model_dump()) == []
     assert g.run_id is None and g.split is None and g.failures is None
 
@@ -360,7 +376,7 @@ def test_t4_grpo_reason_from_an_artefact_is_guarded_on_the_route(copy, monkeypat
 
     raw = "this will diagnose you"
     assert safe_text(raw) != raw
-    _edit(copy, "metrics.json", lambda d: _arm(d, "grpo").update(reason=raw))
+    _edit(copy, "metrics.json", lambda d: _arm(d, "grpo").update(status="not_run", metrics=None, reason=raw))
     monkeypatch.setenv("DAYPART_RESULTS_DIR", str(copy))
     monkeypatch.delenv("DAYPART_REAL_INPUT", raising=False)
     with TestClient(create_app(cohort_seed=0)) as c:

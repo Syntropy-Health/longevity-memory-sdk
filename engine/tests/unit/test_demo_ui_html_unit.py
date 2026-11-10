@@ -2071,10 +2071,20 @@ def _pipeline(response: object) -> dict:
     return got
 
 
+def _grpo_proposed(t: dict) -> dict:
+    """The proposed-grpo shape (arm not run). HAC-75 made the committed grpo arm run; the console's
+    rendering of a ran ("policy") grpo row is UIUX's (HAC-75 child), so these tests pin the proposed path."""
+    for r in t["rows"]:
+        if r["row"] == "grpo":
+            r.update(kind="proposed", status="proposed, not built", reason="needs a trained reward model (4.2)",
+                     run_id=None, split=None, seed=None, failures=None, metrics={})
+    return t
+
+
 def test_rev3_pipeline_maps_every_lab_field_1_to_1():
     from daypart.demo import lab
 
-    t = lab.lab_rows().model_dump(mode="json")
+    t = _grpo_proposed(lab.lab_rows().model_dump(mode="json"))
     rows = {r["row"]: r for r in t["rows"]}
     base, sft, dpo, grpo = rows["base"], rows["sft"], rows["dpo"], rows["grpo"]
 
@@ -2123,7 +2133,7 @@ def test_rev3_pipeline_nulls_and_provenance_mismatch():
     """A null field is "— not recorded" (nr); a mismatch row shows its tag and no number anywhere."""
     from daypart.demo import lab
 
-    t = lab.lab_rows().model_dump(mode="json")
+    t = _grpo_proposed(lab.lab_rows().model_dump(mode="json"))
     for r in t["rows"]:
         if r["row"] == "dpo":
             r.update(status="provenance mismatch", metrics={"boundary_pass_rate": None, "rubric_pass_rate": None}, gate=None,
