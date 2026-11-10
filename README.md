@@ -2,7 +2,7 @@
 
 **An adherence-intelligence engine for health routines. It decides *what kind* of message a person should get today. Every word it sends passes a deterministic safety boundary first. It is trained on Meta's Muse Glimmer 30B and measured in a reproducible synthetic world.**
 
-- **Live demo:** [playground](https://supermomo668--daypart-demo-playground.us-east.modal.run) (inputs, outputs and parameters, step by step) · [research view: full results](https://supermomo668--daypart-demo-dashboard.us-east.modal.run) (Streamlit dashboard)
+- **Live demo:** [Clinical Human Clone](https://supermomo668--daypart-demo-playground.us-east.modal.run) (the five-screen journey: check in, review, passport, next step, learning lab; the step-by-step research playground is its research view) · [research view: full results](https://supermomo668--daypart-demo-dashboard.us-east.modal.run) (Streamlit dashboard)
 - **Status:** hackathon build (Meta, Nov 2026). Synthetic data only. Not a medical device and not medical advice.
 
 ---
@@ -136,7 +136,7 @@ R3 (SFT beats base on boundary by at least 0.05 at rubric parity) passes. R4 (DP
 
 ## FHDIC Challenge 09
 
-The FHDIC Challenge 09 submission index (prototype, demo access, technical documentation, training record, Track B and Track C, and the assumptions, dependencies and limitations) is one page: [docs/daypart/FHDIC.md](docs/daypart/FHDIC.md).
+Judges start at the submission pack: [docs/daypart/submission/README.md](docs/daypart/submission/README.md) (demo URLs, the judge's path, architecture, evidence ledger, outcomes, assumptions and limits, organiser rules). The FHDIC Challenge 09 index (prototype, demo access, technical documentation, training record, Track B and Track C) is [docs/daypart/FHDIC.md](docs/daypart/FHDIC.md).
 
 ## Meta models
 
