@@ -1606,13 +1606,15 @@ def _save_then(timeline: str) -> dict:
 
 
 def test_rev3_save_shows_clone_updated_from_this_checkins_entry():
-    got = _save_then(f'[200, {{ entries: [{_QUIET}, {_ENTRY}] }}]')
+    # QG P6.2 K3: c2's entry comes first, so "the last entry" is not this check-in's
+    got = _save_then(f'[200, {{ entries: [{_ENTRY}, {_QUIET}] }}]')
     assert got["cls"] == "clone-updated" and got["role"] == "status" and got["focused"] and got["formHidden"]
     assert "Your clone updated" in got["text"] and "Heart rate now has enough data" in got["text"]  # c2's entry, not c3's
     assert got["calls"] == ["POST /api/checkins/c2/review", "GET /api/journals/j1/timeline"]
 
 
-@pytest.mark.parametrize("timeline", ['[503, null]', '"network"', '[200, { entries: [] }]'])
+# QG P6.2 K3: the last case has entries, but none for this check-in (c3's only)
+@pytest.mark.parametrize("timeline", ['[503, null]', '"network"', '[200, { entries: [] }]', f'[200, {{ entries: [{_QUIET}] }}]'])
 def test_rev3_save_falls_back_to_the_saved_notice_without_an_error(timeline):
     got = _save_then(timeline)
     assert got["cls"] == "notice notice--ok" and got["role"] == "status" and got["focused"]
