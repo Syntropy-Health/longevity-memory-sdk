@@ -7,7 +7,7 @@ is documentation plus one generator and one test. No engine or API code changed.
 
 **What changed.**
 - `docs/daypart/submission/`: `README.md` (demo URLs, the judge's path, the challenge framing, the
-  LOINC notice), `architecture.md`, `evidence-ledger.md` (41 claims), `outcomes.md` (generated),
+  LOINC notice), `architecture.md`, `evidence-ledger.md` (42 claims), `outcomes.md` (generated),
   `assumptions-limits.md` (A1–A9, D-A1–D-A9, O1–O4, dependencies, limitations), `organiser-rules.md`
   (checklist with the 2026-11-20 18:29 UTC cutoff) and `real-input-pathway.md` (a pointer).
 - `docs/daypart/submission/sources/organiser-research-2026-11-06.md`: the HAC-34 organiser facts,
@@ -27,7 +27,8 @@ own titles by position (HAC-34).
 
 **Known issues / residual risk.**
 - The organiser's IP, data and judging rules and the artefact formats are not published
-  (O1–O4); team registration (closes 2026-11-10 18:29 UTC) is not visible to agents.
+  (O1–O4). Team registration was confirmed by a board member on 2026-11-09 (HAC-58, assumption
+  O5); the organiser's dashboard is not visible to agents.
 - The snapshot is from 2026-11-06. Fetch the event JSON again before submitting.
 - Ledger paths are checked to exist, not to say what the claim says. The claim-to-file reading is
   the reviewer's.
