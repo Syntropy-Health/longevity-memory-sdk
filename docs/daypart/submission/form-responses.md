@@ -49,7 +49,7 @@ does, not what the aim would achieve.
 ```text
 Clinical Human Clone is a synthetic-first prototype for sustaining healthy behaviours. A person checks in about their day in plain words, or with one of four bundled demo files. The system proposes the values it found, each with the words it came from, its unit, date, method and confidence, and saves nothing until the person confirms, corrects or discards each one.
 
-Confirmed values build a Health Clone Passport: one card per tracked measure, marked as the person's own value or as simulated, with its age, source and limits. Every card opens an evidence thread from the check-in to the saved record, its explanation and the safety check it passed. A value older than 14 days, or a measure without enough data, is withheld and shows no number. Where a public health source states a reference range, it is shown beside the value and never interpreted.
+Confirmed values build a Health Clone Passport: one card per tracked measure, marked as the person's own value or as simulated, with its age, source and limits. Every ready card opens an evidence thread from the check-in to the saved record, its explanation and the safety check it passed. A value older than 14 days, or a measure without enough data, is withheld and shows no number. Where a public health source states a reference range, it is shown beside the value and never interpreted.
 
 A suggested next step, with its reason, can be chosen, deferred or handed to a professional. It passes fixed safety rules first, and crisis language gets a fixed hand-off instead of being processed. A timeline shows how each saved check-in changed the passport.
 
@@ -58,7 +58,7 @@ A separate research console reports a learning lab: a base language model and tw
 The demo opens on a fictional member with 28 days of saved check-ins. Everything is synthetic. It is not medical advice, diagnosis or treatment, and it shows no evidence of improved health. Real health-data input is switched off in the build; turning it on would first need consent, privacy, security and clinical oversight.
 ```
 
-**Characters:** 1686 / 2,000
+**Characters:** 1692 / 2,000
 **Ledger rows:** L5, L6, L7, L21, L22, L20, L24, L10, L45, L47, L49, L50, L51, L52, L53, L55, L25, L59, L66, L33, L56, L73
 **Notes:** "four bundled demo files" are two photos and two device files, all synthetic; no device or
 sensor is connected (L55). "Two fine-tuned versions" are the supervised and preference-tuned
