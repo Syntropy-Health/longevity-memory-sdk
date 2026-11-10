@@ -12,7 +12,7 @@ which the brief rules out. Nothing was sent to HeyGen and nothing was rendered t
 later adds a voice track, the narration is the caption text in `captions.srt`, and its timing
 already fits.
 
-**Timeline.** 9 of the 14 segments are real footage and 5 are deck slides. The footage is cut
+**Timeline.** 8 of the 14 segments are real footage (about 82 s with holds) and 6 are deck slides. The footage is cut
 from one real Playwright recording of the hosted build, made by
 [`capture/capture.js`](capture/capture.js) at 1280×720:
 https://supermomo668--daypart-demo-playground.us-east.modal.run, deployed commit
