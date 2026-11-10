@@ -1,14 +1,18 @@
-# Handoff: worktree-agent (HAC-38, P6.1 — CTO amendment AM-2)
+# Handoff: worktree-agent (HAC-38, P6.2 — AM-2 visual spec rev 3)
 
 ## Current state
-- Branch `daypart/hac-fhdic-build` @ 5a79ef1 (P6.1 boundary, QGR `…iteration-complete-20261110-1533-fe84520.md`, UX evidence beside it), pushed. Base dbe19da (P5.2 land).
-- P6.1 delivered: D1 member app `/` + research console `/admin` (one source `static/index.html`, markers rendered by `demo/surfaces.py`); D2 demo tags removed, production copy, seeded fictional persona (`demo/persona.py`, `persona_v1.json`, `tools/make_persona.py`), "Start a fresh journal"; D3 `GET /api/journals/{id}/timeline` (`passport/timeline.py`, newest 60 saves).
-- Decisions: addendum G31–G34; A&D amended (SC1, §4.10, T1.2, API + component tables, Human input).
-- Checks at the boundary: engine 2939 passed (sealed incl.), repo-root 352 passed / 3 skipped, pyright 0, browser suite 26/26 (local chromium via /tmp/chrdeps libs), persona --check ok.
+- Branch `daypart/hac-fhdic-build` @ 52235a2 (P6.2 boundary, QGR `…iteration-complete-20261110-1741-db8ccf0.md`, UX evidence in the folder beside it). Base 5a79ef1 (P6.1 boundary); `origin/daypart/build` 21b1e16 (P6.1 land) merged at dbbbcc4.
+- P6.2 delivered: HAC-68 visual spec rev 3 on both surfaces.
+  - Member `/`: #today persona landing, "Your clone updated" panel from the save's timeline entry, #timeline day feed with the C5 note.
+  - Console `/admin`: sidebar shell, #pipeline built from /api/lab, lab, inventory, playground, #input (403 + gates), `/admin/<route>` aliases.
+  - The OpenAPI description is neutral.
+- Decisions: addendum G35–G38. A&D §4.10, T1.5, T2.1, T10.1 and T10.2 amended in place.
+- Gate: 19 raw findings, 14 kept (K1–K14) plus B1, B2 and B4, all fixed one commit each; reviewer-ux: 1. Records are in `workstreams/daypart/qg/p6.2-*`.
+- Checks: engine 2991 passed (sealed included), browser 49/49, repo-root 352 passed / 3 skipped, pyright 0.
+- Local browser libs: `LD_LIBRARY_PATH=/tmp/p62/libs/root/usr/lib/aarch64-linux-gnu FONTCONFIG_FILE=/tmp/p62/libs/fonts.conf`. They are in /tmp, so a new container needs them re-fetched.
 
 ## Next action
-- After CI green on 5a79ef1: hand `ready @ 5a79ef1` to the CTO (reassign HAC-38).
-- P6.2 waits on HAC-68 (visual spec rev 3, due 2026-11-13): apply rev 3 to both surfaces, "clone updated" moment, timeline view, admin pipeline diagram, browser suite on /admin. Deferred to P6.2: C5 (timeline step change between entries), U2 (registry `allowed_use` "demo display" text, sealed-pinned).
+- Wait for CI green on 52235a2, then hand `ready @ 52235a2` to the CTO by reassigning HAC-38. The CTO lands it, deploys staging, refreshes proof-of-work and re-briefs the L2 review (due 2026-11-18; cutoff 2026-11-20 18:29 UTC).
 
 ## Principal Decisions Needed
 - None.
