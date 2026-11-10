@@ -161,6 +161,8 @@ already in `engine.yml` is the public Modal URL. The real-input gate stays hard 
 - **Decisions during the build:** G13–G30 in `ADDENDUM-fhdic.md` (AM-1 is G19).
 - **Open items (deferred, below threshold):** listed in the plan-complete Known issues block of
   `docs/workstreams/daypart.md`. Chief among them: no per-journal check-in cap, the research
-  playground routes have no body cap, CI actions are tag-pinned with no `permissions:` block, and
-  no committed run proves the journey on the hosted URL (the L2 delivery review checks SC1 there).
+  playground routes have no body cap, and CI actions are tag-pinned with no `permissions:` block.
+  After plan complete, the hosted passport 500 (a data file missing from the wheel) was fixed, and
+  `deploy-demo` now runs the SC1 journey on the hosted URL (`engine/tools/smoke_journey.py`),
+  retrying a deploy rollover (P5.2).
 - **Reference:** `docs/daypart/reference.md`.

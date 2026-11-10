@@ -122,6 +122,10 @@ class Journal:
     provenance: dict[str, ObservationRecord] = field(default_factory=dict)
     checkins: OrderedDict[str, CheckIn] = field(default_factory=OrderedDict)
     last_saved_checkin_id: str | None = None  # set by review() on save (checkins keep creation order)
+    saved_order: list[str] = field(default_factory=list)  # checkin ids in save order (the timeline, G33)
+    timeline_cache: dict[Any, Any] = field(default_factory=dict)  # per-prefix snapshots (immutable once saved)
+    display_name: str | None = None  # a seeded persona's fictional name (G32); None for a fresh journal
+    persona_id: str | None = None
     goal_events: dict[str, str] = field(default_factory=dict)  # next-step step_id -> its act:goal_set event id
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     event_count: int = 0
@@ -195,6 +199,11 @@ class JournalStore:
         for cid in journal.checkins:
             if self._checkin_journal.get(cid) == journal.journal_id:
                 del self._checkin_journal[cid]
+
+    def discard(self, journal: Journal) -> None:
+        """Drop ``journal`` now (a persona seed that failed part-way, G32)."""
+        if self._journals.get(journal.journal_id) is journal:
+            self._drop(journal)
 
     def _evict_idle(self, now: float) -> None:
         for j in [j for j in self._journals.values() if now - j.last_seen > self.idle_seconds]:

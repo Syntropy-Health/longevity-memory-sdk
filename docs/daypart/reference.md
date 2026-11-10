@@ -102,6 +102,9 @@ Modal apps.
   plan completion. No sealed P2–P4 suite exists; the unit and browser suites are the evidence there.
 - Organiser team registration was confirmed by a board member on 2026-11-09 (HAC-58,
   assumption O5). Eligibility (team size and ages) stays unverified in `organiser-rules.md`.
-- No committed run proves the journey on the hosted URL; the deploy smoke checks health only.
+- `deploy-demo` runs the SC1 API journey on the hosted URL after each deploy
+  (`engine/tools/smoke_journey.py`), restarting it with a fresh journal on a deploy rollover (404
+  `unknown_journal`/`unknown_checkin` or a network error, up to 5 tries). A failure fails the job
+  but does not roll back the deploy.
 - Detailed residual risks, per phase and at plan completion: the Known issues blocks in
   [docs/workstreams/daypart.md](../workstreams/daypart.md).

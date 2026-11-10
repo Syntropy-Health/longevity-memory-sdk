@@ -101,3 +101,12 @@ jobs:
           curl -fsS -m 180 "$P/api/health"
           curl -fsS -m 180 -o /dev/null "$P/"
           curl -fsS -m 180 -o /dev/null https://supermomo668--daypart-demo-dashboard.us-east.modal.run/_stcore/health
+      - name: Run the SC1 journey on the hosted URL
+        # journal → check-in → review → passport → next step → lab, synthetic member syn-001. The
+        # passport must be 200: it 500'd from the P2 land to 458db98 because a data file was not
+        # package-data, and the health checks above could not see it (HAC-38). Right after the
+        # deploy old and new containers both serve, so a 404 unknown_journal/unknown_checkin or a
+        # network error restarts the journey with a fresh journal (up to 5 tries, 10-40 s back-off,
+        # no retry after 180 s); a 500 or a wrong value fails at once (P5.2).
+        timeout-minutes: 10
+        run: uv run --no-project python tools/smoke_journey.py https://supermomo668--daypart-demo-playground.us-east.modal.run

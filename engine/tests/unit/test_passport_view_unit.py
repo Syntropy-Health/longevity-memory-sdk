@@ -485,7 +485,7 @@ def test_fixture_sourced_card_links_its_fixture(client):
         source = card["thread"]["steps"][0]
         assert (card["origin"], card["method"], card["value_label"]) == ("observed", "fixture-sidecar-v1", "You recorded")
         assert source["ref"] == "demo-bp-cuff" and source["link"] == "/api/fixtures/demo-bp-cuff"
-        assert source["label"] == "Demo fixture image"
+        assert source["label"] == "Imported photo"  # AM-2 D2 (QG P6.1 C6): was "Demo fixture image"
         assert client.get(source["link"]).status_code == 200
 
 

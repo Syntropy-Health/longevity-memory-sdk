@@ -1,5 +1,62 @@
 # daypart — dev doc
 
+## FHDIC deploy smoke tolerates the rollover (HAC-38 P5.2)
+
+**Overview.** After the P5.1 land, the new `deploy-demo` smoke failed (run 42740065688): `create
+journal` returned 201, then the next call returned 404 `unknown_journal`. Right after `modal
+deploy` the old and new containers both serve, and journals live in memory per container (D-A3),
+so the two calls reached different containers. Run again on the settled deploy, the journey passed
+twice (CTO hand-back 83506a31).
+
+**What changed.**
+- `engine/tools/smoke_journey.py`: `run_with_retry` restarts the whole journey with a fresh journal
+  on a rollover miss: a 404 `unknown_journal` or `unknown_checkin` (same per-container cause), or a
+  network error (`OSError`, `http.client.HTTPException`). Up to 5 tries, back-off 10/20/30/40 s,
+  and no retry starts past 180 s from the first try. A 500 (whatever its body), any other wrong
+  status, a wrong value, a malformed body or a bad URL fails on the first try. Requests are capped
+  at 60 s (`--timeout`); the CI step has `timeout-minutes: 10`.
+- `engine/tests/unit/test_smoke_journey_unit.py`: a 404 `unknown_journal` on try 1 passes on try
+  2 with a fresh journal; a passport 500 fails with no retry; the back-off schedule, the budget
+  edges, the 5-try limit and each retry/no-retry class are pinned.
+
+**Known issues (below the gate threshold, not fixed).**
+- A pass right after a deploy may have been served by the old build; there is no build id to check.
+- 502/503 from Modal's proxy during the swap are not retried (by spec); if they appear, the job
+  fails and a re-run settles it.
+
+## FHDIC hosted passport fix (HAC-38, after plan complete)
+
+**Overview.** On the hosted demo, `GET /api/journals/{id}/passport` returned 500 from the P2 land
+until 458db98. `daypart/evidence/sources_v1.json` was not in `[tool.setuptools.package-data]`, so
+the wheel that `deploy/modal_demo.py` installs (`uv pip install --no-deps /app`) left it out, and
+`evidence/registry.py` could not read it. Editable installs (CI, local runs) read it from disk, so
+every suite was green. The deploy smoke checked health only, so nothing saw it. The CTO found it in
+the hosted SC1 run before the L2 delivery review.
+
+**What changed.**
+- `engine/pyproject.toml`: `"daypart.evidence" = ["*.json"]`.
+- `engine/tests/unit/test_package_data_unit.py`: every non-Python file under `engine/daypart` must
+  match a package-data glob of its package. It was red for `sources_v1.json` before the fix.
+- `engine/tools/smoke_journey.py` (stdlib only) runs the SC1 API journey on a deployed URL:
+  journal, 409 before a save, text check-in, review, passport 200 with both saved values
+  `observed`, next step, choose, lab, and 403 on real-input mode. A new `deploy-demo` step runs it
+  on the playground URL after the deploy. It was red on the hosted demo before the fix, and green
+  against the fixed wheel installed the way Modal installs it.
+- `engine/tests/unit/test_smoke_journey_unit.py`: the smoke passes on the real app, fails on a
+  passport 500, a missing saved value, an open mode, network errors and malformed bodies, and its
+  urllib transport is tested against a local server. The CI step is pinned.
+
+**Run it.** From `engine/`:
+`uv run --no-project python tools/smoke_journey.py https://supermomo668--daypart-demo-playground.us-east.modal.run`
+
+**Known issues (below the gate threshold, not fixed).**
+- The package-data test approximates setuptools: it ignores `packages.find`, the `"*"` key and
+  recursive `**` globs. A mismatch shows as a false red, not a false green, for today's config.
+- The smoke's stdlib-only import rule is a convention, not a test. (The old-container rollover is
+  handled in P5.2 above.)
+- `MODAL_TOKEN_*` stay job-level in `deploy-demo`, so the smoke step can see them (it never reads
+  the environment).
+
 ## FHDIC plan complete (HAC-38, P1–P4)
 
 **Overview.** All four phases are landed on `daypart/build` and deployed to staging. The
@@ -28,8 +85,9 @@ scorer). Its 8 kept findings and B4 are fixed, one commit each; the record is in
   after an 8-character journal prefix.
 - CI: no `permissions:` block, actions pinned by tag, modal installed unlocked in `deploy-demo`.
   No security response headers (CSP, nosniff, frame-ancestors).
-- No committed run proves the journey on the hosted URL; the deploy smoke checks health only. The
-  L2 delivery review checks SC1 on the hosted URL.
+- The hosted journey is now checked at every deploy (see the hosted passport fix above). A failed
+  check fails `deploy-demo` but does not roll back, so a broken build stays live until the next green
+  deploy.
 - The A&D API table omits a few codes (`404 unknown_fixture`, 413/422 on `POST /api/journals`,
   413 on review). The DPO run id is derived in both the passport and the lab; the review label is
   defined in two modules.
