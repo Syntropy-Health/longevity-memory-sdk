@@ -103,6 +103,8 @@ Modal apps.
 - Organiser team registration was confirmed by a board member on 2026-11-09 (HAC-58,
   assumption O5). Eligibility (team size and ages) stays unverified in `organiser-rules.md`.
 - `deploy-demo` runs the SC1 API journey on the hosted URL after each deploy
-  (`engine/tools/smoke_journey.py`). A failure fails the job but does not roll back the deploy.
+  (`engine/tools/smoke_journey.py`), restarting it with a fresh journal on a deploy rollover (404
+  `unknown_journal`/`unknown_checkin` or a network error, up to 5 tries). A failure fails the job
+  but does not roll back the deploy.
 - Detailed residual risks, per phase and at plan completion: the Known issues blocks in
   [docs/workstreams/daypart.md](../workstreams/daypart.md).
