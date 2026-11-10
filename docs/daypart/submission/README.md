@@ -25,6 +25,10 @@ is synthetic, and the prototype gives no diagnosis, treatment or dosing advice
 | [assumptions-limits.md](assumptions-limits.md) | Assumptions, dependencies and limitations |
 | [organiser-rules.md](organiser-rules.md) | The organiser's published rules, checked, with the cutoff |
 | [real-input-pathway.md](real-input-pathway.md) | Why real input is off and what would have to change |
+| [form-responses.md](form-responses.md) | Draft answers for each submission-form field, with character counts against the limits |
+| [deck-outline.md](deck-outline.md) | The 8-slide deck outline: one message, ledger rows and illustration per slide |
+| [technical-appendix.md](technical-appendix.md) | Technical and responsible-AI appendix: mechanisms, training, rigour, safety, data rights, validation path |
+| [sources/hosted-probe-2026-11-10.md](sources/hosted-probe-2026-11-10.md) | What the hosted build at 68236f1 did when tested as a judge would |
 
 ## Demo
 

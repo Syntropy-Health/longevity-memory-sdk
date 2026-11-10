@@ -95,6 +95,13 @@ dashboard, where they most likely sit.
 - **O5.** The team is registered. A board member confirmed it on 2026-11-09, before registration
   closed (tracked as HAC-58). The confirmation is the team's own; the organiser's dashboard that
   records it is not in this repository.
+- **O6.** The submission form's fields and character limits are the ones in the owner's brief
+  (solution summary 2,000, built during challenge 1,500, prototype link 1,024). The organiser does
+  not publish the form; the organiser check of 2026-11-10 (HAC-63) could not see it, so a person
+  with the dashboard login must confirm the limits before pasting the answers.
+- **O7.** The team name *Syntropy*, its tagline and the working challenge (#9 Sustaining Healthy
+  Behaviors) are as the owner supplied them. They are not checked against the organiser's records,
+  and the tagline states the team's research aim, not a result.
 
 ## Dependencies
 
