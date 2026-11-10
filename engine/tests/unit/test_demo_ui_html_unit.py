@@ -1986,13 +1986,18 @@ def test_rev3_pipeline_live_lane_names_only_code_that_exists():
     """§4.1: each live stage's versions are the running code's own constants, and the next-step policy
     selects by rules and checks with the membrane: nothing in the loop imports a model client."""
     from daypart.checkin import next_step
-    from daypart.checkin.models import METHOD_TEXT
+    from daypart.checkin.models import METHOD_FIXTURE, METHOD_TEXT
     from daypart.memory.registry import SLICE_VERSION
     from daypart.passport.view import READY_WINDOW_DAYS
 
     src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
     live = _section(src, '<ol class="pipe" id="pipe-live"', "</ol>")
-    assert f"<dd>{METHOD_TEXT}</dd>" in live
+    # QG P6.2 B1 (G36): the Check-in stage states only what runs: text takes rules-v1 and the PII and
+    # crisis screens; a bundled file takes the fixture sidecar, gated by the sha256 allow-list
+    checkin = _section(live, '<span class="stage-name">Check-in</span>', "</dl>")
+    assert (f"<dt>text</dt><dd>{METHOD_TEXT}</dd><dt>screen</dt><dd>PII + crisis</dd>"
+            f"<dt>file</dt><dd>{METHOD_FIXTURE}</dd><dt>gate</dt><dd>sha256 allow-list</dd>") in checkin
+    assert "bundled file" not in checkin  # no claim that a file passes the text screens
     assert f"<dd>{SLICE_VERSION}</dd>" in live
     assert f"<dd>value ≤ {READY_WINDOW_DAYS} days old</dd>" in live
     assert f"<dd>{next_step.POLICY_VERSION} (rules)</dd>" in live and "<dd>membrane post()</dd>" in live
