@@ -1282,3 +1282,33 @@ def test_k2_persona_checkin_links_say_already_saved():
         """,
     )
     assert "Already saved" in got[0] and "not available" not in got[0] and got[1] is True and got[2] == ["j1-c1", "j1-c2"]
+
+
+def test_k4_only_the_newest_passport_load_draws():
+    """QG P6.1 U1: two overlapping #passport loads (a slow first, a fast second) draw once, with the
+    newest data, so a re-render never pulls the cards from under a keyboard user's focus."""
+    got = _run_page(
+        _BASE + _API + ["journalPending", "ensureJournal", "ppSeq", "showPassport"],
+        """
+        mk("pp-msg"); mk("pp-body");
+        var RENDERS = [];
+        globalThis.renderPassport = function (pp) { RENDERS.push(pp.as_of); };
+        var gates = [];
+        fetch = function (path) {
+          return new Promise(function (resolve) {
+            gates.push(function (asOf) {
+              resolve({ status: 200, ok: true, json: async function () {
+                return path.indexOf("/passport") >= 0 ? { as_of: asOf, cards: [] } : { verticals: [] }; } });
+            });
+          });
+        };
+        var first = showPassport(""), second = showPassport("");
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[2]("new"); gates[3]("new");      // the second load answers first
+        await second;
+        gates[0]("old"); gates[1]("old");      // then the first, stale load
+        await first;
+        return RENDERS;
+        """,
+    )
+    assert got == ["new"]

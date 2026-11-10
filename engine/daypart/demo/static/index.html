@@ -1205,11 +1205,15 @@ function reviewLabel(s) {
   var m = /^reviewed: board sign-off (\d{4}-\d{2}-\d{2})$/.exec(s);
   return m ? "Reviewed (board sign-off, " + fmtDay(m[1]) + ")" : s;
 }
+var ppSeq = 0;
 async function showPassport(rest) {
+  var seq = ++ppSeq; /* only the newest load draws (QG P6.1 U1), as in showReview */
   var msg = clear($("pp-msg")), body = $("pp-body");
+  body.hidden = true; /* the previous cards are never focusable while they are about to be replaced (U1) */
   var retry = function () { showPassport(rest); };
-  if (!(await ensureJournal())) { body.hidden = true; msg.append(serverError(journalErr, retry)); return; }
+  if (!(await ensureJournal())) { if (seq !== ppSeq) return; body.hidden = true; msg.append(serverError(journalErr, retry)); return; }
   var both = await Promise.all([api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/passport"), api("GET", "/api/inventory")]);
+  if (seq !== ppSeq) return; /* a newer load started while this one waited */
   var res = both[0], inv = both[1];
   if (isGone(res)) { body.hidden = true; sessionEnded(); return; }
   if (!res.ok || !res.data || !Array.isArray(res.data.cards)) { body.hidden = true; msg.append(serverError(res, retry)); return; }
