@@ -7,6 +7,12 @@ codes, single container, inspect route, non-null thread links, flag re-run, run 
 `pipeline.tag`, LOINC verification and notice, crisis pre-check).
 The only human gate is the blueprint review (section 0). The CTO briefs it.
 
+**Status at plan completion (2026-11-10, HAC-38):** built and landed (P1–P4), with the build-time
+amendments recorded in `plan/ADDENDUM-fhdic.md` (G13–G30; AM-1 is G19) and applied in place here.
+Nothing in the A&D was deferred or abandoned except what it already marks out of scope (GRPO,
+real input). The draft build plan below was superseded by the locked `plan/BUILD-PLAN-fhdic.md`
+(one branch, G1).
+
 This A&D covers the PVR rev 2 delta only. The 2026-10-31 Daypart A&D and its invariants I1–I9
 still hold. Everything here is synthetic data only. The repo is public, so nothing committed may
 contain real data, keys or internal hostnames.

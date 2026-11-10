@@ -1,5 +1,40 @@
 # daypart — dev doc
 
+## FHDIC plan complete (HAC-38, P1–P4)
+
+**Overview.** All four phases are landed on `daypart/build` and deployed to staging. The
+plan-complete gate reviewed the whole build (code, security, design, test and UX reviewers plus the
+scorer). Its 8 kept findings and B4 are fixed, one commit each; the record is in
+`workstreams/daypart/qg/plan-*.md`. The maintainer reference is
+[docs/daypart/reference.md](../daypart/reference.md).
+
+**What changed at this gate.**
+- `engine/daypart/checkin/service.py`: a correction value too large for a float is 422
+  `value_out_of_range`, not a 500 (K6).
+- `engine/deploy/modal_demo.py`: `scaledown_window=3600` (Modal's maximum), so the one container
+  lives as long as the 60-minute journal idle window the pack promises (K2).
+- New tests: an unmapped value that keeps its concept stays off the passport (K3); CI pins the I1
+  step, T8.5 (K4), and `demo-ui` with `DAYPART_UI_REQUIRED=1` gating the deploy (K5); the Modal
+  idle window outlives `IDLE_SECONDS` (K2).
+- Docs: the registration row is met (HAC-58, assumption O5, ledger L42) (K1); the A&D slice is
+  18 LOINC + 2 local, 11 `add_nodes` (K7); the README names the hosted journey and points to the
+  pack (K8); the usage doc covers the P2 routes (B4).
+
+**Known issues / residual risk (below the gate threshold, not fixed).**
+- No per-journal cap on check-ins or events (one client can grow memory in the one container).
+- The research playground routes (`/api/episodes…`) skip the body cap and echo input in 422s.
+- Integer concepts accept fractional values on `confirm` (only `correct` checks whole numbers).
+- The review duplicate check is quadratic (bounded by the 1 MiB cap); check-in ids are sequential
+  after an 8-character journal prefix.
+- CI: no `permissions:` block, actions pinned by tag, modal installed unlocked in `deploy-demo`.
+  No security response headers (CSP, nosniff, frame-ancestors).
+- No committed run proves the journey on the hosted URL; the deploy smoke checks health only. The
+  L2 delivery review checks SC1 on the hosted URL.
+- The A&D API table omits a few codes (`404 unknown_fixture`, 413/422 on `POST /api/journals`,
+  413 on review). The DPO run id is derived in both the passport and the lab; the review label is
+  defined in two modules.
+- Eligibility (team of 1–5, aged 16–65) stays unverified in `organiser-rules.md`.
+
 ## FHDIC P4 · Submission pack (HAC-38)
 
 **Overview.** P4 adds the FHDIC submission pack (A&D R11, §4.11) at `docs/daypart/submission/`. It
@@ -8,7 +43,7 @@ is documentation plus one generator and one test. No engine or API code changed.
 **What changed.**
 - `docs/daypart/submission/`: `README.md` (demo URLs, the judge's path, the challenge framing, the
   LOINC notice), `architecture.md`, `evidence-ledger.md` (42 claims), `outcomes.md` (generated),
-  `assumptions-limits.md` (A1–A9, D-A1–D-A9, O1–O4, dependencies, limitations), `organiser-rules.md`
+  `assumptions-limits.md` (A1–A9, D-A1–D-A9, O1–O5, dependencies, limitations), `organiser-rules.md`
   (checklist with the 2026-11-20 18:29 UTC cutoff) and `real-input-pathway.md` (a pointer).
 - `docs/daypart/submission/sources/organiser-research-2026-11-06.md`: the HAC-34 organiser facts,
   committed so the ledger can cite them.
