@@ -38,8 +38,8 @@ NATURAL_GROUP: Mapping[str, str] = MappingProxyType({
     "reminder": "barrier", "encouragement": "motivation", "barrier_problem_solving": "barrier",
     "celebrate_streak": "rhythm", "check_in_question": "rhythm", "clinician_handoff": "reach_out",
 })
-#: Word tiers instead of numbers: the passport carries no free-floating numbers (T6.5: no value
-#: there may be mistaken for a registry bound). The numbers themselves are in the ``rm`` eval arm.
+#: Member-facing text carries word tiers, never digits (T6.5: no number in a passport string may be
+#: mistaken for a registry bound). The numeric ``share`` / ``estimated_lift_points`` fields stay.
 WEIGHT_TIERS: tuple[tuple[float, str], ...] = ((0.4, "strong"), (0.2, "moderate"), (0.0, "slight"))
 LIFT_TIERS: tuple[tuple[float, str], ...] = ((0.08, "clear"), (0.03, "moderate"), (0.0, "small"))
 _LIFT_PHRASE = {"clear": "a clear gain", "moderate": "a moderate gain", "small": "a small gain"}
@@ -115,13 +115,16 @@ class Driver(pydantic.BaseModel):
     driver_id: str  # the Jev feature name, e.g. "barrier.forgetfulness"
     label: str
     direction: Literal["helps", "makes_harder"]
-    weight: Literal["strong", "moderate", "slight"]  # tier of its share of the summed driver weight
+    share: float  # share of the summed driver weight, in [0, 1]
+    weight: Literal["strong", "moderate", "slight"]  # the same share as a word tier
     question_ids: tuple[str, ...]  # the Jev questions this answer came from
 
     @model_validator(mode="after")
     def _check(self) -> Driver:
         if not _safe(self.label):
             raise ValueError("driver label failed the narration guard")
+        if not 0.0 <= self.share <= 1.0:
+            raise ValueError("share must be within [0, 1]")
         return self
 
 
@@ -133,7 +136,8 @@ class Insight(pydantic.BaseModel):
     action: str
     reason: str
     driver: str  # a Driver.driver_id in the same Inclinations
-    strength: Literal["clear", "moderate", "small"]  # tier of the estimated lift (see LIFT_TIERS)
+    estimated_lift_points: float  # percentage points of P(keeps the routine today), off-track days
+    strength: Literal["clear", "moderate", "small"]  # the same lift as a word tier (see LIFT_TIERS)
 
     @model_validator(mode="after")
     def _check(self) -> Insight:
@@ -227,6 +231,7 @@ def inclinations(rm: RewardModel, answers: Mapping[str, str]) -> Inclinations:
             driver_id=k,
             label=FEATURE_LABELS[k],
             direction="helps" if member_term[k][0] >= 0 else "makes_harder",
+            share=round(weight[k] / total, 3),
             weight=_tier(weight[k] / total, WEIGHT_TIERS),
             question_ids=_QUESTIONS_FOR[k.split(".")[0]],
         )
@@ -245,7 +250,8 @@ def inclinations(rm: RewardModel, answers: Mapping[str, str]) -> Inclinations:
             f"{_LIFT_PHRASE[strength]} in days with the routine kept, on days when it was slipping."
         )
         insights.append(Insight(insight_id=f"insight:{i}", title=title, action=action, reason=reason,
-                                driver=links[i], strength=strength))
+                                driver=links[i], strength=strength,
+                                estimated_lift_points=round(100.0 * lifts[i], 1)))
     return Inclinations(rm_version=rm.version, jev_version=jev.LIBRARY_VERSION,
                         drivers=drivers, insights=tuple(insights))
 

@@ -78,16 +78,17 @@ def inclinations(rm, answers) -> Inclinations
 class Inclinations:   # frozen, extra="forbid"
     title: "Inclinations"; data: "synthetic"; rm_version: str; jev_version: str
     drivers: tuple[Driver, ...]; insights: tuple[Insight, ...]; note: str
-class Driver:  driver_id (a FEATURE_NAMES entry), label, direction: "helps" | "makes_harder", weight: "strong" | "moderate" | "slight", question_ids
-class Insight: insight_id ("insight:<intent>"), title, action, reason (starts "Why: "), driver, strength: "clear" | "moderate" | "small"
+class Driver:  driver_id (a FEATURE_NAMES entry), label, direction: "helps" | "makes_harder", share in [0, 1], weight: "strong" | "moderate" | "slight", question_ids
+class Insight: insight_id ("insight:<intent>"), title, action, reason (starts "Why: "), driver, estimated_lift_points > 0, strength: "clear" | "moderate" | "small"
 ```
 
 Invariants (`ValidationError` on construction otherwise): every `Insight.driver` is the `driver_id` of a
 driver in the same `Inclinations`; at most 3 insights; every member-facing string (driver label,
 insight title/action/reason, note) passes `assert_narration_safe` and `dsl.check(...).passed`.
 For every synthetic member of `generate(0)`, `inclinations(trained(0), answers_for(p))` has 1–3
-insights, drivers listed heaviest first. No member-facing inclinations string contains a digit, and
-the model carries no float: word tiers only, so nothing can be mistaken for a registry bound (T6.5).
+insights, driver shares summing to 1 ± 0.01, sorted by share descending. No member-facing
+inclinations string (label, title, action, reason, note) contains a digit (T6.5); the numbers live
+only in the numeric fields `share` and `estimated_lift_points`.
 
 ## H3. Passport (amends E2 for the Health Clone Passport only)
 
