@@ -533,3 +533,22 @@ def test_t1_day_back_in_time_ignores_later_saves(client):
     assert (now["status"], now["value"]) == ("ready", 8.0)
     before = _card(_passport(client, jid, day=19), "observation:chc:sleep-duration")
     assert before["origin"] != "observed"
+
+
+# --- QG-plan K3: a save_unmapped value with a concept still never shows on the passport (SC9) -----
+
+
+def test_save_unmapped_blocking_value_with_a_concept_stays_off_the_passport(client):
+    jid = _journal(client)
+    before = _card(_passport(client, jid), "observation:chc:body-weight")
+    _ck, saved_body = _save(client, jid, "weighed 160", decisions=[{"proposal_id": "p-1", "action": "save_unmapped"}])
+    (rid,) = saved_body["records"]
+    rec = client.get(f"/api/journals/{jid}/observations/{rid}")
+    assert rec.status_code == 200, rec.text
+    rec = rec.json()
+    # The precondition the mutant needs: the record keeps its concept but is not mapped.
+    assert rec["status"] == "unmapped" and rec["concept_id"] == "chc:body-weight"
+    card = _card(_passport(client, jid), "observation:chc:body-weight")
+    assert card["status"] == before["status"] == "withheld"
+    assert card["origin"] == "simulated" and card["value"] is None
+    assert rid not in repr(card["thread"])

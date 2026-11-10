@@ -95,7 +95,7 @@ quality:
   format_command: ""                   # e.g. "pnpm exec oxfmt --check ."
   lint_command: ""                     # e.g. "pnpm exec oxlint"
   typecheck_command: ""                # e.g. "pnpm exec tsc --noEmit"
-  test_command: "uv run --all-extras --with pytest --with pytest-asyncio pytest -q"  # LHM suite (pytest-asyncio auto mode)
+  test_command: "PATH=$HOME/.local/bin:$PATH uv run --all-extras --with pytest --with pytest-asyncio pytest -q"  # LHM suite (pytest-asyncio auto mode)
   tests_required: true                 # empty test_command STOPS the gate rather than
                                        # skipping it. false waives tests deliberately —
                                        # and the waiver is reported on every gate.

@@ -13,8 +13,9 @@ states no rule.
 
 - [ ] Submit the working prototype before 2026-11-20 18:29 UTC. **open**: the principal submits;
   agents submit nothing.
-- [ ] The team is registered before registration closes on 2026-11-10 18:29 UTC (23:59 IST).
-  **unverified**: registration lives in the organiser's logged-in dashboard, which agents cannot see.
+- [x] The team is registered before registration closes on 2026-11-10 18:29 UTC (23:59 IST).
+  **met**: a board member confirmed on 2026-11-09 that the team is registered (tracked as HAC-58;
+  assumption O5). The organiser's logged-in dashboard itself is not visible to agents.
 
 ## What the page asks for
 

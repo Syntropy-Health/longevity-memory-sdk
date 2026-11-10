@@ -85,6 +85,9 @@ dashboard, where they most likely sit.
 - **O3.** The repository licence (Apache-2.0) is compatible with the organiser's IP terms, which are
   not published.
 - **O4.** The judging criteria follow the challenge statement themes. No rubric is published.
+- **O5.** The team is registered. A board member confirmed it on 2026-11-09, before registration
+  closed (tracked as HAC-58). The confirmation is the team's own; the organiser's dashboard that
+  records it is not in this repository.
 
 ## Dependencies
 
