@@ -17,40 +17,103 @@ Language models can write good supportive messages. In a health setting, though,
 
 Daypart splits the decision into two parts:
 
-1. **What to say (the policy).** Each day, for each member, pick one of seven *intents*: `none`, `reminder`, `encouragement`, `barrier_problem_solving`, `celebrate_streak`, `check_in_question`, `clinician_handoff`. The pick is conditioned on the member's state (`on_track` → `strained` → `lapsed` → `recovering`) and on their latent profile (motivation, barrier type, health literacy, engagement pattern).
-2. **How to say it (the language model), behind a membrane.** A fine-tuned Muse Glimmer writes the message for the chosen intent. Every draft then passes a **deterministic boundary DSL** (`boundary-v1`, no LLM in the loop). Any dose quantity, outcome or efficacy claim, diagnosis, or advice outside the lane fails, and the message is replaced by a safe one. In the RL environment a violation ends the episode with reward −1.
+1. **What to say (the policy).** Each day, for each member, pick one of seven *intents*: `none`, `reminder`, `encouragement`, `barrier_problem_solving`, `celebrate_streak`, `check_in_question`, `clinician_handoff`. The pick is conditioned on the member's state (`engaged`, `strained`, `lapsed`, `recovering`; see the state diagram below) and on their latent profile (motivation, barrier type, health literacy, engagement pattern).
+2. **How to say it (the language model), behind a membrane.** A fine-tuned Muse Glimmer writes the message for the chosen intent. Every draft then passes a **deterministic boundary DSL** (`boundary-v1`, no LLM in the loop). Any dose quantity, outcome or efficacy claim, diagnosis, or advice outside the lane fails. The draft is regenerated once; if it still fails, the decision is `escalate` and nothing is sent. The membrane never edits text. In the RL environment a violation ends the episode with reward −1.
 
 You can measure this because it runs inside **SimMember**, a seeded synthetic cohort. 200 members have latent-conditioned day-by-day adherence dynamics. 25 curated profiles are held out of all training (invariant I1, enforced in CI).
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    subgraph WORLD["Synthetic world (seeded, offline)"]
+        SM["SimMember cohort<br/><code>daypart.simmember</code><br/>latents → daily state chain → LHM records → I1 manifest"]
+        ENV["SimMemberEnv (FutureHouse aviary)<br/><code>daypart.simmember.env</code><br/>send_message(text, intent) → next state + adherence reward"]
+        SM --> ENV
+    end
+
+    subgraph DECIDE["Decide: what to say, then how"]
+        POL["Policy: choose 1 of 7 intents<br/>baselines today · GRPO / reward model planned"]
+        LM["Muse Glimmer 30B<br/><code>daypart.train</code> (SFT → DPO, 4-bit QLoRA on Modal H100)"]
+        POL --> LM
+    end
+
+    MEM["Membrane<br/><code>daypart.membrane</code><br/>LHM layer-0 narration guard + boundary-v1 DSL"]
+
+    subgraph STATE["Remember and show"]
+        MEMORY["Memory <code>daypart.memory</code><br/>typed events · LOINC-seeded ontology · LHM metric state"]
+        PASS["Pattern passport <code>daypart.passport</code><br/>a number shows only when ready and claim-safe"]
+        MEMORY --> PASS
+    end
+
+    EVAL["Eval harness <code>daypart.eval</code><br/>runs.yaml → metrics.json (every arm, including failed / not run)"]
+    DEMO["Demo <code>daypart.demo</code>, <code>engine/deploy</code><br/>member app + research console (FastAPI) and research view (Streamlit), on Modal"]
+
+    ENV -- member state --> POL
+    LM -- draft --> MEM
+    MEM -- pass --> ENV
+    MEM -- pass --> MEMORY
+    ENV --> EVAL
+    MEM --> EVAL
+    PASS --> DEMO
+    EVAL --> DEMO
+
+    LHM[("LHM SDK (pinned, unmodified)<br/><code>syntropy.lhm</code>")]
+    LHM -. claim + narration guards .-> MEM
+    LHM -. scoring + readiness .-> MEMORY
 ```
-SimMember cohort (seeded, synthetic)        daypart.simmember
-  latents → daily state chain → LHM health records → I1 manifest
-        │
-        ▼
-SimMemberEnv  (FutureHouse aviary)          daypart.simmember.env
-  send_message(text, intent) → next state, adherence reward; DSL violation = episode fail
-        │
-        ├── policy: choose intent ───────── baselines today; GRPO / reward model planned
-        │
-        ├── language: Muse Glimmer 30B      daypart.train (SFT → DPO, 4-bit QLoRA on Modal H100)
-        │
-        ▼
-Membrane  boundary-v1 DSL + layer-0 LHM narration guard   daypart.membrane
-        │
-        ▼
-Memory    typed action/signal events, LOINC-seeded ontology, LHM metric state   daypart.memory
-        │
-        ▼
-Pattern passport   one card per metric; number shown only when ready + claim-safe   daypart.passport
-        │
-        ▼
-Eval harness  runs.yaml → metrics.json (every arm reported, including failed / not run)   daypart.eval
-        │
-        ▼
-Demo   FastAPI playground + Streamlit dashboard, hosted on Modal   daypart.demo, engine/deploy
+
+### One day for one member
+
+The policy and the language model never send anything directly. Every draft goes through the membrane first.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Env as SimMemberEnv
+    participant Pol as Policy
+    participant LM as Muse Glimmer
+    participant Mem as Membrane
+    Env->>Pol: member state + latent profile
+    Pol->>LM: intent (e.g. barrier_problem_solving)
+    LM->>Mem: draft message
+    Mem->>Mem: layer 0 (LHM narration guard), then boundary-v1 DSL
+    alt draft passes
+        Mem->>Env: send_message(text, intent), byte-identical
+        Env-->>Pol: next state + adherence reward
+    else draft fails
+        Mem->>LM: regenerate (once)
+        LM->>Mem: second draft
+        Mem-->>Env: pass, or escalate (nothing sent)
+    end
+    Note over Env: In the RL env, a message that fails the DSL<br/>ends the episode with reward −1.
 ```
+
+### Member state chain
+
+The same transition function drives the baseline trajectories and the RL env, so the two cannot drift apart. A lapsed member never jumps straight back to `engaged`. Every intent can only raise the chance of improving compared with `none`. Base adherence probability is shown per state.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> engaged
+    engaged: engaged (0.90)
+    strained: strained (0.55)
+    lapsed: lapsed (0.08)
+    recovering: recovering (0.62)
+    engaged --> engaged
+    engaged --> strained
+    engaged --> lapsed
+    strained --> engaged
+    strained --> strained
+    strained --> lapsed
+    lapsed --> lapsed
+    lapsed --> recovering
+    recovering --> engaged
+    recovering --> recovering
+    recovering --> lapsed
+```
+
 
 | Package | What it does |
 |---|---|
@@ -106,6 +169,21 @@ All numbers come from `python -m daypart.eval` and the Modal run record in [`doc
 | `always_barrier_problem_solving` | **0.833** | 0 |
 
 Choosing the intent matters: problem-solving the barrier beats no contact by +0.20 adherence and beats a random intent by +0.11. That gap is the headroom a learned policy competes for.
+
+**Training pipeline.** The 25 curated profiles (I1) never enter training data; the eval prompts come from members never used in training.
+
+```mermaid
+flowchart LR
+    C["SimMember cohort<br/>175 training members"] --> SP["Muse Spark<br/>realizes narratives"]
+    SP --> SFTD["SFT set<br/>4,040 boundary-clean chat rows"]
+    SP --> DPOD["DPO set<br/>84 lapse-recovery pairs<br/>(rejected fails DSL or rubric)"]
+    B["Muse Glimmer 30B<br/>4-bit nf4 + LoRA r8"] --> SFT["SFT<br/>1,010 steps · 14.2 min"]
+    SFTD --> SFT
+    SFT --> DPO["DPO<br/>22 steps · 1.0 min · SFT anchor"]
+    DPOD --> DPO
+    DPO --> EV["Held-out eval<br/>141 prompts · boundary + rubric"]
+    H["25 curated profiles<br/>held out (I1, enforced in CI)"] -. excluded from .-> C
+```
 
 **Fine-tuning Muse Glimmer 30B on Modal** (4-bit nf4 QLoRA, LoRA r8 on the language tower only: 14.7M trainable of 29.8B parameters, 0.049%; one H100):
 
