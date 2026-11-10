@@ -45,9 +45,9 @@ def test_passport_has_inclinations(client, body):
     for ins in inc["insights"]:
         assert ins["driver"] in drivers  # each next step is linked to a shown driver
         assert ins["reason"].startswith("Why: ")
-        assert ins["estimated_lift_points"] > 0
+        assert ins["strength"] in ("clear", "moderate", "small")
     for d in inc["drivers"]:
-        assert d["direction"] in ("helps", "makes_harder") and 0 <= d["share"] <= 1
+        assert d["direction"] in ("helps", "makes_harder") and d["weight"] in ("strong", "moderate", "slight")
 
 
 def test_inclinations_wording_is_safe_and_plain(client):
@@ -58,6 +58,7 @@ def test_inclinations_wording_is_safe_and_plain(client):
         assert_narration_safe(t)
         assert dsl.check(t).passed
         assert not JARGON.search(t), t
+        assert not any(ch.isdigit() for ch in t), t  # no number a reader could take for a bound (T6.5)
     assert "simulated" in inc["note"].lower()
 
 

@@ -212,9 +212,13 @@ def test_inclinations_every_member(cohort, rm):
         assert 1 <= len(out.insights) <= inc.MAX_INSIGHTS
         ids = {d.driver_id for d in out.drivers}
         assert all(i.driver in ids for i in out.insights)
-        assert all(i.estimated_lift_points > 0 for i in out.insights)
-        assert abs(sum(d.share for d in out.drivers) - 1.0) < 0.01
-        assert [d.share for d in out.drivers] == sorted((d.share for d in out.drivers), reverse=True)
+        assert all(i.strength in ("clear", "moderate", "small") for i in out.insights)
+        order = ["strong", "moderate", "slight"]
+        ranks = [order.index(d.weight) for d in out.drivers]
+        assert ranks == sorted(ranks)  # drivers are listed heaviest first
+        # T6.5: no free-floating number in any member-facing string
+        assert not any(ch.isdigit() for t in (*(d.label for d in out.drivers),
+                       *(x for i in out.insights for x in (i.title, i.action, i.reason))) for ch in t)
 
 
 def test_inclinations_text_is_safe_and_jargon_free(cohort, rm):
@@ -238,16 +242,16 @@ def test_all_labels_safe():
 
 
 def test_inclinations_reject_unlinked_insight():
-    d = inc.Driver(driver_id="mood", label="Your recent mood", direction="helps", share=1.0, question_ids=("jev.mood",))
+    d = inc.Driver(driver_id="mood", label="Your recent mood", direction="helps", weight="strong", question_ids=("jev.mood",))
     i = inc.Insight(insight_id="insight:reminder", title="A reminder at the right moment", action="Set a reminder.",
-                    reason="Why: test.", driver="barrier.time", estimated_lift_points=1.0)
+                    reason="Why: test.", driver="barrier.time", strength="clear")
     with pytest.raises(pydantic.ValidationError, match="not linked"):
         inc.Inclinations(rm_version="rm-v1", jev_version="jev-v1", drivers=(d,), insights=(i,))
 
 
 def test_driver_rejects_unsafe_label():
     with pytest.raises(pydantic.ValidationError):
-        inc.Driver(driver_id="mood", label="This will cure you", direction="helps", share=0.5, question_ids=())
+        inc.Driver(driver_id="mood", label="This will cure you", direction="helps", weight="slight", question_ids=())
 
 
 def test_forgetful_answers_get_a_reminder_linked_to_forgetting(rm):
