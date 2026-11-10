@@ -35,6 +35,9 @@ from daypart.memory.lhm import MemoryLhm
 from daypart.passport import view as passport_view
 
 TIMELINE_VERSION = "timeline-v1"
+# QG P6.1 S1: the response holds the newest MAX_ENTRIES saves (older ones are counted in
+# ``omitted``), so a cold read costs at most 2 x MAX_ENTRIES snapshots however long the journal is.
+MAX_ENTRIES = 60
 
 Change = Literal["became_ready", "withheld", "value_changed", "now_observed"]
 
@@ -108,6 +111,7 @@ class Timeline(pydantic.BaseModel):
     journal_id: str
     member_id: str
     policy_version: str = next_step.POLICY_VERSION
+    omitted: int = 0  # older saves left out (MAX_ENTRIES)
     entries: tuple[Entry, ...]
 
 
@@ -162,6 +166,7 @@ async def _snapshot(journal: Journal, k: int, day: dt.date) -> _Snapshot:
         step = None
     snap = _Snapshot(cards=cards, step=step)
     journal.timeline_cache[key] = snap
+    await asyncio.sleep(0)  # QG P6.1 S1: let other requests run between cold snapshots
     return snap
 
 
@@ -188,7 +193,8 @@ async def timeline(journal: Journal) -> Timeline:
     """Every saved check-in's entry, in save order (empty before the first save)."""
     entries: list[Entry] = []
     codes = {e.event_id: getattr(e, "code") for e in journal.all_events()}
-    for k, checkin_id in enumerate(journal.saved_order, start=1):
+    omitted = max(0, len(journal.saved_order) - MAX_ENTRIES)
+    for k, checkin_id in enumerate(journal.saved_order[omitted:], start=omitted + 1):
         day = _entry_day(journal, checkin_id)
         before = await _snapshot(journal, k - 1, day)
         after = await _snapshot(journal, k, day)
@@ -215,8 +221,9 @@ async def timeline(journal: Journal) -> Timeline:
         )
         entries.append(Entry(index=k, checkin_id=checkin_id, as_of=_noon(day), appends=tuple(appends),
                              passport_changes=tuple(changes), next_step=step))
-    return Timeline(journal_id=journal.journal_id, member_id=journal.member.member_id, entries=tuple(entries))
+    return Timeline(journal_id=journal.journal_id, member_id=journal.member.member_id, omitted=omitted,
+                    entries=tuple(entries))
 
 
-__all__ = ["TIMELINE_VERSION", "Append", "CardChange", "CardState", "Entry", "StepChange", "StepState",
+__all__ = ["MAX_ENTRIES", "TIMELINE_VERSION", "Append", "CardChange", "CardState", "Entry", "StepChange", "StepState",
            "Timeline", "timeline"]

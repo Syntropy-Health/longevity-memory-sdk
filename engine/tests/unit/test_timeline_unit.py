@@ -232,3 +232,28 @@ def test_k9_first_sleep_save_is_exactly_became_ready(client):
     c = {c["card_id"]: c for c in entry["passport_changes"]}["observation:" + _concept_id(client, "93832-4")]
     assert c["change"] == "became_ready"
     assert c["before"] == {"status": "withheld", "origin": "simulated", "value": None, "unit": None}
+
+
+def test_k1_timeline_is_bounded_and_yields_between_snapshots(client, monkeypatch):
+    """QG P6.1 S1: a long journal returns only its last MAX_ENTRIES entries, and the cold computation
+    yields to the event loop between snapshots, so one request cannot hold the server."""
+    import asyncio
+
+    from daypart.passport import timeline as tl
+
+    monkeypatch.setattr(tl, "MAX_ENTRIES", 3)
+    jid = _journal(client)
+    ids = [_save(client, jid, f"slept {h} hours")[0] for h in (5, 6, 7, 8, 9)]
+    yields = []
+    real_sleep = asyncio.sleep
+
+    async def counting_sleep(d, *a, **k):
+        yields.append(d)
+        return await real_sleep(d, *a, **k)
+
+    monkeypatch.setattr(tl.asyncio, "sleep", counting_sleep)
+    body = client.get(f"/api/journals/{jid}/timeline").json()
+    assert [e["checkin_id"] for e in body["entries"]] == ids[2:]
+    assert [e["index"] for e in body["entries"]] == [3, 4, 5]
+    assert body["omitted"] == 2
+    assert len(yields) >= 4  # one per uncached snapshot (k = 2..5)
