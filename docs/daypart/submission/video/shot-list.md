@@ -1,7 +1,8 @@
 # FHDIC demo video: shot list and edit (HAC-65)
 
-**Status: made.** `clinical-human-clone-demo.mp4` is 2:37 long, 1920×1080, 30 fps, H.264 and
-10.8 MB. It is attached to HAC-65 and is not in git. Captions are burned in and also provided as
+**Status: made.** `clinical-human-clone-demo.mp4` is 2:37 long, 1920×1080, 30 fps, H.264 (CRF 24)
+and 9.3 MB, under the 10 MB attachment limit (md5 `d11077c899317ec37f56b108d51ab5aa`). It is
+attached to HAC-65 (attachment `ff59472d-b4e1-41f9-95d1-9fdd75307bae`) and is not in git. Captions are burned in and also provided as
 [`captions.srt`](captions.srt). The full text and timing are in [`transcript.md`](transcript.md).
 
 **No presenter and no voice-over.** HeyGen was not used. A read-only check on 2026-11-10 found no

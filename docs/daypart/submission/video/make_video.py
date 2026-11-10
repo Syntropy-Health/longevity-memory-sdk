@@ -86,7 +86,7 @@ def ts(t):
     return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
 
-def build(footage: Path, slides: Path, out: Path, ffmpeg: str, font: str, bold: str):
+def build(footage: Path, slides: Path, out: Path, ffmpeg: str, font: str, bold: str, crf: int = 24):
     meta = json.loads((footage / "clips-1280.json").read_text())
     webm = footage / meta["video"]
     clips = {c["id"]: c for c in meta["clips"]}
@@ -142,7 +142,7 @@ def build(footage: Path, slides: Path, out: Path, ffmpeg: str, font: str, bold: 
     fc.append(f"[{prev}]subtitles={srt_path}:fontsdir={fontsdir}:force_style='{style}'[v]")
     cmd = [ffmpeg, "-y", *inputs, "-f", "lavfi", "-t", f"{total:.3f}", "-i", "anullsrc=r=48000:cl=stereo",
            "-filter_complex", ";".join(fc), "-map", "[v]", "-map", f"{len(parts)}:a",
-           "-c:v", "libx264", "-preset", "slow", "-crf", "22", "-pix_fmt", "yuv420p", "-r", f"{FPS}",
+           "-c:v", "libx264", "-preset", "slow", "-crf", f"{crf}", "-pix_fmt", "yuv420p", "-r", f"{FPS}",
            "-c:a", "aac", "-b:a", "64k", "-shortest", "-movflags", "+faststart", str(out)]
     subprocess.run(cmd, check=True)
     # transcript
@@ -171,5 +171,6 @@ if __name__ == "__main__":
     ap.add_argument("--ffmpeg", default="ffmpeg")
     ap.add_argument("--font", required=True, help="regular sans TTF (Liberation Sans)")
     ap.add_argument("--bold", required=True, help="bold sans TTF")
+    ap.add_argument("--crf", type=int, default=24, help="x264 quality; 24 keeps the MP4 under the 10 MB attachment limit")
     a = ap.parse_args()
-    build(a.footage, a.slides, a.out, a.ffmpeg, a.font, a.bold)
+    build(a.footage, a.slides, a.out, a.ffmpeg, a.font, a.bold, a.crf)
