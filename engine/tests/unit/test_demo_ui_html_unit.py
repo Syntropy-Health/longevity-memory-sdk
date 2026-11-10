@@ -29,7 +29,8 @@ ALLOWED_ALPHA_HEX = {"9AA8FF2E", "4FD8C41F", "F08CF526", "FFFFFF0A", "FFFFFF0D",
 # AM-2 D1 (G31): the member app at "/" and the research console at "/admin" are separate shells.
 # Rev 3 §2: the member screens are Today (was #checkin, kept as its alias), Review, Passport, Next, Timeline.
 MEMBER_SCREENS = ("today", "review", "passport", "next", "timeline")
-ADMIN_SCREENS = ("lab", "inventory", "research")
+# Rev 3 §4 (G36): the console screens, hash routes under /admin (#research is the playground's alias).
+ADMIN_SCREENS = ("pipeline", "lab", "inventory", "playground", "input")
 SCREENS = MEMBER_SCREENS
 # AM-2 D2 (G32): the board removed these tags from both surfaces (HAC-66, 2026-11-10).
 REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
@@ -119,9 +120,10 @@ def _by_id(root: _Node, ident: str) -> _Node:
 
 
 def _without_research(html: str) -> str:  # the admin console minus its playground section
-    """The page source with the ``<section id="screen-research">`` element (and everything in it) cut out."""
-    m = re.search(r'<section\b[^>]*\bid="screen-research"[^>]*>', html)
-    assert m, "no <section id=\"screen-research\">"
+    """The page source with the ``<section id="screen-playground">`` element (and everything in it) cut out
+    (rev 3 §4.4 renamed the route #research → #playground; G38)."""
+    m = re.search(r'<section\b[^>]*\bid="screen-playground"[^>]*>', html)
+    assert m, "no <section id=\"screen-playground\">"
     depth, i = 1, m.end()
     tag = re.compile(r"<(/?)section\b[^>]*>")
     while depth:
@@ -140,11 +142,11 @@ def test_t1_1_names_and_no_research_words_outside_research(html, admin):
     assert "Health Clone Passport" in html
     assert "pattern passport" not in (html + admin).lower()  # nowhere, the research console included
     # AM-2 D1: the member app carries no research markup at all (was: research section cut out)
-    assert 'id="screen-research"' not in html
+    assert 'id="screen-research"' not in html and 'id="screen-playground"' not in html
     assert "Daypart playground" not in html
     assert not re.search(r"\bIntent\b", html)
     assert not re.search(r"\bDraft\b", html)
-    research = _by_id(_tree(admin), "screen-research").text()
+    research = _by_id(_tree(admin), "screen-playground").text()
     assert "Research playground" in research
     assert re.search(r"\bIntent\b", research) and re.search(r"\bDraft\b", research)
     assert "Daypart playground" not in _without_research(admin)
@@ -162,18 +164,31 @@ def test_am2_d1_member_app_has_no_admin_screens_and_admin_has_no_journey(html, a
 
 def test_am2_d1_member_never_links_the_research_console(html):
     hrefs = [n.attrs.get("href") or "" for n in _tree(html).iter() if n.tag == "a"]
-    assert not [h for h in hrefs if h.startswith("/admin") or re.match(r"#(lab|research|inventory)\b", h)]
+    assert not [h for h in hrefs if h.startswith("/admin") or re.match(r"#(lab|research|inventory|pipeline|playground|input)\b", h)]
     assert "/results" not in hrefs and "/docs" not in hrefs
     js = _script(html)
     assert '"#lab"' not in js and "Continue to the learning lab" not in js
 
 
 def test_am2_d1_admin_console_links_back_to_the_member_app(admin):
+    # Rev 3 §4 (G38): the console nav is Pipeline · Learning lab · Inventory · Playground · Real input ·
+    # Dashboard ↗ (was #lab, #inventory, #research); "← Member app" sits under it.
     root = _tree(admin)
     nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Research console")
-    assert [n.attrs.get("href") for n in nav.iter() if n.tag == "a"] == ["#lab", "#inventory", "#research"]
+    links = [n for n in nav.iter() if n.tag == "a"]
+    assert [n.attrs.get("href") for n in links] == ["#pipeline", "#lab", "#inventory", "#playground", "#input", "/results"]
+    assert [" ".join(a.text().split())[1:].strip() for a in links] == [
+        "Pipeline", "Learning lab", "Inventory", "Playground", "Real input", "Dashboard (opens in a new tab)"]
+    dash = links[-1]
+    assert dash.attrs.get("target") == "_blank" and dash.attrs.get("rel") == "noopener"
+    hidden = [n for n in dash.iter() if "visually-hidden" in (n.attrs.get("class") or "")]
+    assert len(hidden) == 1 and hidden[0].text().strip() == "(opens in a new tab)"
+    back = [n for n in root.iter() if n.tag == "a" and n.attrs.get("href") == "/"]
+    assert len(back) == 1 and " ".join(back[0].text().split()) == "← Member app" and not _is_inside(back[0], nav)
     hrefs = {n.attrs.get("href") for n in root.iter() if n.tag == "a"}
     assert "/" in hrefs and "/results" in hrefs
+    # no hostname anywhere in the console's links: the dashboard is the app's own relative /results
+    assert not [h for h in hrefs if h and re.match(r"(https?:)?//", h) and "loinc.org" not in h], hrefs
 
 
 def test_am2_d1_one_h1_per_admin_screen(admin):
@@ -287,11 +302,14 @@ def test_t8_4_lab_footnote(admin):
 
 
 def test_t9_4_real_input_button_controls_a_live_region(admin):
-    # AM-2 D2: the real-input control lives in the research console only.
+    # AM-2 D2: the real-input control lives in the research console only. Rev 3 §4.5 (G38): on its own
+    # #input screen, labelled "Request real input" (was a "Real input" button in the console footer).
     root = _tree(admin)
-    btns = [n for n in root.iter() if n.tag == "button" and n.text().strip() == "Real input"]
+    btns = [n for n in root.iter() if n.tag == "button" and "real input" in n.text().lower()]
     assert len(btns) == 1
     b = btns[0]
+    assert b.text().strip() == "Request real input" and _is_inside(b, _by_id(root, "screen-input"))
+    assert not [n for n in root.iter() if n.tag == "footer" and _is_inside(b, n)]
     assert b.attrs.get("aria-expanded") == "false"
     panel = _by_id(root, b.attrs.get("aria-controls") or "")
     assert panel.attrs.get("aria-live") == "polite"
@@ -338,7 +356,11 @@ def test_t1_5_openapi_title_and_description(client):
     info = client.get("/openapi.json").json()["info"]
     assert info["title"] == "Clinical Human Clone API"
     d = info["description"].lower()
-    assert "synthetic" in d and "not medical advice" in d
+    # P6.2 (G38): production-style wording, as P6.1 did for the UI copy (was "Synthetic data only … Not
+    # for clinical use"); the synthetic-data disclosure is in docs/daypart/submission/assumptions-limits.md.
+    assert "not medical advice" in d and "real input is off" in d
+    for word in ("synthetic", "demo", "not for clinical use", "clinically", "fda", "regulat", "approved", "reviewed by"):
+        assert word not in d, word
 
 
 # --- T1.3 -------------------------------------------------------------------------------------------
@@ -432,7 +454,7 @@ def test_safe_href_links_same_origin_api_paths_only() -> None:
 
 def _script(html: str) -> str:
     """The journey script (the last <script> block), research view excluded."""
-    src = _without_research(html) if 'id="screen-research"' in html else html
+    src = _without_research(html) if 'id="screen-playground"' in html else html
     blocks = re.findall(r"<script>(.*?)</script>", src, re.S)
     assert blocks, "no journey script"
     return blocks[-1]
@@ -630,12 +652,18 @@ def test_rev2_generic_server_and_network_errors(html):
 def test_rev2_get_failure_notice_sits_directly_under_h1(html, admin):
     # AM-2 D1: the lab is on the research console now; the inventory screen joins it there.
     # Rev 3 §3.4, §3.6: an eyebrow line may sit above the h1; the notice slot still follows the h1 directly.
-    for page, s in ((html, "passport"), (html, "next"), (html, "timeline"), (admin, "lab"), (admin, "inventory")):
+    # Rev 3 §4 (G38): a console h1 sits in the page header (.a-top: crumb, h1, data source); the slot follows it.
+    for page, s in ((html, "passport"), (html, "next"), (html, "timeline"), (admin, "pipeline"), (admin, "lab"),
+                    (admin, "inventory")):
         sec = _by_id(_tree(page), "screen-" + s)
         kids = [c for c in sec.children if isinstance(c, _Node)]
         if kids[0].tag == "p" and kids[0].attrs.get("class") == "eyebrow":
             kids = kids[1:]
-        assert kids[0].tag == "h1", s
+        if page is admin:
+            assert kids[0].attrs.get("class") == "a-top", s
+            assert [n for n in kids[0].iter() if n.tag == "h1"], s
+        else:
+            assert kids[0].tag == "h1", s
         assert kids[1].tag == "div" and (kids[1].attrs.get("id") or "").endswith("-msg"), s
 
 
@@ -1409,7 +1437,8 @@ def test_rev3_member_render_links_no_console_dashboard_or_real_input(html):
     shipped = re.sub(r"<!--.*?-->", "", html, flags=re.S)  # markup and script, not the source comments
     assert "/admin" not in shipped and "/dashboard" not in shipped
     ids = {n.attrs.get("id") for n in root.iter()}
-    assert not ids & {"ri-btn", "ri-panel", "screen-lab", "screen-research", "screen-inventory"}
+    assert not ids & {"ri-btn", "ri-panel", "screen-lab", "screen-research", "screen-inventory", "screen-pipeline",
+                      "screen-playground", "screen-input"}
     assert not [n for n in root.iter() if n.tag in ("a", "button") and "Real input" in n.text()]
 
 
@@ -1710,3 +1739,332 @@ def test_rev3_member_api_strings_never_reach_an_html_sink(html):
         part = _section(js, start, end)
         for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
             assert sink not in part, (start, sink)
+
+
+# --- HAC-38 P6.2 part B: visual spec rev 3 on the research console (HAC-68 §4, §5) -----------------------
+
+
+def test_rev3_console_shell_skip_link_sidebar_and_brand(admin):
+    root = _tree(admin)
+    body = next(n for n in root.iter() if n.tag == "body")
+    first, second = [c for c in body.children if isinstance(c, _Node)][:2]
+    assert first.tag == "a" and first.attrs.get("class") == "skip" and first.attrs.get("href") == "#main"
+    assert second.attrs.get("class") == "a-shell"
+    side = next(n for n in second.children if isinstance(n, _Node))
+    assert side.tag == "aside" and side.attrs.get("class") == "a-side"
+    brand = next(n for n in side.iter() if "a-brand" in (n.attrs.get("class") or ""))
+    badge = [n for n in brand.iter() if "tag--console" in (n.attrs.get("class") or "")]
+    assert len(badge) == 1 and badge[0].text() == "Research console"  # drawn uppercase by .tag--console
+    assert "Clinical Human Clone" in brand.text()
+    nav = next(n for n in side.iter() if n.tag == "nav")
+    assert nav.attrs.get("aria-label") == "Research console" and "a-nav" in nav.attrs.get("class", "")
+    mains = [n for n in root.iter() if n.tag == "main"]
+    assert len(mains) == 1 and mains[0].attrs.get("id") == "main" and mains[0].attrs.get("tabindex") == "-1"
+    assert not _is_inside(mains[0], side)
+    for s in ADMIN_SCREENS:
+        assert _is_inside(_by_id(root, "screen-" + s), mains[0]), s
+    # the console carries none of the member shell
+    assert not [n for n in root.iter() if "m-head" in (n.attrs.get("class") or "") or n.attrs.get("aria-label") == "Member"]
+    css = _style(admin)
+    for gone in (".site-head", ".steps", ".site-foot", ".research-label", "p.brand"):  # the temporary pre-rev-3 block
+        assert gone not in css, gone
+    assert "site-head" not in admin and 'class="steps"' not in admin
+
+
+def test_rev3_console_page_header_crumb_h1_and_source(admin):
+    root = _tree(admin)
+    sources = {"pipeline": "GET /api/lab", "lab": "GET /api/lab", "inventory": "GET /api/inventory",
+               "playground": "POST /api/episodes", "input": "POST /api/mode"}
+    for s in ADMIN_SCREENS:
+        top = next(n for n in _by_id(root, "screen-" + s).iter() if n.attrs.get("class") == "a-top")
+        crumb = [n for n in top.iter() if n.attrs.get("class") == "a-crumb"]
+        assert len(crumb) == 1 and crumb[0].text() == "/admin/" + s, s
+        h1 = [n for n in top.iter() if n.tag == "h1"]
+        assert len(h1) == 1 and h1[0].attrs.get("id") == "h-" + s, s
+        src = [n for n in top.iter() if "mono" in (n.attrs.get("class") or "").split() and n is not crumb[0]]
+        assert [n.text() for n in src] == [sources[s]], s
+
+
+def test_rev3_console_router_routes_aliases_and_default(admin):
+    js = _script(admin)
+    assert 'var SCREENS = ["pipeline", "lab", "inventory", "playground", "input"];' in js  # SCREENS[0] is the default
+    assert 'var ALIASES = { research: "playground" };' in js  # the API's #research evidence link still resolves
+    rt = _section(js, "function route()", "\n}\n")
+    assert ".a-nav a" in rt and '"page"' in rt and '"step"' not in rt
+    assert "pipeline: showPipeline" in rt and "playground:" in rt and "input:" in rt
+    from daypart.demo.app import ADMIN_ROUTES
+
+    assert ADMIN_ROUTES == ADMIN_SCREENS  # /admin/<route> is served for exactly these
+
+
+def test_rev3_console_path_routes_serve_the_shell(client, admin):
+    for s in ADMIN_SCREENS:
+        r = client.get(f"/admin/{s}")
+        assert r.status_code == 200 and r.text == admin, s
+    assert client.get("/admin/nope").status_code == 404
+    assert client.get("/admin/today").status_code == 404  # never a member route
+    js = _script(admin)
+    assert 'history.replaceState(null, "", "/admin#" + m[1]' in js
+
+
+def test_rev3_pipeline_lanes_stage_counts_and_copy(admin):
+    root = _tree(admin)
+    sec = _by_id(root, "screen-pipeline")
+    live = _by_id(root, "pipe-live")
+    assert live.tag == "ol" and live.attrs.get("aria-label") == "Live loop, 5 stages"
+    stages = [c for c in live.children if isinstance(c, _Node)]
+    assert len(stages) == 5 and all(c.tag == "li" for c in stages)
+    names = [next(n for n in li.iter() if n.attrs.get("class") == "stage-name").text() for li in stages]
+    assert names == ["Check-in", "Review", "EventLog", "Passport recompute", "Next-step policy"]
+    for li in stages:
+        assert [n.text() for n in li.iter() if n.attrs.get("class") == "tag tag--live"] == ["live"]
+    text = " ".join(sec.text().split())
+    assert "↺ loop: the next saved check-in starts again at stage 1. No model is called in this loop." in text
+    assert "● runs on every saved check-in" in text and "○ offline · not run per check-in" in text
+    assert "Simulated outcomes are not patient outcomes." in text
+    off = _by_id(root, "pipe-offline")
+    assert off.tag == "ol" and not [c for c in off.children if isinstance(c, _Node)]  # drawn from /api/lab only
+    for ident in ("pipe-kpis", "lane-offline"):  # hidden until /api/lab answers
+        assert "hidden" in _by_id(root, ident).attrs, ident
+    assert "hidden" not in _by_id(root, "lane-live").attrs  # the live lane is static and always shown
+
+
+def test_rev3_pipeline_live_lane_names_only_code_that_exists():
+    """§4.1: each live stage's versions are the running code's own constants, and the next-step policy
+    selects by rules and checks with the membrane: nothing in the loop imports a model client."""
+    from daypart.checkin import next_step
+    from daypart.checkin.models import METHOD_TEXT
+    from daypart.memory.registry import SLICE_VERSION
+    from daypart.passport.view import READY_WINDOW_DAYS
+
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    live = _section(src, '<ol class="pipe" id="pipe-live"', "</ol>")
+    assert f"<dd>{METHOD_TEXT}</dd>" in live
+    assert f"<dd>{SLICE_VERSION}</dd>" in live
+    assert f"<dd>value ≤ {READY_WINDOW_DAYS} days old</dd>" in live
+    assert f"<dd>{next_step.POLICY_VERSION} (rules)</dd>" in live and "<dd>membrane post()</dd>" in live
+    loop = Path(next_step.__file__).read_text()
+    for client in ("anthropic", "openai", "httpx", "requests", "modal", "transformers", "torch", "muse"):
+        assert not re.search(rf"^\s*(import|from)\s+{client}\b", loop, re.M), client
+
+
+def _lab_literals() -> set[str]:
+    """Every number and run id the committed lab rows carry, as the page would print them."""
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    out: set[str] = set()
+
+    def walk(v: object) -> None:
+        if isinstance(v, dict):
+            for x in v.values():
+                walk(x)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x)
+        elif isinstance(v, float) and v not in (0.0, 1.0):
+            out.update({f"{v:.3f}", repr(v)})
+        elif isinstance(v, int) and not isinstance(v, bool) and v >= 100:
+            out.add(str(v))
+        elif isinstance(v, str) and "/" in v and v[0].isalnum():
+            out.add(v)
+
+    walk(t)
+    for r in t["rows"]:
+        if r["run_id"]:
+            out.add(r["run_id"].split("/")[0])  # the run prefix
+    return out
+
+
+def test_rev3_console_has_no_hard_coded_lab_numbers(admin):
+    """§4.1: every pipeline and lab number is read per request from /api/lab, never written into the page."""
+    found = _lab_literals()
+    assert {"0.319", "0.681", "4040", "0.645"} <= found  # the literals the mockup drew from f66f132
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    for lit in sorted(found):
+        for page in (admin, src):
+            assert not re.search(rf"(?<![\w.]){re.escape(lit)}(?![\w])", page), lit
+    assert "needs a trained reward model" not in src  # the grpo reason comes from the API verbatim
+
+
+_PIPE = ["$", "el", "attrs", "safeHref", "link", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError",
+         "parts", "fix3", "delta3", "labRowNamed", "mismatched", "mismatchTag", "rowRate", "intOrNull", "envName", "kpi",
+         "pipeKpis", "OFFLINE", "runLink", "withDelta", "offlineStage", "pipeOffline", "pipeSeq", "showPipeline"]
+_PIPE_BODY = """
+mk("pipe-msg"); var kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
+kp.hidden = true; lane.hidden = true;
+RESP.push(RESPONSE);
+await showPipeline();
+function txt(e) { return e.textContent; }
+return { kpis: kp.children.map(function (li) { return li.children.map(txt); }),
+  stages: ol.children.map(function (li) { return [li.className, li.querySelector("span.stage-name").textContent,
+    li.querySelectorAll("span.tag").map(txt), li.querySelectorAll("dt").map(txt), li.querySelectorAll("dd").map(txt),
+    li.querySelectorAll("a").map(function (a) { return [a.textContent, a.href, a.title]; })]; }),
+  label: ol.getAttribute("aria-label"), note: $("pipe-note").textContent,
+  hidden: [kp.hidden, lane.hidden], msg: $("pipe-msg").textContent };
+"""
+
+
+def _pipeline(response: object) -> dict:
+    import json
+
+    got = _run_page(_PIPE, _PIPE_BODY.replace("RESPONSE", json.dumps(response)))
+    assert isinstance(got, dict)
+    return got
+
+
+def test_rev3_pipeline_maps_every_lab_field_1_to_1():
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    rows = {r["row"]: r for r in t["rows"]}
+    base, sft, dpo, grpo = rows["base"], rows["sft"], rows["dpo"], rows["grpo"]
+
+    def f(v: float) -> str:
+        return f"{v:.3f}"
+
+    def d(v: float) -> str:
+        return ("+" if v >= 0 else "") + f"{v:.3f}"
+
+    envs = [r for r in t["rows"] if r["kind"] == "env_baseline"]
+    best = max(envs, key=lambda r: r["metrics"]["mean_adherence"])
+    got = _pipeline([200, t])
+    assert got["hidden"] == [False, False] and got["msg"] == ""
+    assert got["kpis"] == [
+        ["boundary pass · dpo", f(dpo["metrics"]["boundary_pass_rate"]),
+         f"base {f(base['metrics']['boundary_pass_rate'])} · n = {dpo['split']['n']}"],
+        ["rubric pass · dpo", f(dpo["metrics"]["rubric_pass_rate"]),
+         f"sft {f(sft['metrics']['rubric_pass_rate'])} · base {f(base['metrics']['rubric_pass_rate'])}"],
+        ["builder check I1", "✓ passed" if t["i1_passed"] else "⚠ not passed", f"member failures {t['member_failure_count']}"],
+        ["best env adherence", f(best["metrics"]["mean_adherence"]),
+         f"{best['row'].removeprefix('env_').replace('_', ' ')} · {best['split']['n']} episodes"],
+    ]
+    assert got["label"] == "Offline training, 4 stages"
+    b, s, p, g = got["stages"]
+    assert b[:4] == ["", "Base", ["offline"], ["run", "boundary", "rubric", "failures"]]
+    assert b[4][1:] == [f(base["metrics"]["boundary_pass_rate"]), f(base["metrics"]["rubric_pass_rate"]),
+                        f"{base['failures']} · {base['degenerate']} degenerate"]
+    assert b[5] == [["…/base", "#lab/" + base["run_id"], base["run_id"]]]
+    assert s[2] == ["offline", "✓ gate r3"] and s[3] == ["run", "rows", "boundary", "rubric"]
+    assert s[4][1:] == [str(sft["split"]["training_rows"]),
+                        f"{f(sft['metrics']['boundary_pass_rate'])} (Δ {d(sft['gate']['delta'])})", f(sft["metrics"]["rubric_pass_rate"])]
+    assert s[5][0][0] == "…/" + sft["run_id"].rsplit("/", 1)[1]
+    assert p[2] == ["offline", "✓ gate r4"] and p[3] == ["run", "pairs", "boundary", "rubric"]
+    assert p[4][1:] == [str(dpo["split"]["training_rows"]),
+                        f"{f(dpo['metrics']['boundary_pass_rate'])} · {dpo['gate']['boundary_regressions']} regressions",
+                        f"{f(dpo['metrics']['rubric_pass_rate'])} (Δ {d(dpo['gate']['rubric_delta'])})"]
+    assert g[:4] == ["is-proposed", "GRPO", ["○ proposed, not built"], ["run", "reason"]]
+    assert g[4] == ["not recorded", grpo["reason"]] and g[5] == []  # the reason verbatim from the API
+    prefix = base["run_id"].rsplit("/", 1)[0]
+    sp = base["split"]
+    assert got["note"] == (f"Runs {prefix}/*. Eval split {sp['prompt_set_version']}, n = {sp['n']}, seed {base['seed']}. "
+                           "Trained adapters are evaluated here; the live loop above does not call them in this build.")
+
+
+def test_rev3_pipeline_nulls_and_provenance_mismatch():
+    """A null field is "— not recorded" (nr); a mismatch row shows its tag and no number anywhere."""
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    for r in t["rows"]:
+        if r["row"] == "dpo":
+            r.update(status="provenance mismatch", metrics={"boundary_pass_rate": None, "rubric_pass_rate": None}, gate=None,
+                     split={**r["split"], "n": None, "training_rows": None})
+        if r["row"] == "sft":
+            r["metrics"]["boundary_pass_rate"] = None
+            r["gate"] = {"passed": False}
+        if r["row"] == "grpo":
+            r["reason"] = None
+    t.update(i1_passed=None, member_failure_count=None)
+    t["rows"] = [r for r in t["rows"] if r["kind"] != "env_baseline"]
+    got = _pipeline([200, t])
+    k1, k2, k3, k4 = got["kpis"]
+    assert k1[1] == "⚠ provenance mismatch" and k1[2].endswith("n = not recorded")
+    assert k2[1] == "⚠ provenance mismatch"
+    assert k3[1:] == ["not recorded", "member failures not recorded"]
+    assert k4[1:] == ["not recorded", "not recorded · not recorded"]
+    _b, s, p, g = got["stages"]
+    assert s[2] == ["offline", "⚠ gate r3 not passed"] and s[4][2] == "not recorded"  # no Δ without a boundary number
+    assert p[2] == ["offline", "⚠ provenance mismatch"] and p[3] == ["run"]  # no number, no gate
+    assert g[4] == ["not recorded", "not recorded"]
+
+
+@pytest.mark.parametrize("resp", [[500, {"error": "internal"}], "network", [200, {"rows": "x"}]])
+def test_rev3_pipeline_failed_lab_get_hides_numbers(resp):
+    got = _pipeline(resp)
+    assert got["hidden"] == [True, True] and got["kpis"] == [] and got["stages"] == []
+    assert "Something went wrong" in got["msg"]
+    assert ("error 500" in got["msg"]) if resp[0] == 500 else True
+
+
+def test_rev3_lab_deep_link_marks_the_row_and_keeps_stacking(admin):
+    js = _script(admin)
+    lab = _section(js, "async function showLab", "\nfunction labRow")
+    assert 'setAttribute("aria-current", "true")' in lab
+    css = _style(admin)
+    assert 'table.stack tr[aria-current="true"] td{background:var(--a-raised)}' in css
+    assert "@media (max-width:40rem){\n  table.stack thead" in css and "content:attr(data-label)" in css
+
+
+def test_rev3_inventory_table_maps_the_api_and_has_no_cards_column(admin, client):
+    root = _tree(admin)
+    sec = _by_id(root, "screen-inventory")
+    heads = [" ".join(n.text().split()) for n in sec.iter() if n.tag == "th"]
+    assert heads == ["Vertical", "Concepts", "Status"]  # /api/inventory has no card count, so no Cards column
+    assert "cards" not in " ".join(str(k) for k in client.get("/api/inventory").json())
+    got = _run_page(["$", "el", "nr", "clear", "notice", "TIMEOUT_MS", "api", "serverError", "cell", "MONTHS", "fmtDay", "reviewLabel",
+                     "showInventory"], """
+      mk("ainv-msg"); var body = mk("ainv-body"); body.hidden = true; mk("ainv-meta", "dl"); var rows = mk("ainv-rows", "tbody"); mk("ainv-list");
+      RESP.push([200, INV]);
+      await showInventory();
+      return [body.hidden, rows.children.map(function (tr) { return [tr.className].concat(tr.children.map(function (td) {
+        return td.getAttribute("data-label") + "=" + td.textContent; })); })];
+    """.replace("INV", __import__("json").dumps(client.get("/api/inventory").json())))
+    inv = client.get("/api/inventory").json()
+    assert got[0] is False
+    want = [["", f"Vertical={v['label']}", f"Concepts={len(v['concepts'])}", "Status=✓ covered"] for v in inv["verticals"]]
+    want += [["proposed", f"Vertical={g}", "Concepts=0", "Status=○ gap"] for g in inv["gap_labels"]]
+    assert got[1] == want
+
+
+def test_rev3_playground_has_no_optional_chip_or_synthetic_tag(admin):
+    sec = _by_id(_tree(admin), "screen-playground")
+    text = " ".join(sec.text().split())
+    assert "(optional)" not in text and "synthetic" not in text.lower() and "Research console" not in text
+    assert "research-label" not in admin
+    for ident in ("r-member", "r-intent", "r-text", "r-start", "r-step", "r-days", "r-log", "r-cards"):
+        _by_id(_tree(admin), ident)
+
+
+def test_rev3_real_input_screen_lists_gates_from_the_api(admin, client):
+    from daypart.governance import real_input
+
+    assert real_input.REAL_INPUT_BUILD_ALLOWED is False
+    root = _tree(admin)
+    sec = _by_id(root, "screen-input")
+    panel = _by_id(root, "ri-panel")
+    assert _is_inside(panel, sec) and panel.attrs.get("aria-live") == "polite" and not panel.children
+    r = client.post("/api/mode", json={"real_input": True})
+    assert r.status_code == 403 and len(r.json()["open_gates"]) == 12
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    for g in r.json()["open_gates"]:
+        assert g["label"] not in src, g["label"]  # the gate labels come from the API, never the page
+    ri = _section(_script(admin), "async function realInput", "\n}\n")
+    assert '"POST", "/api/mode"' in ri and "res.status === 403" in ri and 'el("ol", "gates' in ri
+    assert ".gates{columns:1" in _style(admin) and "@media (min-width:48rem){.gates{columns:2}}" in _style(admin)
+
+
+def test_rev3_console_api_strings_never_reach_an_html_sink(admin):
+    js = _script(admin)
+    for start, end in (("/* ---------- #pipeline", "/* ---------- #input"), ("/* ---------- #input", "/* ---------- wiring")):
+        part = _section(js, start, end)
+        for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
+            assert sink not in part, (start, sink)
+
+
+def test_rev3_console_reduced_motion_and_tap_targets(admin):
+    css = _style(admin)
+    assert "@media (prefers-reduced-motion:reduce){\n  *,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important" in css
+    assert ".a-nav a{display:flex;align-items:center;gap:var(--s2);min-height:var(--tap)" in css
+    assert ".a-side-foot a{display:inline-flex;align-items:center;min-height:var(--tap)}" in css
+    assert "--tap:44px" in css

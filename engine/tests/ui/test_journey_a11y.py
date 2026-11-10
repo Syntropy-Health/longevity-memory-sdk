@@ -48,8 +48,10 @@ AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
 # AM-2 D1 (G31): the member app is served at "/", the research console at "/admin".
 # Visual spec rev 3 §2 (HAC-68): the member routes; #checkin stays an alias of #today.
 ROUTES = ["today", "review", "passport", "next", "timeline"]
-ALIASES = {"checkin": "today"}
-ADMIN_ROUTES = ["lab", "inventory", "research"]
+# Rev 3 §4 (G36): the console routes are hashes under /admin, #pipeline by default; #research (the API's
+# simulated-source evidence link) is the playground's alias.
+ALIASES = {"checkin": "today", "research": "playground"}
+ADMIN_ROUTES = ["pipeline", "lab", "inventory", "playground", "input"]
 # AM-2 D2 (G32): the board removed the demo banner and these tags (HAC-66); T1.2 now checks they are absent.
 REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
                 "Research view (optional)")
@@ -139,7 +141,8 @@ def screen(page: Page, route: str):
 
 def url(base_url: str, route: str) -> str:
     """The route's URL on its surface: the research console's routes live under /admin."""
-    return f"{base_url}admin#{route}" if route.split("/")[0] in ADMIN_ROUTES else f"{base_url}#{route}"
+    admin = ALIASES.get(route.split("/")[0], route.split("/")[0]) in ADMIN_ROUTES
+    return f"{base_url}admin#{route}" if admin else f"{base_url}#{route}"
 
 
 def goto(page: Page, base_url: str, route: str) -> None:
@@ -225,14 +228,18 @@ def wait_route_ready(page: Page, route: str) -> None:
         "passport": "#pp-cards article",
         "next": "#ns-panel button",
         "timeline": "#tl-days details",
+        "pipeline": "#pipe-offline li",
         "lab": "#lab-rows tr",
-        "inventory": "#ainv-list li",
+        "inventory": "#ainv-rows tr",
+        "playground": "#r-start",
+        "research": "#r-start",
+        "input": "#ri-btn",
     }[route]
     expect(page.locator(ready).first).to_be_visible()
 
 
 def research_episode(page: Page) -> None:
-    """On ``#research``: start an episode and take one step, so the episode form, the adherence grid and
+    """On ``#playground``: start an episode and take one step, so the episode form, the adherence grid and
     the log are drawn (the content most likely to overflow at 375 px; QG P3 B3)."""
     expect(page.locator("#r-member option").first).to_be_attached()
     page.click("#r-start")
@@ -287,6 +294,10 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
     page.locator("#tl-days details:not([open]) > summary").first.click()
     check("timeline")
 
+    goto(page, base_url, "pipeline")  # the console's default route (rev 3 §4.1)
+    wait_route_ready(page, "pipeline")
+    check("pipeline")
+
     goto(page, base_url, "lab")
     wait_route_ready(page, "lab")
     check("lab")
@@ -295,9 +306,14 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
     wait_route_ready(page, "inventory")
     check("inventory")
 
-    goto(page, base_url, "research")  # T10.3 says every route (QG P3 B3)
+    goto(page, base_url, "playground")  # T10.3 says every route (QG P3 B3)
     research_episode(page)
-    check("research")
+    check("playground")
+
+    goto(page, base_url, "input")  # with the refusal and its gate list drawn
+    page.click("#ri-btn")
+    expect(page.locator("#ri-panel ol li").first).to_be_visible()
+    check("input")
 
     assert seen == ["today", "review", "updated", "passport", "next", "timeline"] + ADMIN_ROUTES
     page.context.close()
@@ -306,7 +322,7 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
 def test_direct_load_focuses_each_h1(browser: Browser, page_errors, base_url: str):
     """G27 (9): a direct load or reload of a route URL leaves focus on that screen's h1 (the #checkin
     alias lands on #today's)."""
-    for route in ROUTES + ["checkin"] + ADMIN_ROUTES:
+    for route in ROUTES + ["checkin"] + ADMIN_ROUTES + ["research"]:
         page = _new_page(browser, page_errors, viewport=DESKTOP)
         for _ in range(2):  # the first load, then a reload of the same URL
             if _:
@@ -353,9 +369,14 @@ def test_t8_4_lab_says_simulated_not_patient_outcomes(page: Page, base_url: str)
 
 
 def test_t9_4_real_input_refusal_lists_every_gate(page: Page, base_url: str, axe_source: str):
-    goto(page, base_url, "lab")  # AM-2 D2: the real-input control is on the research console only
+    # AM-2 D2: the real-input control is on the research console only; rev 3 §4.5: on its own #input screen
+    goto(page, base_url, "input")
     expect(page.locator("#ri-btn")).to_be_visible()
-    page.click("#ri-btn")
+    expect(page.locator("#ri-btn")).to_have_text("Request real input")
+    with page.expect_response(lambda r: r.url.endswith("/api/mode") and r.request.method == "POST") as resp:
+        page.click("#ri-btn")
+    assert resp.value.status == 403
+    assert resp.value.json()["error"] == "real_input_refused"
     panel = page.locator("#ri-panel")
     expect(panel).to_contain_text("Real input is off and cannot be turned on in this build")
     expect(page.locator("#ri-btn")).to_have_attribute("aria-expanded", "true")
@@ -563,7 +584,7 @@ def test_t10_4_reduced_motion_zeroes_every_duration(browser: Browser, page_error
     assert bad == [], f"clone updated: {bad[:10]}"  # rev 3 §3.3: the ring pulse and row rise are removed too
     for route in ROUTES + ADMIN_ROUTES:  # every route on both surfaces (QG P3 B3, AM-2 D1)
         goto(page, base_url, route)
-        if route == "research":
+        if route == "playground":
             research_episode(page)
         else:
             wait_route_ready(page, route)
@@ -1052,3 +1073,228 @@ def test_rev3_skip_link_is_first_and_keeps_the_route(page: Page, base_url: str):
     expect(page.locator("#main")).to_be_focused()
     assert page.evaluate("location.hash") == "#passport"
     expect(screen(page, "passport")).to_be_visible()
+
+
+# ---------------------------------------------------------------- visual spec rev 3, research console (HAC-38 P6.2 part B)
+
+
+CONSOLE_NAV = "nav[aria-label='Research console']"
+
+
+def _console_prep(page: Page, route: str) -> None:
+    """Draw each console screen's richest state before it is measured."""
+    if route == "playground":
+        research_episode(page)
+    elif route == "input":
+        page.click("#ri-btn")
+        expect(page.locator("#ri-panel ol li").first).to_be_visible()
+    else:
+        wait_route_ready(page, route)
+
+
+def _tab_through(page: Page) -> Keyboard:
+    """Tab from the skip link through every stop of the page (sidebar, then content) until focus wraps
+    back to the skip link or leaves the page."""
+    page.focus("a.skip")
+    kb = Keyboard(page)
+    for _ in range(Keyboard.MAX_STOPS):
+        desc = kb._step("Tab")
+        if page.evaluate("document.activeElement === document.body || document.activeElement.classList.contains('skip')"):
+            break
+        assert desc
+    else:
+        raise AssertionError("Tab never wrapped")
+    kb.press("Shift+Tab")  # settle the last stop
+    # the wrap itself (focus on <body> past the last stop) is not a stop
+    kb.focused = [f for f in kb.focused if not f[0].startswith("BODY")]
+    kb.rings = [r for r in kb.rings if not r[0].startswith("BODY")]
+    return kb
+
+
+@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
+def test_rev3_console_routes_axe_reflow_focus_and_rings(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
+    """§4, §5 on every console route: the nav moves focus to the h1 and marks its page; axe has no serious or
+    critical violation; nothing scrolls sideways; every Tab stop shows the spec ring and differs from unfocused."""
+    page = _new_page(browser, page_errors, viewport=viewport)
+    page.goto(f"{base_url}admin")
+    expect(screen(page, "pipeline")).to_be_visible()  # the default route
+    expect(page.locator("#h-pipeline")).to_be_focused()
+    for route in ADMIN_ROUTES:
+        page.locator(f"{CONSOLE_NAV} a[href='#{route}']").click()
+        expect(screen(page, route)).to_be_visible()
+        expect(page.locator(f"#h-{route}")).to_be_focused()
+        expect(page.locator(f"{CONSOLE_NAV} a[aria-current=page]")).to_have_count(1)
+        expect(page.locator(f"{CONSOLE_NAV} a[href='#{route}']")).to_have_attribute("aria-current", "page")
+        expect(screen(page, route).locator(".a-crumb")).to_have_text(f"/admin/{route}")
+        _console_prep(page, route)
+        where = f"/admin#{route} @ {viewport['width']}px"
+        assert_no_tags(page, where)
+        assert_axe_clean(page, axe_source, where)
+        assert_no_hscroll(page, where)
+        kb = _tab_through(page)
+        assert len(kb.rings) >= 8, (where, kb.rings)
+        same = [(d, f) for d, f, u in kb.rings if f == u]
+        assert same == [], f"{where}: focused elements with no visible focus change: {same}"
+        thin = [(d, f) for d, f in kb.focused if not _strong_ring(f)]
+        assert thin == [], f"{where}: focused elements without the spec focus ring: {thin}"
+        small = page.evaluate("""() => [...document.querySelectorAll('.a-side a, .a-main .btn')]
+          .filter(e => e.offsetParent !== null && e.getBoundingClientRect().height < 44).map(e => e.textContent.trim())""")
+        assert small == [], f"{where}: tap targets under 44 px: {small}"
+    page.context.close()
+
+
+def test_rev3_console_reduced_motion_zeroes_every_duration(browser: Browser, page_errors, base_url: str):
+    page = _new_page(browser, page_errors, viewport=MOBILE, reduced_motion="reduce")
+    for route in ADMIN_ROUTES:
+        goto(page, base_url, route)
+        _console_prep(page, route)
+        bad = page.evaluate(MOTION_JS)
+        assert bad == [], f"/admin#{route} @ 375px: {bad[:10]}"
+    page.context.close()
+
+
+def test_rev3_console_skip_link_dashboard_and_member_link(page: Page, base_url: str):
+    goto(page, base_url, "lab")
+    wait_route_ready(page, "lab")
+    first = page.evaluate("""() => [...document.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex="0"]')]
+      .find(e => e.offsetParent !== null || getComputedStyle(e).position === 'absolute')""" + "?.className")
+    assert first == "skip"
+    page.focus("a.skip")
+    expect(page.locator("a.skip")).to_be_in_viewport()
+    page.keyboard.press("Enter")
+    expect(page.locator("#main")).to_be_focused()
+    assert page.evaluate("location.hash") == "#lab"
+    dash = page.locator(f"{CONSOLE_NAV} a", has_text="Dashboard")
+    expect(dash).to_have_attribute("href", "/results")
+    expect(dash).to_have_attribute("target", "_blank")
+    expect(dash).to_have_attribute("rel", "noopener")
+    expect(dash).to_have_accessible_name(re.compile(r"Dashboard\s*\(opens in a new tab\)"))
+    expect(page.get_by_role("link", name="← Member app")).to_have_attribute("href", "/")
+    expect(page.locator(".a-brand .tag--console")).to_have_css("text-transform", "uppercase")
+
+
+def _lab(page: Page, base_url: str) -> dict[str, Any]:
+    return page.request.get(f"{base_url}api/lab").json()
+
+
+def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe_source: str):
+    """§4.1: the KPIs and offline stages print /api/lab's own fields (3 decimals); the live lane is 5 static stages."""
+    goto(page, base_url, "pipeline")
+    wait_route_ready(page, "pipeline")
+    t = _lab(page, base_url)
+    rows = {r["row"]: r for r in t["rows"]}
+    base, sft, dpo = rows["base"], rows["sft"], rows["dpo"]
+    kpis = page.locator("#pipe-kpis > li")
+    expect(kpis).to_have_count(4)
+    expect(kpis.nth(0).locator(".kpi-v")).to_have_text(f"{dpo['metrics']['boundary_pass_rate']:.3f}")
+    expect(kpis.nth(0).locator(".kpi-s")).to_have_text(f"base {base['metrics']['boundary_pass_rate']:.3f} · n = {dpo['split']['n']}")
+    expect(kpis.nth(1).locator(".kpi-v")).to_have_text(f"{dpo['metrics']['rubric_pass_rate']:.3f}")
+    expect(kpis.nth(2).locator(".kpi-v")).to_have_text("✓ passed" if t["i1_passed"] else "⚠ not passed")
+    live = page.get_by_role("list", name="Live loop, 5 stages")
+    expect(live.locator("> li")).to_have_count(5)
+    expect(live.locator(".tag--live")).to_have_count(5)
+    expect(page.locator("#lane-live")).to_contain_text("No model is called in this loop.")
+    off = page.get_by_role("list", name="Offline training, 4 stages")
+    stages = off.locator("> li")
+    expect(stages).to_have_count(4)
+    expect(stages.nth(0)).to_contain_text(f"{base['failures']} · {base['degenerate']} degenerate")
+    expect(stages.nth(1)).to_contain_text(f"{sft['split']['training_rows']}")
+    expect(stages.nth(1)).to_contain_text(f"(Δ +{sft['gate']['delta']:.3f})")
+    expect(stages.nth(2)).to_contain_text(f"{dpo['gate']['boundary_regressions']} regressions")
+    expect(stages.nth(3)).to_contain_text(rows["grpo"]["reason"])
+    expect(stages.nth(3)).to_contain_text("○ proposed, not built")
+    expect(page.locator("#screen-pipeline")).to_contain_text("Simulated outcomes are not patient outcomes.")
+    # a run links its lab row, which the deep link marks
+    stages.nth(1).locator("a").click()
+    expect(screen(page, "lab")).to_be_visible()
+    expect(page.locator(f"#lab-rows tr[data-run-id='{sft['run_id']}']")).to_have_attribute("aria-current", "true")
+    expect(page.locator("#lab-rows tr[aria-current=true]")).to_have_count(1)
+    assert_axe_clean(page, axe_source, "lab deep link")
+
+
+def test_rev3_pipeline_mocked_lab_mismatch_and_nulls(page: Page, base_url: str):
+    real = json.loads(json.dumps(_lab(page, base_url)))
+    for r in real["rows"]:
+        if r["row"] == "dpo":
+            r.update(status="provenance mismatch", metrics={"boundary_pass_rate": None, "rubric_pass_rate": None}, gate=None)
+        if r["row"] == "base":
+            r["metrics"]["boundary_pass_rate"] = 0.4567
+    page.route(re.compile(r".*/api/lab$"), lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(real)))
+    goto(page, base_url, "pipeline")
+    wait_route_ready(page, "pipeline")
+    k1 = page.locator("#pipe-kpis > li").nth(0)
+    expect(k1.locator(".kpi-v")).to_have_text("⚠ provenance mismatch")
+    expect(k1.locator(".kpi-s")).to_contain_text("base 0.457")  # the mocked number, read per request
+    dpo = page.locator("#pipe-offline > li").nth(2)
+    expect(dpo).to_contain_text("⚠ provenance mismatch")
+    assert not re.search(r"\d\.\d{3}", dpo.inner_text()), dpo.inner_text()
+
+
+@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
+def test_rev3_pipeline_failed_lab_keeps_the_live_lane(browser: Browser, page_errors, base_url: str, axe_source: str, viewport):
+    page = _new_page(browser, page_errors, viewport=viewport)
+    calls = {"n": 0}
+
+    def broken(route: Route) -> None:
+        calls["n"] += 1
+        if calls["n"] > 1:
+            route.continue_()
+        else:
+            route.fulfill(status=500, content_type="application/json", body='{"error": "internal"}')
+
+    page.route(re.compile(r".*/api/lab$"), broken)
+    goto(page, base_url, "pipeline")
+    msg = page.locator("#pipe-msg")
+    expect(msg).to_contain_text("We had a problem on our side (error 500)")
+    expect(page.locator("#h-pipeline")).to_be_focused()  # a failed GET leaves focus on the h1
+    expect(page.locator("#lane-live")).to_be_visible()
+    expect(page.get_by_role("list", name="Live loop, 5 stages").locator("> li")).to_have_count(5)
+    expect(page.locator("#lane-offline")).to_be_hidden()
+    expect(page.locator("#pipe-kpis")).to_be_hidden()
+    where = f"pipeline 500 @ {viewport['width']}px"
+    assert_axe_clean(page, axe_source, where)
+    assert_no_hscroll(page, where)
+    msg.get_by_role("button", name="Try again").click()
+    wait_route_ready(page, "pipeline")
+    expect(page.locator("#pipe-kpis")).to_be_visible()
+    expect(msg.locator(".notice")).to_have_count(0)
+    assert calls["n"] == 2
+    page.context.close()
+
+
+def test_rev3_pipeline_layout_vertical_below_72rem_horizontal_from_72rem(browser: Browser, page_errors, base_url: str):
+    for width, horizontal in ((1280, True), (1100, False), (375, False)):
+        page = _new_page(browser, page_errors, viewport={"width": width, "height": 900})
+        goto(page, base_url, "pipeline")
+        wait_route_ready(page, "pipeline")
+        tops = page.locator("#pipe-live > li").evaluate_all("els => els.map(e => Math.round(e.getBoundingClientRect().top))")
+        assert (len(set(tops)) == 1) is horizontal, (width, tops)
+        page.context.close()
+
+
+def test_rev3_real_input_gates_two_columns_from_48rem(browser: Browser, page_errors, base_url: str):
+    for width, cols in ((1280, "2"), (375, "1")):
+        page = _new_page(browser, page_errors, viewport={"width": width, "height": 900})
+        goto(page, base_url, "input")
+        page.click("#ri-btn")
+        expect(page.locator("#ri-panel ol.gates li")).to_have_count(len(load_checklist()))
+        assert page.locator("#ri-panel ol.gates").evaluate("e => getComputedStyle(e).columnCount") == cols
+        page.context.close()
+
+
+def test_rev3_console_old_links_and_path_routes_resolve(page: Page, base_url: str):
+    """G36: /admin#research and /admin#lab/<run> keep working; /admin/<route>[#<run>] is rewritten to the hash form."""
+    page.goto(f"{base_url}admin#research")
+    expect(screen(page, "playground")).to_be_visible()
+    expect(page.locator(f"{CONSOLE_NAV} a[href='#playground']")).to_have_attribute("aria-current", "page")
+    run = next(r["run_id"] for r in _lab(page, base_url)["rows"] if r["row"] == "dpo")
+    page.goto(f"{base_url}admin#lab/{run}")
+    expect(page.locator(f"#lab-rows tr[data-run-id='{run}']")).to_have_attribute("aria-current", "true")
+    page.goto(f"{base_url}admin/lab#{run}")
+    expect(page.locator(f"#lab-rows tr[data-run-id='{run}']")).to_have_attribute("aria-current", "true")
+    assert page.evaluate("location.pathname + location.hash") == f"/admin#lab/{run}"
+    page.goto(f"{base_url}admin/input")
+    expect(page.locator("#h-input")).to_be_focused()
+    assert page.evaluate("location.pathname + location.hash") == "/admin#input"
+    page.goto(f"{base_url}admin#nope")
+    expect(screen(page, "pipeline")).to_be_visible()  # an unknown route opens the default
