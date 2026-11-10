@@ -620,8 +620,10 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
   of "Demo mode", "Synthetic data only", "Not for clinical use", "Research view (optional)" and
   does not contain "Your real input, evaluation from vetted sources".
 - T1.3 [sealed] no JSON response from the new endpoints contains the real-input phrase.
-- T1.5 [sealed] `/openapi.json` `info.title` == "Clinical Human Clone API" (the FastAPI `title` is
-  renamed; the description says synthetic only, not medical advice).
+- T1.5 [sealed] (as amended by AM-2 D2, G38) `/openapi.json` `info.title` == "Clinical Human Clone
+  API" (the FastAPI `title` is renamed); the description says "Real input is off in this build" and
+  "Not medical advice", and is neutral: it names no synthetic or demo data, no clinical review and no
+  regulatory status (that disclosure lives in `docs/daypart/submission/assumptions-limits.md`).
 - T1.4 the Streamlit dashboard page title and headers say "Clinical Human Clone: research view"
   (unit test on the strings).
 
