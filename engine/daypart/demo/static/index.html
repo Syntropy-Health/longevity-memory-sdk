@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clinical Human Clone · Health Clone Passport demo</title>
+<title>Clinical Human Clone</title>
 <style>
 /* ============ 1. Tokens (the only colours allowed) ============ */
 :root{
@@ -241,39 +241,47 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 </style>
 </head>
 <body>
-<div class="banner" role="status">
-  <div class="wrap"><span class="ico ico-i" aria-hidden="true">i</span><span>Demo mode: synthetic inputs and simulated results</span></div>
-</div>
-
-<header class="site-head">
+<!-- AM-2 D1 (G31): one source, two shells. The server keeps the member-marked blocks at "/" and the
+     admin-marked blocks at "/admin" (daypart/demo/surfaces.py); everything unmarked is shared. -->
+<!--@member--><header class="site-head">
   <div class="wrap">
-    <p class="brand">Clinical Human Clone <small>Health Clone Passport demo</small></p>
+    <p class="brand">Clinical Human Clone <small>Health Clone Passport</small></p>
     <nav aria-label="Journey">
       <ol class="steps">
         <li><a href="#checkin">Check in</a></li>
         <li><a href="#review" id="nav-review">Review</a></li>
         <li><a href="#passport">Passport</a></li>
         <li><a href="#next">Next step</a></li>
-        <li><a href="#lab">Learning lab</a></li>
       </ol>
     </nav>
   </div>
-</header>
+</header><!--/@member--><!--@admin--><header class="site-head">
+  <div class="wrap">
+    <p class="brand">Clinical Human Clone <small>Research console</small></p>
+    <nav aria-label="Research console">
+      <ol class="steps">
+        <li><a href="#lab">Learning lab</a></li>
+        <li><a href="#inventory">Inventory</a></li>
+        <li><a href="#research">Playground</a></li>
+      </ol>
+    </nav>
+  </div>
+</header><!--/@admin-->
 
 <main class="wrap" id="main">
 <div id="session-msg"></div>
-
+<!--@member-->
 <!-- ================= 1. CHECK IN ================= -->
 <section id="screen-checkin" data-screen="checkin" aria-labelledby="h-checkin" hidden>
   <h1 id="h-checkin" tabindex="-1">What matters today?</h1>
   <div id="ci-load-msg"></div>
   <div id="ci-body">
-  <p class="screen-intro" id="ci-intro">Tell the clone about your day in a sentence, or use one of the demo files. Nothing is saved until you review it.</p>
+  <p class="screen-intro" id="ci-intro">Tell your clone about your day in a sentence, or import a file from a device. Nothing is saved until you review it.</p>
 
-  <div class="notice" id="real-data-warning">
-    <span class="ico" aria-hidden="true">⚠</span>
-    <div><p class="notice-title">Do not enter real health data</p>
-    <p>This is a public demo. Use made-up details only: no names, e-mail addresses, phone numbers or dates of birth.</p></div>
+  <div class="notice notice--info" id="real-data-warning">
+    <span class="ico ico-i" aria-hidden="true">i</span>
+    <div><p class="notice-title">Keep personal details out</p>
+    <p>Your clone needs health values only. Leave out names, e-mail addresses, phone numbers and dates of birth.</p></div>
   </div>
 
   <div id="ci-msg"></div>
@@ -286,17 +294,17 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
     </div>
     <button class="btn btn--primary" type="submit" id="ci-submit">Check in</button>
 
-    <h2 class="small" style="margin-top:var(--s5)">Or use a demo input</h2>
+    <h2 class="small" style="margin-top:var(--s5)">Or import a file</h2>
     <div class="btn-row btn-row--stack" style="margin-top:0">
-      <button class="btn btn--secondary" type="button" id="ci-files-btn" aria-expanded="false" aria-controls="ci-files">▤ Use a demo file</button>
-      <button class="btn btn--secondary" type="button" id="ci-images-btn" aria-expanded="false" aria-controls="ci-images">▣ Use a demo image</button>
+      <button class="btn btn--secondary" type="button" id="ci-files-btn" aria-expanded="false" aria-controls="ci-files">▤ Import a device file</button>
+      <button class="btn btn--secondary" type="button" id="ci-images-btn" aria-expanded="false" aria-controls="ci-images">▣ Import a photo</button>
     </div>
     <div id="ci-files" class="field" style="margin-top:var(--s3)" hidden>
-      <p class="label" id="ci-files-l">Demo files</p>
+      <p class="label" id="ci-files-l">Device files</p>
       <ul class="choice-list" aria-labelledby="ci-files-l"></ul>
     </div>
     <div id="ci-images" class="field" style="margin-top:var(--s3)" hidden>
-      <p class="label" id="ci-images-l">Demo images</p>
+      <p class="label" id="ci-images-l">Photos</p>
       <ul class="choice-list" aria-labelledby="ci-images-l"></ul>
     </div>
 
@@ -305,8 +313,9 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
       <button class="btn" type="button" disabled aria-describedby="na-note">⊘ Voice · Not available</button>
       <button class="btn" type="button" disabled aria-describedby="na-note">⊘ Video · Not available</button>
     </div>
-    <p class="hint" id="na-note" style="margin-top:var(--s2)">Voice and video are not part of this demo.</p>
+    <p class="hint" id="na-note" style="margin-top:var(--s2)">Voice and video check-ins are not available yet.</p>
   </form>
+  <div class="btn-row"><button class="btn btn--secondary" type="button" id="fresh-btn">Start a fresh journal</button></div>
   </div>
 </section>
 
@@ -348,7 +357,8 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
   <div id="ns-result" aria-live="polite" class="small"></div>
 </section>
 
-<!-- ================= 5. LAB ================= -->
+<!--/@member--><!--@admin-->
+<!-- ================= LEARNING LAB ================= -->
 <section id="screen-lab" data-screen="lab" aria-labelledby="h-lab" hidden>
   <h1 id="h-lab" tabindex="-1">Learning lab</h1>
   <div id="lab-msg"></div>
@@ -366,11 +376,22 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
   </div>
 </section>
 
+<!-- ================= INVENTORY (the concept registry; admin only, so h-inventory is unique per surface) ================= -->
+<section id="screen-inventory" data-screen="inventory" aria-labelledby="h-inventory" hidden>
+  <h1 id="h-inventory" tabindex="-1">Concept inventory</h1>
+  <div id="ainv-msg"></div>
+  <div id="ainv-body" hidden>
+    <p class="screen-intro">Every concept the clone can record, by area, with its code, and the areas it does not cover yet.</p>
+    <dl class="meta panel" id="ainv-meta" style="padding:var(--s3) var(--s4)"></dl>
+    <div id="ainv-list"></div>
+  </div>
+</section>
+
 <!-- ================= RESEARCH (the only place the playground words appear) ================= -->
 <section id="screen-research" data-screen="research" aria-labelledby="h-research" hidden>
-  <p class="research-label">◇ Research view (optional)</p>
-  <h1 id="h-research" tabindex="-1">Research view (optional)</h1>
-  <p class="muted">The original episode playground for researchers (formerly the Daypart playground). Not part of the journey. <a href="/results">Full results (research view)</a> · <a href="/docs">API</a></p>
+  <p class="research-label">◇ Research console</p>
+  <h1 id="h-research" tabindex="-1">Research playground</h1>
+  <p class="muted">The original episode playground for researchers (formerly the Daypart playground). Not part of the member journey. <a href="/results">Full results (research view)</a> · <a href="/docs">API</a></p>
 
   <div class="panel" aria-labelledby="r-ep-h">
     <h2 id="r-ep-h">Episode</h2>
@@ -402,7 +423,7 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
     <p id="r-pp-meta" class="muted small" style="margin-top:var(--s3)"></p>
     <div id="r-cards" class="cards"></div>
   </div>
-  <a href="#checkin">Back to the journey</a>
+  <a href="/">Open the member app</a>
 
 <script>
 /* Research view: the original episode playground, restyled. Loaded on the first visit only. */
@@ -416,8 +437,8 @@ var research = (function () {
   async function call(path, body) {
     var res = await api(body ? "POST" : "GET", path, body);
     if (!res.ok) {
-      throw new Error(res.status ? "The demo had a problem with this request (error " + Math.floor(res.status) + ")."
-        : "We could not reach the demo server. Check your connection and try again.");
+      throw new Error(res.status ? "The service had a problem with this request (error " + Math.floor(res.status) + ")."
+        : "We could not reach the server. Check your connection and try again.");
     }
     return res.data;
   }
@@ -523,14 +544,14 @@ var research = (function () {
 })();
 </script>
 </section>
-
+<!--/@admin-->
 </main>
 
 <footer class="site-foot">
   <div class="wrap">
-    <p class="small muted">Synthetic data only. Not for clinical use. <a href="#research">Research view (optional)</a></p>
+    <!--@admin--><p class="small muted"><a href="/">Member app</a> · <a href="/results">Full results (research view)</a> · <a href="/docs">API</a></p>
     <button class="btn btn--secondary" type="button" id="ri-btn" aria-controls="ri-panel" aria-expanded="false">Real input</button>
-    <div id="ri-panel" aria-live="polite" style="margin-top:var(--s4)"></div>
+    <div id="ri-panel" aria-live="polite" style="margin-top:var(--s4)"></div><!--/@admin-->
     <p class="small muted loinc">This material contains content from LOINC® (<a href="https://loinc.org">https://loinc.org</a>). LOINC is copyright © 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee and is available at no cost under the license at <a href="https://loinc.org/license/">https://loinc.org/license/</a>. LOINC® is a registered United States trademark of Regenstrief Institute, Inc. The codes are used for display of synthetic values only; no clinical interpretation.</p>
   </div>
 </footer>
@@ -540,7 +561,7 @@ var research = (function () {
 /* Clinical Human Clone journey UI (HAC-38 P3). Every node is built with createElement and
    textContent; API strings never reach innerHTML. Links from the API pass safeHref (https:, '#' or a same-origin /api/ path). */
 
-var S = { journal: null, today: null, checkins: {}, lastCheckin: null };
+var S = { journal: null, today: null, displayName: null, checkins: {}, lastCheckin: null };
 var STORE = "chc.session.v1";
 
 /* ---------- DOM helpers ---------- */
@@ -642,8 +663,8 @@ function failed(res) { return res.status === 0 || res.status >= 500 || (res.data
    opts.focus: a failed POST (focus moves to the notice); a failed GET leaves focus on the h1. */
 function serverError(res, retry, opts) {
   var st = res && typeof res.status === "number" && res.status > 0 ? Math.floor(res.status) : 0;
-  var body = st ? "The demo had a problem on its side (error " + st + "). Try again in a moment."
-    : "We could not reach the demo server. Check your connection and try again.";
+  var body = st ? "The service had a problem on its side (error " + st + "). Try again in a moment."
+    : "We could not reach the server. Check your connection and try again.";
   var again = el("button", "btn btn--secondary", "Try again");
   again.type = "button";
   again.addEventListener("click", retry);
@@ -653,7 +674,7 @@ function showError(box, n) { clear(box).append(n); if (n.hasAttribute("tabindex"
 
 /* ---------- session (journal) ---------- */
 function persist() {
-  try { sessionStorage.setItem(STORE, JSON.stringify({ journal: S.journal, today: S.today, checkins: S.checkins, lastCheckin: S.lastCheckin })); }
+  try { sessionStorage.setItem(STORE, JSON.stringify({ journal: S.journal, today: S.today, displayName: S.displayName, checkins: S.checkins, lastCheckin: S.lastCheckin })); }
   catch (e) { /* storage off: memory only */ }
 }
 function restore() {
@@ -661,13 +682,38 @@ function restore() {
     var v = JSON.parse(sessionStorage.getItem(STORE) || "null");
     if (v && typeof v.journal === "string") {
       S.journal = v.journal; S.today = v.today || null;
+      S.displayName = typeof v.displayName === "string" ? v.displayName : null;
       S.checkins = v.checkins && typeof v.checkins === "object" ? v.checkins : {};
       S.lastCheckin = typeof v.lastCheckin === "string" ? v.lastCheckin : null;
     }
   } catch (e) { /* ignore */ }
 }
-var journalPending = null, journalErr = null;
-async function createJournal() {
+var journalPending = null, journalErr = null, nextFresh = false;
+function adoptJournal(d) {
+  S.journal = d.journal_id; S.today = d.today || null;
+  S.displayName = typeof d.display_name === "string" ? d.display_name : null;
+  S.checkins = {}; S.lastCheckin = null;
+  /* a persona journal's check-ins were saved on the server (G32): record them so their #review/<id>
+     evidence links say "Already saved" (QG P6.1 C1) */
+  (Array.isArray(d.saved_checkins) ? d.saved_checkins : []).forEach(function (id) {
+    if (typeof id === "string") S.checkins[id] = { status: "saved", alreadySaved: true, result: null, proposals: [] };
+  });
+  persist(); updateNav();
+}
+/* AM-2 D2 (G32): the app opens on the seeded persona's journal (28 days already saved through review).
+   fresh: an empty journal for the first member instead (the "Start a fresh journal" button). */
+async function createJournal(fresh) {
+  if (!fresh) {
+    var ps = await api("GET", "/api/personas");
+    journalErr = ps;
+    var pid = ps.ok && Array.isArray(ps.data) && ps.data[0] && typeof ps.data[0].persona_id === "string" ? ps.data[0].persona_id : null;
+    if (pid !== null) {
+      var pj = await api("POST", "/api/journals", { persona: pid });
+      journalErr = pj;
+      if (pj.status === 201 && pj.data && typeof pj.data.journal_id === "string") { adoptJournal(pj.data); return true; }
+      if (failed(pj)) return false;
+    } else if (failed(ps)) return false;
+  }
   var res = await api("GET", "/api/members");
   journalErr = res;
   if (!res.ok || !Array.isArray(res.data)) return false;
@@ -676,18 +722,17 @@ async function createJournal() {
     if (typeof m !== "string") continue;
     var j = await api("POST", "/api/journals", { member_id: m });
     journalErr = j;
-    if (j.status === 201 && j.data && typeof j.data.journal_id === "string") {
-      S.journal = j.data.journal_id; S.today = j.data.today || null;
-      S.checkins = {}; S.lastCheckin = null; persist(); updateNav();
-      return true;
-    }
+    if (j.status === 201 && j.data && typeof j.data.journal_id === "string") { adoptJournal(j.data); return true; }
     if (failed(j)) return false;
   }
   return false;
 }
 function ensureJournal() {
   if (S.journal) return Promise.resolve(true);
-  if (!journalPending) journalPending = createJournal().finally(function () { journalPending = null; });
+  if (!journalPending) {
+    var fresh = nextFresh; nextFresh = false;
+    journalPending = createJournal(fresh).finally(function () { journalPending = null; });
+  }
   return journalPending;
 }
 function sessionEnded() {
@@ -695,15 +740,19 @@ function sessionEnded() {
   var again = el("button", "btn btn--secondary", "Start again");
   again.type = "button";
   again.addEventListener("click", startAgain);
-  box.append(notice("info", "This demo session has ended", ["Sessions are kept for a short time only.", again], { role: "alert" }));
+  box.append(notice("info", "This session has ended", ["Sessions are kept for a short time only.", again], { role: "alert" }));
 }
-async function startAgain() {
+/* fresh === true: an empty journal; anything else (the "Start again" click event) re-seeds the persona. */
+async function startAgain(fresh) {
+  /* a journal still being created (the first load) settles first, so this request is never folded into it */
+  if (journalPending) { try { await journalPending; } catch (e) { /* replaced below */ } }
   clear($("session-msg"));
-  S.journal = null; S.today = null; S.checkins = {}; S.lastCheckin = null;
+  S.journal = null; S.today = null; S.displayName = null; S.checkins = {}; S.lastCheckin = null;
+  nextFresh = fresh === true;
   try { sessionStorage.removeItem(STORE); } catch (e) { /* ignore */ }
   resetCheckin();
   var ok = await ensureJournal();
-  if (!ok) { showError($("session-msg"), serverError(journalErr, startAgain, { focus: true })); return; }
+  if (!ok) { showError($("session-msg"), serverError(journalErr, function () { startAgain(fresh); }, { focus: true })); return; }
   if (location.hash === "#checkin") route(); else location.hash = "#checkin";
 }
 function isGone(res) { return res.status === 404 && code(res) === "unknown_journal"; }
@@ -713,15 +762,19 @@ function updateNav() {
 }
 
 /* ---------- router ---------- */
-var SCREENS = ["checkin", "review", "passport", "next", "lab", "research"];
-var TITLES = { checkin: "What matters today?", review: "Review before saving", passport: "Health Clone Passport",
-  next: "Suggested next step", lab: "Learning lab", research: "Research view (optional)" };
+/*@member*/
+var SCREENS = ["checkin", "review", "passport", "next"];
+var TITLES = { checkin: "What matters today?", review: "Review before saving", passport: "Health Clone Passport", next: "Suggested next step" };
+/*/@member*//*@admin*/
+var SCREENS = ["lab", "inventory", "research"];
+var TITLES = { lab: "Learning lab", inventory: "Concept inventory", research: "Research playground" };
+/*/@admin*/
 function parseHash() {
   var h = location.hash.replace(/^#/, "");
   var i = h.indexOf("/");
   var base = i < 0 ? h : h.slice(0, i), rest = i < 0 ? "" : h.slice(i + 1);
   try { rest = decodeURIComponent(rest); } catch (e) { /* keep raw */ }
-  if (SCREENS.indexOf(base) < 0) { base = "checkin"; rest = ""; }
+  if (SCREENS.indexOf(base) < 0) { base = SCREENS[0]; rest = ""; }
   return { base: base, rest: rest };
 }
 function route() {
@@ -737,19 +790,19 @@ function route() {
   var focusInventory = r.base === "passport" && r.rest === "inventory";
   if (!focusInventory) $("h-" + r.base).focus();
   var render = { checkin: showCheckin, review: showReview, passport: showPassport, next: showNext, lab: showLab,
-    research: function () { research.init(); } }[r.base];
+    inventory: showInventory, research: function () { research.init(); } }[r.base];
   Promise.resolve(render(r.rest)).catch(function () { /* each screen renders its own errors */ });
 }
 
 /* ---------- #checkin ---------- */
 var CI_ERRORS = {
-  not_a_demo_fixture: ["warn", "Only the bundled demo files can be used", "That file is not one of the demo files, so it was dropped. Pick one from “Use a demo file” or “Use a demo image”."],
+  not_a_demo_fixture: ["warn", "Only supported device files can be used", "That file is not one of the supported files, so it was dropped. Pick one from “Import a device file” or “Import a photo”."],
   too_large: ["warn", "That file is too large", "Files must be 1 MiB or smaller. Nothing was saved."],
-  unsupported_type: ["warn", "That file type is not supported", "Use a PNG or JPEG image, or a CSV or JSON file from the demo set. Nothing was saved."],
+  unsupported_type: ["warn", "That file type is not supported", "Use a PNG or JPEG photo, or a CSV or JSON file from a supported device. Nothing was saved."],
   nothing_extracted: ["info", "We could not find anything to record", "Try something like “slept 7 hours” or “walked 5000 steps”."],
-  empty_checkin: ["info", "Write a sentence or pick a demo input", null],
+  empty_checkin: ["info", "Write a sentence or import a file", null],
   text_too_long: ["warn", "That is too long, so nothing was saved", "Keep your check-in to 500 characters."],
-  one_source_only: ["info", "Use one input at a time", "Send a sentence or one demo file, not both."]
+  one_source_only: ["info", "Use one input at a time", "Send a sentence or one file, not both."]
 };
 var PII_REASONS = {
   email: "It contains something like an e-mail address.",
@@ -833,7 +886,7 @@ async function submitCheckin(input) {
     var c = code(res);
     if (res.status === 500 && c === "extractor_output_invalid") {
       setCiError(notice("warn", "Something went wrong reading your check-in, so nothing was saved",
-        ["This is a fault in the demo, not in what you wrote. Try again, or use a demo input."], { role: "alert" }), true);
+        ["This is a fault on our side, not in what you wrote. Try again, or import a file."], { role: "alert" }), true);
       return;
     }
     if (failed(res)) { setCiError(serverError(res, retry), true); return; }
@@ -861,7 +914,7 @@ function showHandoff(text) {
   again.type = "button";
   again.addEventListener("click", function () { resetCheckin(); $("ci-text").focus(); });
   var n = notice("handoff", "Please talk to a person about this", [
-    el("p", "handoff-text", text), "This demo cannot help with this. Nothing from your check-in was saved.", again
+    el("p", "handoff-text", text), "This app cannot help with this. Nothing from your check-in was saved.", again
   ], { role: "alert", focus: true, titleId: "handoff-title" });
   clear($("ci-msg")).append(n);
   n.focus();
@@ -878,20 +931,20 @@ var FLAG_WHY = {
   unit_assumed: "The unit was not written, so it was assumed.",
   ambiguous_date: "The date is not clear.",
   contradiction: "It conflicts with another value in this check-in.",
-  unknown_code: "This word is not in the demo's concept list.",
-  out_of_plausible_range: "The value is outside what this demo accepts as input.",
+  unknown_code: "This word is not in the clone's concept list.",
+  out_of_plausible_range: "The value is outside what the clone accepts as input.",
   missing_value: "There is no value to save."
 };
 var CORRECTION_WHY = {
   unit_not_allowed: ["u", "the unit is not one this measure allows"],
   not_a_whole_number: ["v", "the value must be a whole number"],
-  value_out_of_range: ["v", "the value is outside what this demo accepts as input"],
+  value_out_of_range: ["v", "the value is outside what the clone accepts as input"],
   date_outside_window: ["d", "the date must be within the last 28 days"],
-  unknown_concept: [null, "this word is not in the demo's concept list, so discard it or save it as unmapped"],
+  unknown_concept: [null, "this word is not in the clone's concept list, so discard it or save it as unmapped"],
   value_not_recordable: ["v", "the value cannot be recorded"]
 };
 var ACTIONS = [["confirm", "Confirm"], ["correct", "Correct"], ["discard", "Discard"], ["save_unmapped", "Save as unmapped"]];
-var SOURCE_KINDS = { text: "Your text", file_fixture: "Demo file", image_fixture: "Demo image" };
+var SOURCE_KINDS = { text: "Your text", file_fixture: "Device file", image_fixture: "Photo" };
 var rvCurrent = null, rvBusy = false;
 
 function pTitle(p) { return p.concept_code === null || p.concept_code === undefined ? "“" + p.display + "”" : String(p.display); }
@@ -1152,11 +1205,15 @@ function reviewLabel(s) {
   var m = /^reviewed: board sign-off (\d{4}-\d{2}-\d{2})$/.exec(s);
   return m ? "Reviewed (board sign-off, " + fmtDay(m[1]) + ")" : s;
 }
+var ppSeq = 0;
 async function showPassport(rest) {
+  var seq = ++ppSeq; /* only the newest load draws (QG P6.1 U1), as in showReview */
   var msg = clear($("pp-msg")), body = $("pp-body");
+  body.hidden = true; /* the previous cards are never focusable while they are about to be replaced (U1) */
   var retry = function () { showPassport(rest); };
-  if (!(await ensureJournal())) { body.hidden = true; msg.append(serverError(journalErr, retry)); return; }
+  if (!(await ensureJournal())) { if (seq !== ppSeq) return; body.hidden = true; msg.append(serverError(journalErr, retry)); return; }
   var both = await Promise.all([api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/passport"), api("GET", "/api/inventory")]);
+  if (seq !== ppSeq) return; /* a newer load started while this one waited */
   var res = both[0], inv = both[1];
   if (isGone(res)) { body.hidden = true; sessionEnded(); return; }
   if (!res.ok || !res.data || !Array.isArray(res.data.cards)) { body.hidden = true; msg.append(serverError(res, retry)); return; }
@@ -1169,9 +1226,8 @@ function renderPassport(pp, inv) {
   var meta = clear($("pp-meta"));
   function row(k, v) { meta.append(el("dt", null, k)); var dd = el("dd"); dd.append(v === null ? nr() : v); meta.append(dd); }
   row("As of", fmtDate(pp.as_of));
-  row("Member", "Synthetic member " + pp.member_id);
+  row("Member", S.displayName || "Member " + pp.member_id);
   var ont = el("span"); ont.append(el("code", null, pp.ontology_version), " · LOINC " + pp.loinc_version); row("Ontology", ont);
-  row("Mode", pp.mode === "demo" ? "Demo" : String(pp.mode));
   row("Review", reviewLabel(inv && inv.reviewer_status));
   var cards = clear($("pp-cards"));
   pp.cards.forEach(function (c, i) { cards.append(card(c, i)); });
@@ -1270,7 +1326,11 @@ function rangeCell(r) {
   dd.append(link(r.source_url, "Range source: " + (host || "not recorded"), "ref-src"));
   return dd;
 }
-function viewText(u) { return u === "#research" ? "view in research view" : u.indexOf("/api/fixtures/") === 0 ? "view demo file" : "view"; }
+/* AM-2 D1 (G31): the member app never links into the research console (#lab, #research, #inventory);
+   such an evidence-thread link is shown as its text only. */
+var ADMIN_HASH = /^#(lab|research|inventory)(\/|$)/;
+function memberLink(u) { return safeHref(u) !== null && !ADMIN_HASH.test(u); }
+function viewText(u) { return u.indexOf("/api/fixtures/") === 0 ? "view file" : "view"; }
 function thread(steps) {
   var d = el("details", "thread");
   d.append(el("summary", null, "Evidence thread (5 steps)"));
@@ -1285,15 +1345,15 @@ function thread(steps) {
       b.append("none" + (s.note ? " · " + s.note : ""));
     } else if (i === 0) {
       b.append(String(s.label));
-      if (safeHref(s.link) !== null) {
-        /* only a #review/ link is a check-in; the simulated cohort (#research) is never called one */
+      if (memberLink(s.link)) {
+        /* only a #review/ link is a check-in; the simulated cohort is never called one */
         var checkin = s.link.indexOf("#review/") === 0;
         if (!checkin && s.ref) b.append(" · " + s.ref);
         b.append(" · ", link(s.link, checkin ? "view check-in" + (s.ref ? " " + s.ref : "") : viewText(s.link)));
       } else if (s.ref) b.append(" · " + s.ref);
     } else if (i === 1) {
       b.append(String(s.label) + (s.event_id ? " · event " + s.event_id : "") + (s.record_id ? " · record " + s.record_id : ""));
-      if (safeHref(s.link) !== null) b.append(" · ", link(s.link, viewText(s.link)));
+      if (memberLink(s.link)) b.append(" · ", link(s.link, viewText(s.link)));
     } else if (i === 2) {
       b.append(el("code", null, s.ontology_version), " · " + (s.readiness === "ready" ? "ready" : "not ready") + " · ");
       var inv = link(s.link, "inventory");
@@ -1305,7 +1365,7 @@ function thread(steps) {
       if (s.note) b.append(" · " + s.note);
     } else {
       b.append(String(s.label) + " · rules " + s.rule_version);
-      if (s.run_id) { b.append(" · "); var a = link(s.link, null); a.append(el("code", null, s.run_id)); b.append(a); }
+      if (s.run_id) { b.append(" · "); var a = memberLink(s.link) ? link(s.link, null) : el("span"); a.append(el("code", null, s.run_id)); b.append(a); }
       if (s.note) b.append(" · " + s.note);
     }
     li.append(b);
@@ -1379,7 +1439,7 @@ async function choose(stepId, choice) {
     var res = await api("POST", "/api/journals/" + encodeURIComponent(S.journal) + "/next-step", { step_id: stepId, choice: choice });
     clear(out); clear(msg);
     if (isGone(res)) { sessionEnded(); return; }
-    var cont = link("#lab", "Continue to the learning lab");
+    var cont = link("#passport", "Back to your passport");
     if (res.status === 200 && res.data) {
       if (choice === "choose") out.append(notice("ok", "Goal set", [para("Added to your clone. ", cont)]));
       else out.append(notice("info", "Nothing was saved", [para("You can come back to this later. ", cont)]));
@@ -1492,7 +1552,35 @@ function labRow(r) {
   return tr;
 }
 
-/* ---------- Real input (footer) ---------- */
+/* ---------- #inventory (research console): the concept registry ---------- */
+async function showInventory() {
+  var msg = clear($("ainv-msg")), body = $("ainv-body");
+  var res = await api("GET", "/api/inventory");
+  if (!res.ok || !res.data || !Array.isArray(res.data.verticals)) { body.hidden = true; msg.append(serverError(res, showInventory)); return; }
+  var inv = res.data, meta = clear($("ainv-meta"));
+  function row(k, v) { meta.append(el("dt", null, k)); var dd = el("dd"); dd.append(v === null || v === undefined ? nr() : String(v)); meta.append(dd); }
+  row("LOINC", inv.loinc_version);
+  row("Sign-off", reviewLabel(inv.reviewer_status));
+  var list = clear($("ainv-list"));
+  inv.verticals.forEach(function (v, i) {
+    var h = el("h2", null, String(v.label)); h.id = "ainv-v" + i;
+    var ul = el("ul", "inv"); ul.setAttribute("aria-labelledby", h.id);
+    (Array.isArray(v.concepts) ? v.concepts : []).forEach(function (c) {
+      var li = el("li");
+      li.append(el("span", null, String(c.display)), el("code", "mono", String(c.code)));
+      ul.append(li);
+    });
+    list.append(h, ul);
+  });
+  var gaps = Array.isArray(inv.gap_labels) ? inv.gap_labels : [];
+  var gh = el("h2", null, "Not covered yet"); gh.id = "ainv-gaps";
+  var gl = el("ul", "inv"); gl.setAttribute("aria-labelledby", gh.id);
+  gaps.forEach(function (g) { var li = el("li", "gap"); li.append(el("span", null, String(g)), el("span", "tag tag--withheld", "○ Gap")); gl.append(li); });
+  list.append(gh, gl);
+  body.hidden = false;
+}
+
+/* ---------- Real input (research console footer) ---------- */
 var riBusy = false;
 async function realInput() {
   var b = $("ri-btn"), panel = $("ri-panel");
@@ -1522,16 +1610,20 @@ async function realInput() {
 }
 
 /* ---------- wiring ---------- */
+/*@member*/
 $("ci-text").addEventListener("input", updateCount);
 $("ci-form").addEventListener("submit", function (ev) { ev.preventDefault(); submitCheckin({ text: $("ci-text").value }); });
 $("ci-files-btn").addEventListener("click", function () { togglePicker("ci-files-btn", "ci-files"); });
 $("ci-images-btn").addEventListener("click", function () { togglePicker("ci-images-btn", "ci-images"); });
 $("rv-form").addEventListener("submit", submitReview);
-$("ri-btn").addEventListener("click", realInput);
-addEventListener("hashchange", route);
+$("fresh-btn").addEventListener("click", function () { startAgain(true); });
 restore();
 updateNav();
 updateCount();
+/*/@member*//*@admin*/
+$("ri-btn").addEventListener("click", realInput);
+/*/@admin*/
+addEventListener("hashchange", route);
 route();
 </script>
 </body>

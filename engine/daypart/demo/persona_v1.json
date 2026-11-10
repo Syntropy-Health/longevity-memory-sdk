@@ -1,0 +1,123 @@
+{
+  "persona_id": "persona-v1",
+  "display_name": "Rowan Ellis",
+  "fictional": true,
+  "note": "A fictional person made up for this demo by tools/make_persona.py (seed 2026). Not a real person, patient or record.",
+  "member_id": "syn-007",
+  "generator": "tools/make_persona.py",
+  "seed": 2026,
+  "checkins": [
+    {
+      "day": "2026-09-02",
+      "text": "On Sep 2 I slept 5.9 hours and walked 5200 steps; pulse 68 bpm"
+    },
+    {
+      "day": "2026-09-03",
+      "text": "On Sep 3 I slept 6.2 hours and walked 5990 steps; weight 74.3 kg; bp 124/77 mmhg"
+    },
+    {
+      "day": "2026-09-04",
+      "text": "On Sep 4 I slept 6.4 hours and walked 5590 steps; exercised 35 minutes"
+    },
+    {
+      "day": "2026-09-05",
+      "text": "On Sep 5 I slept 6.4 hours and walked 5800 steps; pulse 63 bpm"
+    },
+    {
+      "day": "2026-09-06",
+      "text": "On Sep 6 I slept 6.0 hours and walked 5250 steps"
+    },
+    {
+      "day": "2026-09-07",
+      "text": "On Sep 7 I slept 6.2 hours and walked 5430 steps"
+    },
+    {
+      "day": "2026-09-08",
+      "text": "On Sep 8 I slept 6.1 hours and walked 6700 steps; pulse 67 bpm; exercised 30 minutes"
+    },
+    {
+      "day": "2026-09-09",
+      "text": "On Sep 9 I slept 6.2 hours and walked 5970 steps"
+    },
+    {
+      "day": "2026-09-10",
+      "text": "On Sep 10 I slept 6.7 hours and walked 7080 steps; weight 73.9 kg; bp 124/79 mmhg"
+    },
+    {
+      "day": "2026-09-11",
+      "text": "On Sep 11 I slept 6.2 hours and walked 6410 steps; pulse 68 bpm"
+    },
+    {
+      "day": "2026-09-12",
+      "text": "On Sep 12 I slept 6.6 hours and walked 6500 steps; exercised 25 minutes"
+    },
+    {
+      "day": "2026-09-13",
+      "text": "On Sep 13 I slept 6.8 hours and walked 7240 steps; knee pain 3 out of 10"
+    },
+    {
+      "day": "2026-09-14",
+      "text": "On Sep 14 I slept 6.7 hours and walked 6450 steps; pulse 65 bpm"
+    },
+    {
+      "day": "2026-09-15",
+      "text": "On Sep 15 I slept 6.6 hours and walked 7160 steps"
+    },
+    {
+      "day": "2026-09-16",
+      "text": "On Sep 16 I slept 6.7 hours and walked 7550 steps; exercised 35 minutes"
+    },
+    {
+      "day": "2026-09-17",
+      "text": "On Sep 17 I slept 7.0 hours and walked 7480 steps; pulse 69 bpm; weight 73.6 kg; bp 122/78 mmhg"
+    },
+    {
+      "day": "2026-09-18",
+      "text": "On Sep 18 I slept 6.7 hours and walked 7640 steps"
+    },
+    {
+      "day": "2026-09-19",
+      "text": "On Sep 19 I slept 7.1 hours and walked 7880 steps"
+    },
+    {
+      "day": "2026-09-20",
+      "text": "On Sep 20 I slept 6.9 hours and walked 7400 steps; pulse 63 bpm; exercised 25 minutes"
+    },
+    {
+      "day": "2026-09-21",
+      "text": "On Sep 21 I slept 7.1 hours and walked 8870 steps"
+    },
+    {
+      "day": "2026-09-22",
+      "text": "On Sep 22 I slept 7.0 hours and walked 8620 steps"
+    },
+    {
+      "day": "2026-09-23",
+      "text": "On Sep 23 I slept 7.2 hours and walked 8450 steps; pulse 62 bpm"
+    },
+    {
+      "day": "2026-09-24",
+      "text": "On Sep 24 I slept 7.1 hours and walked 8320 steps; weight 73.2 kg; bp 123/79 mmhg; exercised 35 minutes"
+    },
+    {
+      "day": "2026-09-25",
+      "text": "On Sep 25 I slept 7.3 hours and walked 9510 steps"
+    },
+    {
+      "day": "2026-09-26",
+      "text": "On Sep 26 I slept 7.5 hours and walked 8670 steps; pulse 66 bpm"
+    },
+    {
+      "day": "2026-09-27",
+      "text": "On Sep 27 I slept 7.3 hours and walked 8910 steps"
+    },
+    {
+      "day": "2026-09-28",
+      "text": "On Sep 28 I slept 7.4 hours and walked 9340 steps; exercised 35 minutes"
+    },
+    {
+      "day": "2026-09-29",
+      "text": "On Sep 29 I slept 7.5 hours and walked 9360 steps; pulse 63 bpm"
+    }
+  ]
+}

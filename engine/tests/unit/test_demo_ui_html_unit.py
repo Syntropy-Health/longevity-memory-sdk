@@ -20,7 +20,13 @@ from daypart.demo.app import create_app  # noqa: E402
 
 REAL_INPUT_PHRASE = "Your real input, evaluation from vetted sources"
 ALLOWED_HEX = {"183446", "2B6F8A", "E8F2F3", "247F72", "A65C16", "FFFFFF"}
-SCREENS = ("checkin", "review", "passport", "next", "lab", "research")
+# AM-2 D1 (G31): the member app at "/" and the research console at "/admin" are separate shells.
+MEMBER_SCREENS = ("checkin", "review", "passport", "next")
+ADMIN_SCREENS = ("lab", "inventory", "research")
+SCREENS = MEMBER_SCREENS
+# AM-2 D2 (G32): the board removed these tags from both surfaces (HAC-66, 2026-11-10).
+REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
+                "Research view (optional)")
 
 
 @pytest.fixture(scope="module")
@@ -34,6 +40,13 @@ def client():
 @pytest.fixture(scope="module")
 def html(client) -> str:
     r = client.get("/")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    return r.text
+
+
+@pytest.fixture(scope="module")
+def admin(client) -> str:
+    r = client.get("/admin")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
     return r.text
 
@@ -98,7 +111,7 @@ def _by_id(root: _Node, ident: str) -> _Node:
     return found[0]
 
 
-def _without_research(html: str) -> str:
+def _without_research(html: str) -> str:  # the admin console minus its playground section
     """The page source with the ``<section id="screen-research">`` element (and everything in it) cut out."""
     m = re.search(r'<section\b[^>]*\bid="screen-research"[^>]*>', html)
     assert m, "no <section id=\"screen-research\">"
@@ -115,18 +128,61 @@ def _without_research(html: str) -> str:
 # --- T1.1 ---------------------------------------------------------------------------------------
 
 
-def test_t1_1_names_and_no_research_words_outside_research(html):
+def test_t1_1_names_and_no_research_words_outside_research(html, admin):
     assert "Clinical Human Clone" in html
     assert "Health Clone Passport" in html
-    assert "pattern passport" not in html.lower()  # nowhere, the research view included
-    outside = _without_research(html)
-    assert "Daypart playground" not in outside
-    assert "pattern passport" not in outside.lower()
-    assert not re.search(r"\bIntent\b", outside)
-    assert not re.search(r"\bDraft\b", outside)
-    research = _by_id(_tree(html), "screen-research").text()
-    assert "Research view (optional)" in research
+    assert "pattern passport" not in (html + admin).lower()  # nowhere, the research console included
+    # AM-2 D1: the member app carries no research markup at all (was: research section cut out)
+    assert 'id="screen-research"' not in html
+    assert "Daypart playground" not in html
+    assert not re.search(r"\bIntent\b", html)
+    assert not re.search(r"\bDraft\b", html)
+    research = _by_id(_tree(admin), "screen-research").text()
+    assert "Research playground" in research
     assert re.search(r"\bIntent\b", research) and re.search(r"\bDraft\b", research)
+    assert "Daypart playground" not in _without_research(admin)
+
+
+def test_am2_d1_member_app_has_no_admin_screens_and_admin_has_no_journey(html, admin):
+    member_ids = {n.attrs.get("id") for n in _tree(html).iter()}
+    admin_ids = {n.attrs.get("id") for n in _tree(admin).iter()}
+    for s in ADMIN_SCREENS:
+        assert "screen-" + s not in member_ids and "screen-" + s in admin_ids
+    for s in MEMBER_SCREENS:
+        assert "screen-" + s in member_ids and "screen-" + s not in admin_ids
+    assert "ri-btn" not in member_ids and "ri-btn" in admin_ids  # the real-input control is admin-only
+
+
+def test_am2_d1_member_never_links_the_research_console(html):
+    hrefs = [n.attrs.get("href") or "" for n in _tree(html).iter() if n.tag == "a"]
+    assert not [h for h in hrefs if h.startswith("/admin") or re.match(r"#(lab|research|inventory)\b", h)]
+    assert "/results" not in hrefs and "/docs" not in hrefs
+    js = _script(html)
+    assert '"#lab"' not in js and "Continue to the learning lab" not in js
+
+
+def test_am2_d1_admin_console_links_back_to_the_member_app(admin):
+    root = _tree(admin)
+    nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Research console")
+    assert [n.attrs.get("href") for n in nav.iter() if n.tag == "a"] == ["#lab", "#inventory", "#research"]
+    hrefs = {n.attrs.get("href") for n in root.iter() if n.tag == "a"}
+    assert "/" in hrefs and "/results" in hrefs
+
+
+def test_am2_d1_one_h1_per_admin_screen(admin):
+    root = _tree(admin)
+    for s in ADMIN_SCREENS:
+        sec = _by_id(root, "screen-" + s)
+        h1s = [n for n in sec.iter() if n.tag == "h1"]
+        assert len(h1s) == 1 and h1s[0].attrs.get("tabindex") == "-1", s
+
+
+def test_am2_d2_removed_tags_on_neither_surface(html, admin):
+    for page in (html, admin):
+        text = " ".join(_tree(page).text().split())
+        for tag in REMOVED_TAGS:
+            assert tag not in text and tag not in page, tag
+    assert 'class="banner"' not in html and 'class="banner"' not in admin
 
 
 # --- structure: routes, h1s, nav, banner ----------------------------------------------------------
@@ -153,30 +209,33 @@ def _is_inside(node: _Node, ancestor: _Node) -> bool:
     return False
 
 
-def test_banner_is_first_in_body_outside_main_with_role_status(html):
+def test_header_is_first_in_body_outside_main(html):
+    # AM-2 D2 (G32): the demo-mode banner is gone; the site header now opens the page.
     root = _tree(html)
     body = next(n for n in root.iter() if n.tag == "body")
     first = next(c for c in body.children if isinstance(c, _Node))
-    assert "banner" in (first.attrs.get("class") or "").split()
-    assert first.attrs.get("role") == "status"
-    assert "Demo mode: synthetic inputs and simulated results" in first.text()
+    assert first.tag == "header" and "site-head" in (first.attrs.get("class") or "").split()
     main = next(n for n in root.iter() if n.tag == "main")
     assert not _is_inside(first, main)
 
 
-def test_step_nav_has_five_links(html):
+def test_step_nav_has_four_member_links(html):
+    # AM-2 D1: the learning lab moved to the research console, so the journey nav has 4 links.
     root = _tree(html)
     nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Journey")
     hrefs = [n.attrs.get("href") for n in nav.iter() if n.tag == "a"]
-    assert hrefs == ["#checkin", "#review", "#passport", "#next", "#lab"]
+    assert hrefs == ["#checkin", "#review", "#passport", "#next"]
 
 
-def test_footer_disclaimer_research_link_and_loinc_notice(html):
-    root = _tree(html)
+@pytest.mark.parametrize("surface", ["html", "admin"])
+def test_footer_loinc_notice_and_no_disclaimer(surface, request):
+    # AM-2 D2: the "Synthetic data only. Not for clinical use." line and the research link are gone;
+    # the LOINC notice stays on both surfaces (T5.6).
+    root = _tree(request.getfixturevalue(surface))
     foot = next(n for n in root.iter() if n.tag == "footer")
     text = " ".join(foot.text().split())
-    assert "Synthetic data only. Not for clinical use." in text
-    assert any(n.tag == "a" and n.attrs.get("href") == "#research" for n in foot.iter())
+    assert "Synthetic data only" not in text and "Not for clinical use" not in text
+    assert not any(n.tag == "a" and n.attrs.get("href") == "#research" for n in foot.iter())
     assert "LOINC" in text and "Regenstrief Institute" in text
     assert any(n.tag == "a" and n.attrs.get("href") == "https://loinc.org/license/" for n in foot.iter())
 
@@ -193,7 +252,9 @@ def test_t2_1_checkin_heading_labelled_textarea_and_warning(html):
     assert len(areas) == 1 and areas[0].attrs.get("maxlength") == "500"
     tid = areas[0].attrs.get("id")
     assert tid and any(n.tag == "label" and n.attrs.get("for") == tid for n in sec.iter())
-    assert "Do not enter real health data" in sec.text()
+    # AM-2 D2: the "public demo" warning became a privacy note; the PII tripwire is unchanged.
+    assert "Keep personal details out" in sec.text()
+    assert "Do not enter real health data" not in sec.text() and "public demo" not in sec.text()
 
 
 def test_t3_3_voice_and_video_disabled_not_available(html):
@@ -205,13 +266,14 @@ def test_t3_3_voice_and_video_disabled_not_available(html):
         assert "Not available" in hits[0].text()
 
 
-def test_t8_4_lab_footnote(html):
-    sec = _by_id(_tree(html), "screen-lab")
+def test_t8_4_lab_footnote(admin):
+    sec = _by_id(_tree(admin), "screen-lab")
     assert "Simulated outcomes are not patient outcomes." in sec.text()
 
 
-def test_t9_4_real_input_button_controls_a_live_region(html):
-    root = _tree(html)
+def test_t9_4_real_input_button_controls_a_live_region(admin):
+    # AM-2 D2: the real-input control lives in the research console only.
+    root = _tree(admin)
     btns = [n for n in root.iter() if n.tag == "button" and n.text().strip() == "Real input"]
     assert len(btns) == 1
     b = btns[0]
@@ -223,13 +285,17 @@ def test_t9_4_real_input_button_controls_a_live_region(html):
 # --- palette and escaping ----------------------------------------------------------------------------
 
 
-def test_only_the_six_token_colours(html):
+@pytest.mark.parametrize("surface", ["html", "admin"])
+def test_only_the_six_token_colours(surface, request):
+    html = request.getfixturevalue(surface)
     found = {m.upper() for m in re.findall(r"(?<![&\w])#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b", html)}
     assert found == ALLOWED_HEX, found - ALLOWED_HEX
     assert not re.search(r"\b(rgba?|hsla?)\(", html)
 
 
-def test_no_html_sinks_with_data(html):
+@pytest.mark.parametrize("surface", ["html", "admin"])
+def test_no_html_sinks_with_data(surface, request):
+    html = request.getfixturevalue(surface)
     for rhs in re.findall(r"innerHTML\s*=\s*([^;\n]*)", html):
         assert rhs.strip() in ("''", '""'), rhs
     for sink in ("outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function"):
@@ -240,7 +306,9 @@ def test_no_html_sinks_with_data(html):
         assert rhs.strip().startswith("safeHref("), rhs
 
 
-def test_no_external_resources(html):
+@pytest.mark.parametrize("surface", ["html", "admin"])
+def test_no_external_resources(surface, request):
+    html = request.getfixturevalue(surface)
     assert not re.search(r"<(script|link|img|iframe)\b[^>]*\b(src|href)=\"(https?:)?//", html)
     assert "@import" not in html and "@font-face" not in html
 
@@ -346,7 +414,8 @@ def test_safe_href_links_same_origin_api_paths_only() -> None:
 
 def _script(html: str) -> str:
     """The journey script (the last <script> block), research view excluded."""
-    blocks = re.findall(r"<script>(.*?)</script>", _without_research(html), re.S)
+    src = _without_research(html) if 'id="screen-research"' in html else html
+    blocks = re.findall(r"<script>(.*?)</script>", src, re.S)
     assert blocks, "no journey script"
     return blocks[-1]
 
@@ -486,7 +555,7 @@ def test_rev2_crisis_handoff_notice(html):
     hand = _section(js, "function showHandoff", "\n}\n")
     assert '"handoff"' in hand  # notice kind → .notice--handoff
     assert "Please talk to a person about this" in hand
-    assert "This demo cannot help with this. Nothing from your check-in was saved." in hand
+    assert "This app cannot help with this. Nothing from your check-in was saved." in hand
     assert "Write a different check-in" in hand
     assert '"alert"' in hand and "focus" in hand
     assert "real-data-warning" in hand and ".hidden = true" in hand
@@ -502,7 +571,7 @@ def test_rev2_crisis_handoff_notice(html):
 def test_rev2_checkin_server_copy(html):
     js = _script(html)
     assert "Something went wrong reading your check-in, so nothing was saved" in js
-    assert "This is a fault in the demo, not in what you wrote. Try again, or use a demo input." in js
+    assert "This is a fault on our side, not in what you wrote. Try again, or import a file." in js
     assert "That is too long, so nothing was saved" in js
     assert "Keep your check-in to 500 characters." in js
     assert "extractor_output_invalid" in js
@@ -524,8 +593,11 @@ def test_rev2_generic_server_and_network_errors(html):
     js = _script(html)
     assert "AbortController" in js
     assert re.search(r"^var TIMEOUT_MS = 15000;$", js, re.M)  # exactly 15 s (§3.8), not 150000
-    assert "We could not reach the demo server. Check your connection and try again." in js
-    assert "The demo had a problem on its side (error " in js and "Try again in a moment." in js
+    # AM-2 D2: production copy (was "the demo server" / "The demo had a problem")
+    assert "We could not reach the server. Check your connection and try again." in js
+    assert "The service had a problem on its side (error " in js and "Try again in a moment." in js
+    low = " ".join(_string_literals(js)).lower()
+    assert not re.search(r"\b(the|this|a) demo\b|demo (file|image|input|server|session)", low), low
     assert '"Try again"' in js
     assert "Something went wrong, so nothing was saved" not in js  # the network copy makes no saving claim
     assert "genericError" not in js
@@ -533,10 +605,10 @@ def test_rev2_generic_server_and_network_errors(html):
     assert not re.search(r"\bdetail\b", js)
 
 
-def test_rev2_get_failure_notice_sits_directly_under_h1(html):
-    root = _tree(html)
-    for s in ("passport", "next", "lab"):
-        sec = _by_id(root, "screen-" + s)
+def test_rev2_get_failure_notice_sits_directly_under_h1(html, admin):
+    # AM-2 D1: the lab is on the research console now; the inventory screen joins it there.
+    for page, s in ((html, "passport"), (html, "next"), (admin, "lab"), (admin, "inventory")):
+        sec = _by_id(_tree(page), "screen-" + s)
         kids = [c for c in sec.children if isinstance(c, _Node)]
         assert kids[0].tag == "h1", s
         assert kids[1].tag == "div" and (kids[1].attrs.get("id") or "").endswith("-msg"), s
@@ -671,7 +743,7 @@ def test_c3_already_saved_revisit_shows_no_count():
     assert not re.search(r"Saved \d", got[2]), got[2]
 
 
-_THREAD = ["STEP_NAMES", "viewText", "thread"]
+_THREAD = ["STEP_NAMES", "ADMIN_HASH", "memberLink", "viewText", "thread"]
 _STEPS_TAIL = """{ label: "Memory core-v1+u1", ontology_version: "core-v1+u1", readiness: "ready", link: "#passport/inventory" },
   { label: "none", status: "suppressed", links: [], note: "no source" },
   { label: "none", rule_version: "boundary-v1", run_id: null, link: "" }"""
@@ -704,12 +776,31 @@ def test_c4_thread_links_same_origin_api_steps():
     assert bad[0]["links"] == [] and bad[1]["links"] == []
 
 
+def test_am2_d1_learning_run_link_is_text_in_the_member_app():
+    got = _run_page(
+        _BASE + _THREAD,
+        """
+        var d = thread([{ label: "Your text", ref: "ci-1", link: "#review/ci-1" },
+          { label: "Saved observation", event_id: "e1", record_id: "r1", link: "/api/journals/j1/observations/r1" },
+          { label: "Memory", ontology_version: "core-v1+u1", readiness: "ready", link: "#passport/inventory" },
+          { label: "none", status: "suppressed", links: [], note: "no source" },
+          { label: "boundary-v1", rule_version: "boundary-v1", run_id: "tag/dpo", link: "#lab/tag/dpo" }]);
+        var li = d.querySelectorAll("li")[4];
+        return { text: li.textContent, links: li.querySelectorAll("a").length };
+        """,
+    )
+    assert got == {"text": got["text"], "links": 0} and "tag/dpo" in got["text"]
+
+
 def test_c5_simulated_source_is_never_called_a_check_in():
     sim = _thread_links('{ label: "Simulated cohort", ref: "simulated-cohort/seed-0", link: "#research" }',
                         '{ label: "simulated series", event_id: null, record_id: null, link: "#research" }')
     for step in sim:
         assert "check-in" not in step["text"], step
-        assert step["links"] == [["#research", "view in research view"]]
+        # AM-2 D1 (G31): the member app never links into the research console, so the simulated
+        # cohort source is named as text (was: a "view in research view" link to #research).
+        assert step["links"] == []
+    assert "simulated-cohort/seed-0" in sim[0]["text"]
     own = _thread_links('{ label: "Your text", ref: "ci-1", link: "#review/ci-1" }',
                         '{ label: "Saved observation", event_id: "e1", record_id: "r1", link: "/api/journals/j1/observations/r1" }')
     assert own[0]["links"] == [["#review/ci-1", "view check-in ci-1"]]
@@ -797,7 +888,7 @@ def test_d4_stale_step_refetch_failure_takes_focus(second):
     assert got["role"] == "alert" and got["tabindex"] == "-1" and got["focused"]
 
 
-_CHECKIN = ["persist", "updateNav", "journalPending", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
+_CHECKIN = ["persist", "updateNav", "journalPending", "adoptJournal", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
             "loadFixtures", "submitCheckin"]
 _CI_DOM = """
 mk("ci-load-msg"); var body = mk("ci-body"); ["ci-files", "ci-images"].forEach(function (i) { var b = mk(i); b.append(el("ul")); });
@@ -816,15 +907,18 @@ def test_d5_checkin_journal_failure_shows_the_generic_notice_and_try_again_reloa
         RESP.push([503, null]);
         await showCheckin();
         var failed = state();
-        RESP.push([200, [{ member_id: "syn-001" }]], [201, { journal_id: "j9", today: "2026-11-07" }], [200, []]);
+        // AM-2 D2 (G32): the journal is the seeded persona's (GET /api/personas, then POST {persona})
+        RESP.push([200, [{ persona_id: "persona-v1", display_name: "Rowan Ellis" }]],
+                  [201, { journal_id: "j9", today: "2026-11-07", persona_id: "persona-v1", display_name: "Rowan Ellis" }], [200, []]);
         $("ci-load-msg").querySelector("button").click();
         await new Promise(function (r) { setTimeout(r, 50); });
-        return [failed, state(), S.journal];
+        return [failed, state(), S.journal, S.displayName, CALLS.map(function (c) { return [c[0], c[1], c[2]]; })];
         """,
     )
     assert got[0]["title"] == "Something went wrong" and got[0]["role"] == "alert" and got[0]["bodyHidden"]
     assert "(error 503)" in got[0]["text"]
-    assert got[1]["title"] is None and not got[1]["bodyHidden"] and got[2] == "j9"
+    assert got[1]["title"] is None and not got[1]["bodyHidden"] and got[2] == "j9" and got[3] == "Rowan Ellis"
+    assert got[4][1:3] == [["GET", "/api/personas", None], ["POST", "/api/journals", {"persona": "persona-v1"}]]
 
 
 @pytest.mark.parametrize("resp", ['[500, null]', '"network"'])
@@ -1158,3 +1252,95 @@ def test_b2_overlapping_review_loads_render_each_card_once():
         """,
     )
     assert got == {"cards": 2, "dup": [], "gets": 1}
+
+
+def test_k3_member_facing_api_labels_never_say_demo(client):
+    """QG P6.1 C6 (AM-2 D2): strings the member app renders from the API (the import pickers and the
+    passport card source) use production wording too, not only the page's own copy."""
+    fx = client.get("/api/fixtures").json()
+    assert fx and not [f["label"] for f in fx if "demo" in f["label"].lower()]
+    member = client.get("/api/members").json()[0]["member_id"]
+    jid = client.post("/api/journals", json={"member_id": member}).json()["journal_id"]
+    ci = client.post("/api/checkins", json={"journal_id": jid, "fixture_id": "demo-scale-photo"}).json()
+    decisions = [{"proposal_id": p["proposal_id"], "action": "discard" if p["blocking"] else "confirm"} for p in ci["proposals"]]
+    assert client.post(f"/api/checkins/{ci['checkin_id']}/review", json={"decisions": decisions}).status_code == 200
+    pp = client.get(f"/api/journals/{jid}/passport").json()
+    labels = {c["source"] for c in pp["cards"]} | {c["thread"]["steps"][0]["label"] for c in pp["cards"]}
+    assert "Imported photo" in labels
+    assert not [s for s in labels if "demo" in s.lower()], labels
+
+
+def test_k2_persona_checkin_links_say_already_saved():
+    got = _run_page(
+        _BASE + ["persist", "updateNav", "adoptJournal", "alreadySavedNotice", "savedNotice", "rvSeq", "rvCurrent", "showReview"],
+        """
+        mk("nav-review", "a"); mk("rv-intro", "p"); mk("rv-msg"); mk("rv-form", "form"); mk("rv-list");
+        var sessionStorage = { setItem: function () {} };
+        adoptJournal({ journal_id: "j1", today: "2026-09-29", display_name: "Rowan Ellis", saved_checkins: ["j1-c1", "j1-c2"] });
+        await showReview("j1-c2");
+        return [$("rv-msg").textContent, $("rv-form").hidden, Object.keys(S.checkins)];
+        """,
+    )
+    assert "Already saved" in got[0] and "not available" not in got[0] and got[1] is True and got[2] == ["j1-c1", "j1-c2"]
+
+
+def test_k4_only_the_newest_passport_load_draws():
+    """QG P6.1 U1: two overlapping #passport loads (a slow first, a fast second) draw once, with the
+    newest data, so a re-render never pulls the cards from under a keyboard user's focus."""
+    got = _run_page(
+        _BASE + _API + ["journalPending", "ensureJournal", "ppSeq", "showPassport"],
+        """
+        mk("pp-msg"); mk("pp-body");
+        var RENDERS = [];
+        globalThis.renderPassport = function (pp) { RENDERS.push(pp.as_of); };
+        var gates = [];
+        fetch = function (path) {
+          return new Promise(function (resolve) {
+            gates.push(function (asOf) {
+              resolve({ status: 200, ok: true, json: async function () {
+                return path.indexOf("/passport") >= 0 ? { as_of: asOf, cards: [] } : { verticals: [] }; } });
+            });
+          });
+        };
+        var first = showPassport(""), second = showPassport("");
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[2]("new"); gates[3]("new");      // the second load answers first
+        await second;
+        gates[0]("old"); gates[1]("old");      // then the first, stale load
+        await first;
+        return RENDERS;
+        """,
+    )
+    assert got == ["new"]
+
+
+def test_t9_fresh_journal_during_the_first_load_is_fresh():
+    """QG P6.1 T9 (regression for O1, b2f3ace): "Start a fresh journal" pressed while the persona
+    journal is still being created ends on a fresh, empty journal, never the persona's."""
+    got = _run_page(
+        _BASE + _API + ["persist", "updateNav", "adoptJournal", "journalPending", "createJournal", "ensureJournal",
+                        "resetCheckin", "startAgain", "sessionEnded"],
+        """
+        mk("nav-review", "a"); mk("session-msg");
+        var sessionStorage = { setItem: function () {}, removeItem: function () {} };
+        globalThis.resetCheckin = function () {}; globalThis.route = function () {};
+        S.journal = null;
+        var release;
+        var held = new Promise(function (r) { release = r; });
+        fetch = async function (path, init) {
+          CALLS.push([init.method, path, init.body === undefined ? null : JSON.parse(init.body)]);
+          if (path === "/api/personas") await held;  // the first load is slow
+          var r = path === "/api/personas" ? [200, [{ persona_id: "persona-v1", display_name: "Rowan Ellis" }]]
+            : path === "/api/members" ? [200, [{ member_id: "syn-001" }]]
+            : init.body && JSON.parse(init.body).persona ? [201, { journal_id: "jp", today: "2026-09-29", display_name: "Rowan Ellis", saved_checkins: [] }]
+            : [201, { journal_id: "jf", today: "2026-09-29" }];
+          return { status: r[0], ok: true, json: async function () { return r[1]; } };
+        };
+        var first = ensureJournal();
+        var again = startAgain(true);       // clicked while the persona journal is pending
+        release();
+        await first; await again;
+        return [S.journal, S.displayName, CALLS[CALLS.length - 1]];
+        """,
+    )
+    assert got[0] == "jf" and got[1] is None and got[2] == ["POST", "/api/journals", {"member_id": "syn-001"}]

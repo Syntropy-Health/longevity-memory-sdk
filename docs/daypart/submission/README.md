@@ -8,9 +8,11 @@ lab** that shows only committed training and evaluation results, each with its r
 
 Agents prepared this pack. The principal submits it; agents submit nothing.
 
-**Demo mode only.** Every input is synthetic, and every result comes from a simulator. Do not
-enter real health data. The prototype gives no diagnosis, treatment or dosing advice and is not
-for clinical use. Real-input mode is a gate that always refuses ([real-input pathway](real-input-pathway.md)).
+**Data.** The app opens on a prepared member, Rowan Ellis, a fictional person with 28 days of
+check-ins already saved through the same review step a person uses. Every member, value and result
+is synthetic, and the prototype gives no diagnosis, treatment or dosing advice
+([assumptions and limits](assumptions-limits.md)). Real-input mode is a gate that always refuses
+([real-input pathway](real-input-pathway.md)).
 
 ## The pack
 
@@ -28,7 +30,8 @@ for clinical use. Real-input mode is a gate that always refuses ([real-input pat
 
 | Surface | URL |
 |---|---|
-| **Clinical Human Clone** (the five-screen journey) | https://supermomo668--daypart-demo-playground.us-east.modal.run |
+| **Clinical Human Clone**, member app (the four-screen journey) | https://supermomo668--daypart-demo-playground.us-east.modal.run |
+| Research console (learning lab, concept inventory, research playground) | https://supermomo668--daypart-demo-playground.us-east.modal.run/admin |
 | API explorer (OpenAPI) | https://supermomo668--daypart-demo-playground.us-east.modal.run/docs |
 | Research view: full results (dashboard) | https://supermomo668--daypart-demo-dashboard.us-east.modal.run |
 
@@ -38,10 +41,11 @@ redeploys both apps from `.github/workflows/engine.yml` after every green push t
 
 ### What a judge clicks
 
-A banner on every screen reads "Demo mode: synthetic inputs and simulated results".
+The member app and the research console are separate: the member app never links into the console.
 
 1. **Check in** ("What matters today?"): type a sentence such as "slept 6 hours and walked 8000
-   steps", or pick one of the bundled demo files or images. Voice and video show as unavailable.
+   steps", or import one of the supported device files or photos. Voice and video show as
+   unavailable. "Start a fresh journal" swaps the prepared member for an empty journal.
 2. **Review before saving**: one row per value the system found, with the source snippet, the
    method, the value, unit and date, and any flags. Confirm, correct, discard or save as unmapped.
    Nothing is saved until you submit the review.
@@ -51,12 +55,13 @@ A banner on every screen reads "Demo mode: synthetic inputs and simulated result
    enough evidence say so instead of showing a number.
 4. **Suggested next step**: a plain-language suggestion and its reason. Choose it, defer it, or
    ask a professional.
-5. **Learning lab**: the base, SFT and DPO results and three scripted baselines, each with its run
-   ID, split, seed and failure count. GRPO reads "proposed, not built". The same table is in
-   [outcomes.md](outcomes.md).
+5. **Learning lab** (research console, `/admin`): the base, SFT and DPO results and three scripted
+   baselines, each with its run ID, split, seed and failure count. GRPO reads "proposed, not built".
+   The same table is in [outcomes.md](outcomes.md).
 
-The footer's **Real input** control asks the server to turn real input on. The server refuses
-and lists the open gates. The old episode playground is still there as "Research view (optional)".
+On the research console, the footer's **Real input** control asks the server to turn real input on.
+The server refuses and lists the open gates. The old episode playground is there as "Research
+playground", and the concept inventory lists every concept the clone can record.
 
 The whole journey works with a keyboard alone, at 375 px wide, and with reduced motion. CI runs
 axe on every screen before each deploy.

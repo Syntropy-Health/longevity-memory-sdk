@@ -9,6 +9,12 @@ the items below rather than on a committed file.
 
 - **Synthetic only.** Every member, check-in, demo file and result is synthetic or simulated. No
   real personal or health data was collected, stored or used, and none should be entered.
+- **Presented as production, disclosed here.** At the board's request (L2 delivery review, HAC-66,
+  2026-11-10, CTO amendment AM-2) the app carries no "demo mode" banner or synthetic-data tag, so a
+  judge sees it as it would run in use. This page is where the synthetic nature is disclosed. The
+  member app opens on **Rowan Ellis, a fictional person**: 28 days of check-ins written by
+  `engine/tools/make_persona.py` (fixed seed) and saved through the same review step a person uses
+  (`engine/daypart/demo/persona_v1.json`, `fictional: true`). Real input stays refused.
 - **No clinical use.** No diagnosis, treatment, dosing or clinical decision support. A reference
   range is shown beside a value only where a public source states it, and it is never interpreted.
   No clinician has reviewed the content.
@@ -58,8 +64,9 @@ D-A1, D-A2, D-A3 and D-A9 as written; the others stand as agent assumptions.
 - **D-A3.** Each browser session gets its own in-memory journal. Journals are never persisted and
   are evicted after 60 minutes idle or beyond 256 live journals. The hosted app runs in a single
   container so that journals are shared across requests; it is sized for a judging demo, not load.
-- **D-A4.** The learning lab is a screen in the main app. The Streamlit dashboard stays at its URL
-  as the "research view: full results".
+- **D-A4.** The learning lab is a screen of the research console (`/admin`), separate from the
+  member app since AM-2 (2026-11-10). The Streamlit dashboard stays at its URL as the "research
+  view: full results".
 - **D-A5.** The LOINC version is the release the codes were verified against at build time
   (LOINC 2.83, through the public HL7 terminology server). A code that failed verification was
   dropped, never replaced by a guess: 69725-0 was dropped because it is a single anxiety item, not

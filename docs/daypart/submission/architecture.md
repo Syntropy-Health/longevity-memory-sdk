@@ -95,20 +95,25 @@ All paths are under [`engine/daypart/`](../../../engine/daypart/).
 | Passport view | `passport/view.py` | Observation cards, the existing pattern cards, the 5-step evidence thread, and the gap inventory. A card is ready only if its value is at most 14 days old. |
 | Next step | `checkin/next_step.py` | Rule-ordered suggestion through the membrane; "choose" records a goal. |
 | Lab rows | `demo/lab.py` | The learning-lab table from the committed results. |
-| App and UI | `demo/app.py`, `demo/static/index.html` | The API routes below and the hash-routed five-screen page (vanilla JS, no build step). |
+| Persona | `demo/persona.py`, `demo/persona_v1.json`, `tools/make_persona.py` | The prepared fictional member: 28 check-ins replayed through the real create-and-review path. |
+| Timeline | `passport/timeline.py` | Per saved check-in, its appends and the passport and next-step change, from the real passport and next step run on the journal cut to its first saves. |
+| Surfaces | `demo/surfaces.py` | Renders the one page source into the member app (`/`) and the research console (`/admin`). |
+| App and UI | `demo/app.py`, `demo/static/index.html` | The API routes below and two hash-routed surfaces: the member app (4 screens) and the research console (3 screens) (vanilla JS, no build step). |
 
 ### API
 
 | Route | Purpose |
 |---|---|
 | `GET /api/mode`, `POST /api/mode` | Demo-mode status; a request to enable real input always gets 403 with the open gates. |
-| `POST /api/journals` | Start a per-visitor journal for a synthetic member. |
+| `POST /api/journals` | Start a per-visitor journal for a synthetic member, or `{"persona"}` for the prepared fictional member (28 check-ins replayed through review). |
+| `GET /api/personas` | The prepared member the app opens on. |
 | `GET /api/fixtures`, `GET /api/fixtures/{fixture_id}` | The bundled synthetic demo files and images. |
 | `POST /api/checkins` | Text or a demo fixture in; proposals out. Nothing is saved. |
 | `POST /api/checkins/{id}/review` | Confirm, correct, discard or save as unmapped; all-or-nothing. |
 | `GET /api/journals/{id}/observations/{record_id}` | One saved observation with all its provenance fields. |
 | `GET /api/journals/{id}/passport` | The Health Clone Passport (optionally `?day=`). |
 | `GET`, `POST /api/journals/{id}/next-step` | The suggested next step, and the person's choice. |
+| `GET /api/journals/{id}/timeline` | How the clone adapted: per saved check-in, its EventLog appends and the passport and next-step change (read-only). |
 | `GET /api/lab` | The learning-lab table. |
 | `GET /api/inventory`, `GET /api/units` | The concept inventory with its gaps; the allowed units per concept. |
 
