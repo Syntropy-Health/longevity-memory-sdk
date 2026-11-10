@@ -2131,6 +2131,12 @@ def test_rev3_pipeline_failed_lab_get_hides_numbers(resp):
     assert ("error 500" in got["msg"]) if resp[0] == 500 else True
 
 
+def test_rev3_pipeline_delta_signs():
+    """QG P6.2 K13: a gate Δ carries its own sign at 3 decimals; zero is "+0.000"; a null is no Δ."""
+    got = _run_js(["fix3", "delta3"], "[delta3(-0.021), delta3(0.0214), delta3(0), delta3(null)]")
+    assert got == ["-0.021", "+0.021", "+0.000", None]
+
+
 def test_rev3_only_the_newest_pipeline_load_draws():
     """QG P6.2 K12: two overlapping #pipeline loads; the stale first answer (here a failure) neither
     hides the newer KPIs and offline lane nor adds a notice, and draws no stale numbers."""
