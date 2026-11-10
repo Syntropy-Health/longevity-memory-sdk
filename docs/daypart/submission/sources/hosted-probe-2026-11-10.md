@@ -7,7 +7,7 @@ that the [form responses](../form-responses.md), the [deck outline](../deck-outl
 - **Host:** https://supermomo668--daypart-demo-playground.us-east.modal.run (member app at `/`,
   research console at `/admin`).
 - **Build:** `daypart/build` @ `68236f1d2c84ac4e41f12674602f5686a9e3979e`, deployed by the CI
-  workflow `.github/workflows/engine.yml`, run **42873055419** (success, 2026-11-10 18:13 UTC).
+  workflow `.github/workflows/engine.yml`, run **42873055419** (success; started 18:13 UTC on the 18:13 merge, finished 18:17 UTC on 2026-11-10).
   Every gate job (tests, type check, browser and accessibility suite, attribution boundary) passed
   before the deploy job ran.
 - **Probed:** 2026-11-10, 18:30 to 18:40 UTC. Every input was synthetic. Journal ids are
@@ -118,3 +118,10 @@ one per saved check-in, each with its appended observations and the passport cha
 - `GET /api/lab`: 7 rows: base, SFT and DPO, 3 scripted simulator baselines and GRPO "proposed,
   not built". The same numbers as [outcomes.md](../outcomes.md).
 - `GET /api/health`: `{"status": "ok", "cohort_seed": 0}`.
+
+## 6. The pre-existing SDK's upstream history
+
+Read from the GitHub API on 2026-11-10: the upstream repository
+https://github.com/Syntropy-Health/lhm has 41 commits up to the pinned commit `4821dc7`, dated
+2026-07-09 (first) to 2026-10-22 (the pinned commit). This repository imports that commit
+unchanged ([ATTRIBUTION.md](../../../../ATTRIBUTION.md)).

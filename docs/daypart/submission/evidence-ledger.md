@@ -140,7 +140,7 @@ None is a patient outcome.
 | id | claim | evidence |
 |---|---|---|
 | L68 | The pre-existing foundation is Syntropy Health's health-metrics SDK, committed byte-identical as the repository's first commit (f170784, 2026-11-02) and unchanged since; a CI job checks it. | `ATTRIBUTION.md` · `.github/workflows/engine.yml` |
-| L69 | The SDK's own history, 41 commits from 2026-07-09 to 2026-10-22 in its upstream repository, is pre-existing work and is not claimed as challenge work (*reported*: read from the upstream history on 2026-11-10). | `ATTRIBUTION.md` |
+| L69 | The SDK's own history, 41 commits from 2026-07-09 to 2026-10-22 in its upstream repository, is pre-existing work and is not claimed as challenge work (*reported*: read from the upstream history on 2026-11-10). | `ATTRIBUTION.md` · `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` |
 | L70 | All new work is under `engine/`, `docs/daypart/` and the CI workflow, committed 2026-11-03 to 2026-11-10: simulator, safety rules and training pipeline from 2026-11-03, training run 2026-11-05, check-in, review, registry, passport, evidence and governance on 2026-11-07, prepared member, timeline and the two surfaces on 2026-11-10. | `ATTRIBUTION.md` · `engine/daypart/simmember` · `engine/daypart/membrane` · `engine/daypart/checkin/service.py` · `engine/daypart/passport/view.py` · `engine/daypart/demo/persona.py` · `engine/daypart/passport/timeline.py` |
 | L71 | The team name *Syntropy*, its tagline and the working challenge are as the owner supplied them (*reported*). | ASSUMPTION O7 |
 | L72 | The form limits used here (2,000, 1,500, 1,024 characters) are the brief's, not checked against the live form. | ASSUMPTION O6 |
