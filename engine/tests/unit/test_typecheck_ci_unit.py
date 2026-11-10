@@ -30,3 +30,12 @@ def test_typecheck_job_runs_pinned_pyright_in_engine():
 
 def test_deploy_needs_typecheck():
     assert "typecheck" in _jobs()["deploy-demo"]["needs"]
+
+
+# --- QG-plan K4: T8.5 / SC5, the I1 builder check runs in CI and gates the deploy ------------------
+
+
+def test_t8_5_i1_check_runs_in_the_test_job_and_gates_deploy():
+    runs = [s.get("run", "") for s in _jobs()["test"]["steps"]]
+    assert "uv run python -m daypart.ci.i1_check" in runs
+    assert "test" in _jobs()["deploy-demo"]["needs"]
