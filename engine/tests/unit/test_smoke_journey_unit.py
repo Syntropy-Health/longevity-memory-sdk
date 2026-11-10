@@ -427,3 +427,32 @@ def test_journey_step_has_a_hard_time_cap():
     steps = yaml.safe_load(workflow.read_text())["jobs"]["deploy-demo"]["steps"]
     (step,) = [s for s in steps if "tools/smoke_journey.py" in s.get("run", "")]
     assert 0 < int(step.get("timeout-minutes", 0)) <= 10
+
+
+# --- QG P5.2 B3/B4: a dropped response is a network error (retried); a bad URL is a config error ---
+
+
+def test_dropped_response_is_retried(client, sleeps):
+    import http.client
+
+    call = _transport(client)
+    misses = []
+
+    def dropped(method, path, body):
+        if not misses:
+            misses.append(path)
+            raise http.client.IncompleteRead(b"")
+        return call(method, path, body)
+
+    smoke.run_with_retry(dropped)
+    assert len(sleeps) == 1
+
+
+@pytest.mark.parametrize("exc", [ValueError("unknown url type: 'nourl'"), __import__("http.client").client.InvalidURL("bad")])
+def test_bad_url_fails_without_retry(sleeps, exc):
+    def bad(m, p, b):
+        raise exc
+
+    with pytest.raises(smoke.SmokeFailure, match="create journal"):
+        smoke.run_with_retry(bad)
+    assert sleeps == []

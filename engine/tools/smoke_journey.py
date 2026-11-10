@@ -28,6 +28,7 @@ body fails on the first try.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import sys
 import time
@@ -91,7 +92,9 @@ def _expect(step: str, call: Transport, method: str, path: str, body: Any, statu
     """Make one call; fail with the step name on a network error, a wrong status or a non-object body."""
     try:
         code, data = call(method, path, body)
-    except (OSError, ValueError) as e:  # URLError, TimeoutError, connection reset, bad URL
+    except (ValueError, http.client.InvalidURL) as e:  # a bad URL is a setup error: never retried
+        raise SmokeFailure(f"{step}: {type(e).__name__}: {e}") from e
+    except (OSError, http.client.HTTPException) as e:  # URLError, timeout, reset, dropped response
         raise RolloverMiss(f"{step}: {type(e).__name__}: {e}") from e
     if code != status:
         if code == 404 and isinstance(data, dict) and data.get("error") in ROLLOVER_ERRORS:
