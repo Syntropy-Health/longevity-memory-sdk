@@ -38,6 +38,9 @@ from daypart.simmember.dynamics import INTENTS
 
 log = logging.getLogger("daypart.demo")
 
+# The research console's routes (visual spec rev 3 §4; G36), the same list as the admin SCREENS in index.html.
+ADMIN_ROUTES = ("pipeline", "lab", "inventory", "playground", "input")
+
 IntentName = Annotated[str, Field(json_schema_extra={"enum": list(INTENTS)})]
 
 
@@ -138,8 +141,10 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     app = FastAPI(
         title="Clinical Human Clone API",
         description=(
-            "Clinical Human Clone and Health Clone Passport demo. Synthetic data only: synthetic inputs "
-            "and simulated results, no real health data. Not for clinical use. Not medical advice."
+            "Clinical Human Clone and Health Clone Passport API: the member check-in journey (check-in, "
+            "review, passport, next step, timeline) and the research console (learning lab, inventory, "
+            "episode playground). Real input is off in this build; GET /api/mode lists its open gates. "
+            "Not medical advice."
         ),
         version="0.1.0",
     )
@@ -169,6 +174,14 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     @app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
     def admin() -> str:
         return admin_html  # the research console (admin)
+
+    @app.get("/admin/{route}", response_class=HTMLResponse, include_in_schema=False)
+    def admin_route(route: str) -> str:
+        # G36: the console routes are hashes under /admin; a path form (/admin/lab#<run_id>) gets the same
+        # shell, whose script rewrites it to /admin#lab/<run_id> before routing.
+        if route not in ADMIN_ROUTES:
+            raise HTTPException(status_code=404, detail="unknown console route")
+        return admin_html
 
     @app.get("/results", include_in_schema=False)
     def results() -> RedirectResponse:

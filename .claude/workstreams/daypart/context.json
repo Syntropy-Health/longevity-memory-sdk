@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "workstream": "daypart",
-  "updated_at": "2026-11-10T02:55:13.758817+00:00",
+  "updated_at": "2026-11-10T15:34:38.450513+00:00",
   "linear": {
     "initiative_url": "",
     "initiative_id": ""
@@ -212,6 +212,18 @@
       "summary": "deploy smoke retries the SC1 journey on a Modal rollover miss",
       "pr": "",
       "updated_at": "2026-11-10T02:55:13.758763+00:00"
+    },
+    "P6.1": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "5a79ef1",
+      "qgr": "workstreams/daypart/qgr/longevity-memory-sdk-matt-mo-worktree-agent-daypart-longevity-memory-sdk-qgr-iteration-complete-20261110-1533-fe84520.md",
+      "summary": "AM-2 P6.1: / member app + /admin console, tags removed, persona, timeline API",
+      "pr": "",
+      "updated_at": "2026-11-10T15:34:38.450426+00:00"
     }
   }
 }
