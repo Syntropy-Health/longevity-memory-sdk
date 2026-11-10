@@ -19,10 +19,18 @@ from fastapi.testclient import TestClient  # noqa: E402
 from daypart.demo.app import create_app  # noqa: E402
 
 REAL_INPUT_PHRASE = "Your real input, evaluation from vetted sources"
-ALLOWED_HEX = {"183446", "2B6F8A", "E8F2F3", "247F72", "A65C16", "FFFFFF"}
+# Visual spec rev 3 §1 (HAC-68): the member and console palettes plus the shared provenance / warning hues.
+ALLOWED_HEX = {"070B14", "0F1729", "16213A", "EAF0FA", "A9B8D0", "5E7397", "24324F", "9AA8FF",  # member
+               "09090B", "111114", "18181C", "EDEDF0", "A6A6B0", "71717E", "26262C", "F08CF5",  # console
+               "4FD8C4", "F6B95C",  # observed (provenance), warn (system warning)
+               "000"}  # not a colour: the opaque mask layer of the .panel--glow gradient border
+# the decorative alpha variants: glows, the console grid, the panel highlight and the shadows
+ALLOWED_ALPHA_HEX = {"9AA8FF2E", "4FD8C41F", "F08CF526", "FFFFFF0A", "FFFFFF0D", "00000099", "000000CC"}
 # AM-2 D1 (G31): the member app at "/" and the research console at "/admin" are separate shells.
-MEMBER_SCREENS = ("checkin", "review", "passport", "next")
-ADMIN_SCREENS = ("lab", "inventory", "research")
+# Rev 3 §2: the member screens are Today (was #checkin, kept as its alias), Review, Passport, Next, Timeline.
+MEMBER_SCREENS = ("today", "review", "passport", "next", "timeline")
+# Rev 3 §4 (G36): the console screens, hash routes under /admin (#research is the playground's alias).
+ADMIN_SCREENS = ("pipeline", "lab", "inventory", "playground", "input")
 SCREENS = MEMBER_SCREENS
 # AM-2 D2 (G32): the board removed these tags from both surfaces (HAC-66, 2026-11-10).
 REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
@@ -112,9 +120,10 @@ def _by_id(root: _Node, ident: str) -> _Node:
 
 
 def _without_research(html: str) -> str:  # the admin console minus its playground section
-    """The page source with the ``<section id="screen-research">`` element (and everything in it) cut out."""
-    m = re.search(r'<section\b[^>]*\bid="screen-research"[^>]*>', html)
-    assert m, "no <section id=\"screen-research\">"
+    """The page source with the ``<section id="screen-playground">`` element (and everything in it) cut out
+    (rev 3 §4.4 renamed the route #research → #playground; G38)."""
+    m = re.search(r'<section\b[^>]*\bid="screen-playground"[^>]*>', html)
+    assert m, "no <section id=\"screen-playground\">"
     depth, i = 1, m.end()
     tag = re.compile(r"<(/?)section\b[^>]*>")
     while depth:
@@ -133,11 +142,11 @@ def test_t1_1_names_and_no_research_words_outside_research(html, admin):
     assert "Health Clone Passport" in html
     assert "pattern passport" not in (html + admin).lower()  # nowhere, the research console included
     # AM-2 D1: the member app carries no research markup at all (was: research section cut out)
-    assert 'id="screen-research"' not in html
+    assert 'id="screen-research"' not in html and 'id="screen-playground"' not in html
     assert "Daypart playground" not in html
     assert not re.search(r"\bIntent\b", html)
     assert not re.search(r"\bDraft\b", html)
-    research = _by_id(_tree(admin), "screen-research").text()
+    research = _by_id(_tree(admin), "screen-playground").text()
     assert "Research playground" in research
     assert re.search(r"\bIntent\b", research) and re.search(r"\bDraft\b", research)
     assert "Daypart playground" not in _without_research(admin)
@@ -155,18 +164,31 @@ def test_am2_d1_member_app_has_no_admin_screens_and_admin_has_no_journey(html, a
 
 def test_am2_d1_member_never_links_the_research_console(html):
     hrefs = [n.attrs.get("href") or "" for n in _tree(html).iter() if n.tag == "a"]
-    assert not [h for h in hrefs if h.startswith("/admin") or re.match(r"#(lab|research|inventory)\b", h)]
+    assert not [h for h in hrefs if h.startswith("/admin") or re.match(r"#(lab|research|inventory|pipeline|playground|input)\b", h)]
     assert "/results" not in hrefs and "/docs" not in hrefs
     js = _script(html)
     assert '"#lab"' not in js and "Continue to the learning lab" not in js
 
 
 def test_am2_d1_admin_console_links_back_to_the_member_app(admin):
+    # Rev 3 §4 (G38): the console nav is Pipeline · Learning lab · Inventory · Playground · Real input ·
+    # Dashboard ↗ (was #lab, #inventory, #research); "← Member app" sits under it.
     root = _tree(admin)
     nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Research console")
-    assert [n.attrs.get("href") for n in nav.iter() if n.tag == "a"] == ["#lab", "#inventory", "#research"]
+    links = [n for n in nav.iter() if n.tag == "a"]
+    assert [n.attrs.get("href") for n in links] == ["#pipeline", "#lab", "#inventory", "#playground", "#input", "/results"]
+    assert [" ".join(a.text().split())[1:].strip() for a in links] == [
+        "Pipeline", "Learning lab", "Inventory", "Playground", "Real input", "Dashboard (opens in a new tab)"]
+    dash = links[-1]
+    assert dash.attrs.get("target") == "_blank" and dash.attrs.get("rel") == "noopener"
+    hidden = [n for n in dash.iter() if "visually-hidden" in (n.attrs.get("class") or "")]
+    assert len(hidden) == 1 and hidden[0].text().strip() == "(opens in a new tab)"
+    back = [n for n in root.iter() if n.tag == "a" and n.attrs.get("href") == "/"]
+    assert len(back) == 1 and " ".join(back[0].text().split()) == "← Member app" and not _is_inside(back[0], nav)
     hrefs = {n.attrs.get("href") for n in root.iter() if n.tag == "a"}
     assert "/" in hrefs and "/results" in hrefs
+    # no hostname anywhere in the console's links: the dashboard is the app's own relative /results
+    assert not [h for h in hrefs if h and re.match(r"(https?:)?//", h) and "loinc.org" not in h], hrefs
 
 
 def test_am2_d1_one_h1_per_admin_screen(admin):
@@ -210,21 +232,25 @@ def _is_inside(node: _Node, ancestor: _Node) -> bool:
 
 
 def test_header_is_first_in_body_outside_main(html):
-    # AM-2 D2 (G32): the demo-mode banner is gone; the site header now opens the page.
+    # AM-2 D2 (G32): the demo-mode banner is gone. Rev 3 §5: a skip link comes first, then the member header.
     root = _tree(html)
     body = next(n for n in root.iter() if n.tag == "body")
-    first = next(c for c in body.children if isinstance(c, _Node))
-    assert first.tag == "header" and "site-head" in (first.attrs.get("class") or "").split()
+    first, second = [c for c in body.children if isinstance(c, _Node)][:2]
+    assert first.tag == "a" and first.attrs.get("class") == "skip" and first.attrs.get("href") == "#main"
+    assert second.tag == "header" and "m-head" in (second.attrs.get("class") or "").split()
     main = next(n for n in root.iter() if n.tag == "main")
-    assert not _is_inside(first, main)
+    assert main.attrs.get("id") == "main" and main.attrs.get("tabindex") == "-1"
+    assert not _is_inside(second, main)
 
 
-def test_step_nav_has_four_member_links(html):
-    # AM-2 D1: the learning lab moved to the research console, so the journey nav has 4 links.
+def test_member_nav_has_five_items(html):
+    # Rev 3 §2 (AM-2 D1): Today · Review · Passport · Next · Timeline (was a 4-link "Journey" step nav).
     root = _tree(html)
-    nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Journey")
-    hrefs = [n.attrs.get("href") for n in nav.iter() if n.tag == "a"]
-    assert hrefs == ["#checkin", "#review", "#passport", "#next"]
+    nav = next(n for n in root.iter() if n.tag == "nav" and n.attrs.get("aria-label") == "Member")
+    links = [n for n in nav.iter() if n.tag == "a"]
+    assert [a.attrs.get("href") for a in links] == ["#today", "#review", "#passport", "#next", "#timeline"]
+    assert [" ".join(a.text().split())[1:].strip() for a in links] == ["Today", "Review", "Passport", "Next", "Timeline"]
+    assert not any(n.attrs.get("aria-label") == "Journey" for n in root.iter() if n.tag == "nav")
 
 
 @pytest.mark.parametrize("surface", ["html", "admin"])
@@ -245,20 +271,24 @@ def test_footer_loinc_notice_and_no_disclaimer(surface, request):
 
 def test_t2_1_checkin_heading_labelled_textarea_and_warning(html):
     root = _tree(html)
-    sec = _by_id(root, "screen-checkin")
+    sec = _by_id(root, "screen-today")
     h1 = next(n for n in sec.iter() if n.tag == "h1")
-    assert h1.text().strip() == "What matters today?"
+    assert h1.text().strip() == "What matters today?"  # the fresh-journal text; a persona's adds the first name
     areas = [n for n in sec.iter() if n.tag == "textarea"]
     assert len(areas) == 1 and areas[0].attrs.get("maxlength") == "500"
     tid = areas[0].attrs.get("id")
     assert tid and any(n.tag == "label" and n.attrs.get("for") == tid for n in sec.iter())
-    # AM-2 D2: the "public demo" warning became a privacy note; the PII tripwire is unchanged.
-    assert "Keep personal details out" in sec.text()
-    assert "Do not enter real health data" not in sec.text() and "public demo" not in sec.text()
+    # Rev 3 §3.1 (AM-2 D2): the privacy notice became one neutral hint, still in aria-describedby; the PII
+    # refusal is unchanged (was: the "Keep personal details out" notice, #real-data-warning).
+    hint = _by_id(root, "ci-pii")
+    assert " ".join(hint.text().split()) == "Leave out names, e-mail addresses, phone numbers and dates of birth."
+    assert "ci-pii" in (areas[0].attrs.get("aria-describedby") or "").split()
+    assert "real-data-warning" not in html and "Keep personal details out" not in html
+    assert "Do not enter real health data" not in html and "public demo" not in sec.text()
 
 
 def test_t3_3_voice_and_video_disabled_not_available(html):
-    sec = _by_id(_tree(html), "screen-checkin")
+    sec = _by_id(_tree(html), "screen-today")
     buttons = [n for n in sec.iter() if n.tag == "button" and "disabled" in n.attrs]
     for word in ("Voice", "Video"):
         hits = [b for b in buttons if word in b.text()]
@@ -272,11 +302,14 @@ def test_t8_4_lab_footnote(admin):
 
 
 def test_t9_4_real_input_button_controls_a_live_region(admin):
-    # AM-2 D2: the real-input control lives in the research console only.
+    # AM-2 D2: the real-input control lives in the research console only. Rev 3 §4.5 (G38): on its own
+    # #input screen, labelled "Request real input" (was a "Real input" button in the console footer).
     root = _tree(admin)
-    btns = [n for n in root.iter() if n.tag == "button" and n.text().strip() == "Real input"]
+    btns = [n for n in root.iter() if n.tag == "button" and "real input" in n.text().lower()]
     assert len(btns) == 1
     b = btns[0]
+    assert b.text().strip() == "Request real input" and _is_inside(b, _by_id(root, "screen-input"))
+    assert not [n for n in root.iter() if n.tag == "footer" and _is_inside(b, n)]
     assert b.attrs.get("aria-expanded") == "false"
     panel = _by_id(root, b.attrs.get("aria-controls") or "")
     assert panel.attrs.get("aria-live") == "polite"
@@ -286,10 +319,13 @@ def test_t9_4_real_input_button_controls_a_live_region(admin):
 
 
 @pytest.mark.parametrize("surface", ["html", "admin"])
-def test_only_the_six_token_colours(surface, request):
+def test_only_the_rev3_token_colours(surface, request):
+    # Rev 3 §1 replaced the six rev 2 tokens with one palette per surface (both ship in the shared CSS).
     html = request.getfixturevalue(surface)
     found = {m.upper() for m in re.findall(r"(?<![&\w])#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b", html)}
-    assert found == ALLOWED_HEX, found - ALLOWED_HEX
+    assert found == ALLOWED_HEX, found ^ ALLOWED_HEX
+    alpha = {m.upper() for m in re.findall(r"(?<![&\w])#([0-9A-Fa-f]{8})\b", html)}
+    assert alpha == ALLOWED_ALPHA_HEX, alpha ^ ALLOWED_ALPHA_HEX
     assert not re.search(r"\b(rgba?|hsla?)\(", html)
 
 
@@ -320,7 +356,11 @@ def test_t1_5_openapi_title_and_description(client):
     info = client.get("/openapi.json").json()["info"]
     assert info["title"] == "Clinical Human Clone API"
     d = info["description"].lower()
-    assert "synthetic" in d and "not medical advice" in d
+    # P6.2 (G38): production-style wording, as P6.1 did for the UI copy (was "Synthetic data only … Not
+    # for clinical use"); the synthetic-data disclosure is in docs/daypart/submission/assumptions-limits.md.
+    assert "not medical advice" in d and "real input is off" in d
+    for word in ("synthetic", "demo", "not for clinical use", "clinically", "fda", "regulat", "approved", "reviewed by"):
+        assert word not in d, word
 
 
 # --- T1.3 -------------------------------------------------------------------------------------------
@@ -414,7 +454,7 @@ def test_safe_href_links_same_origin_api_paths_only() -> None:
 
 def _script(html: str) -> str:
     """The journey script (the last <script> block), research view excluded."""
-    src = _without_research(html) if 'id="screen-research"' in html else html
+    src = _without_research(html) if 'id="screen-playground"' in html else html
     blocks = re.findall(r"<script>(.*?)</script>", src, re.S)
     assert blocks, "no journey script"
     return blocks[-1]
@@ -542,9 +582,10 @@ _API = ["TIMEOUT_MS", "api", "code", "failed", "serverError", "showError", "isGo
 
 def test_rev2_css_brings_over_handoff_info_and_range_rules(html):
     css = _style(html)
-    assert re.search(r"\.notice--handoff\{border-color:var\(--ink\)\}", css)
-    assert ".notice--handoff .handoff-text" in css
-    assert ".notice:focus{" in css
+    # rev 3 §3.1: the hand-off bar is the surface text colour (was the rev 2 --ink token)
+    assert re.search(r"\.notice--handoff\{border-left-color:var\(--c-text\)\}", css)
+    assert ".handoff-text{font-weight:600}" in css
+    assert '.notice[tabindex="-1"]:focus,.clone-updated[tabindex="-1"]:focus{' in css
     assert ".ref-pop,.ref-src{display:block}" in css
     assert ".visually-hidden{" in css
     assert ".spec{" not in css and "[data-screen]{display:none}" not in css
@@ -555,10 +596,12 @@ def test_rev2_crisis_handoff_notice(html):
     hand = _section(js, "function showHandoff", "\n}\n")
     assert '"handoff"' in hand  # notice kind → .notice--handoff
     assert "Please talk to a person about this" in hand
-    assert "This app cannot help with this. Nothing from your check-in was saved." in hand
+    # rev 3 §3.1: the only copy change (was "This app cannot help with this.")
+    assert "Your clone cannot help with this. Nothing from your check-in was saved." in hand
     assert "Write a different check-in" in hand
     assert '"alert"' in hand and "focus" in hand
-    assert "real-data-warning" in hand and ".hidden = true" in hand
+    # it replaces both columns: the check-in form and the "Your clone" aside (was: the real-data notice)
+    assert "setAside(false)" in hand and ".hidden = true" in hand
     assert "A person can help with this" not in js and '"Start again"' not in hand
     # the UI adds no phone number, link or emergency copy of its own: the API text is the body
     assert "tel:" not in html
@@ -571,7 +614,7 @@ def test_rev2_crisis_handoff_notice(html):
 def test_rev2_checkin_server_copy(html):
     js = _script(html)
     assert "Something went wrong reading your check-in, so nothing was saved" in js
-    assert "This is a fault on our side, not in what you wrote. Try again, or import a file." in js
+    assert "This is a fault on our side, not in what you wrote. Try again, or add a file." in js  # rev 3 (was "import a file")
     assert "That is too long, so nothing was saved" in js
     assert "Keep your check-in to 500 characters." in js
     assert "extractor_output_invalid" in js
@@ -595,22 +638,32 @@ def test_rev2_generic_server_and_network_errors(html):
     assert re.search(r"^var TIMEOUT_MS = 15000;$", js, re.M)  # exactly 15 s (§3.8), not 150000
     # AM-2 D2: production copy (was "the demo server" / "The demo had a problem")
     assert "We could not reach the server. Check your connection and try again." in js
-    assert "The service had a problem on its side (error " in js and "Try again in a moment." in js
+    # rev 3 §3.8 (was "The service had a problem on its side (error N)")
+    assert "We had a problem on our side (error " in js and "Try again in a moment." in js
     low = " ".join(_string_literals(js)).lower()
     assert not re.search(r"\b(the|this|a) demo\b|demo (file|image|input|server|session)", low), low
     assert '"Try again"' in js
     assert "Something went wrong, so nothing was saved" not in js  # the network copy makes no saving claim
     assert "genericError" not in js
     # error notices never carry the server's body
-    assert not re.search(r"\bdetail\b", js)
+    assert not re.search(r"(?<!tl-)\bdetail\b", js)  # rev 3's timeline class .tl-detail is not a server field
 
 
 def test_rev2_get_failure_notice_sits_directly_under_h1(html, admin):
     # AM-2 D1: the lab is on the research console now; the inventory screen joins it there.
-    for page, s in ((html, "passport"), (html, "next"), (admin, "lab"), (admin, "inventory")):
+    # Rev 3 §3.4, §3.6: an eyebrow line may sit above the h1; the notice slot still follows the h1 directly.
+    # Rev 3 §4 (G38): a console h1 sits in the page header (.a-top: crumb, h1, data source); the slot follows it.
+    for page, s in ((html, "passport"), (html, "next"), (html, "timeline"), (admin, "pipeline"), (admin, "lab"),
+                    (admin, "inventory")):
         sec = _by_id(_tree(page), "screen-" + s)
         kids = [c for c in sec.children if isinstance(c, _Node)]
-        assert kids[0].tag == "h1", s
+        if kids[0].tag == "p" and kids[0].attrs.get("class") == "eyebrow":
+            kids = kids[1:]
+        if page is admin:
+            assert kids[0].attrs.get("class") == "a-top", s
+            assert [n for n in kids[0].iter() if n.tag == "h1"], s
+        else:
+            assert kids[0].tag == "h1", s
         assert kids[1].tag == "div" and (kids[1].attrs.get("id") or "").endswith("-msg"), s
 
 
@@ -743,7 +796,7 @@ def test_c3_already_saved_revisit_shows_no_count():
     assert not re.search(r"Saved \d", got[2]), got[2]
 
 
-_THREAD = ["STEP_NAMES", "ADMIN_HASH", "memberLink", "viewText", "thread"]
+_THREAD = ["STEP_NAMES", "ADMIN_CONSOLE_ROUTES", "ADMIN_HASH", "memberLink", "viewText", "thread"]
 _STEPS_TAIL = """{ label: "Memory core-v1+u1", ontology_version: "core-v1+u1", readiness: "ready", link: "#passport/inventory" },
   { label: "none", status: "suppressed", links: [], note: "no source" },
   { label: "none", rule_version: "boundary-v1", run_id: null, link: "" }"""
@@ -790,6 +843,25 @@ def test_am2_d1_learning_run_link_is_text_in_the_member_app():
         """,
     )
     assert got == {"text": got["text"], "links": 0} and "tag/dpo" in got["text"]
+
+
+def test_b4_member_never_links_any_console_route():
+    """QG P6.2 B4: the member app treats every console route (``app.ADMIN_ROUTES``) and the #research
+    alias as the console's, so an evidence link to any of them is text, never a link."""
+    import json
+
+    from daypart.demo.app import ADMIN_ROUTES
+
+    console = list(ADMIN_ROUTES) + ["research"]
+    got = _run_page(_BASE + ["ADMIN_CONSOLE_ROUTES", "ADMIN_HASH", "memberLink"], f"""
+        var c = {json.dumps(console)};
+        return {{ routes: ADMIN_CONSOLE_ROUTES, bare: c.map(function (r) {{ return memberLink("#" + r); }}),
+          deep: c.map(function (r) {{ return memberLink("#" + r + "/x"); }}),
+          member: ["#passport", "#review/ci-1", "#timeline", "#labs", "/api/journals/j1/observations/r1"].map(memberLink) }};
+    """)
+    assert sorted(got["routes"]) == sorted(console)
+    assert not any(got["bare"]) and not any(got["deep"])
+    assert all(got["member"])  # member routes, and a word that only starts like a console route, stay links
 
 
 def test_c5_simulated_source_is_never_called_a_check_in():
@@ -888,11 +960,15 @@ def test_d4_stale_step_refetch_failure_takes_focus(second):
     assert got["role"] == "alert" and got["tabindex"] == "-1" and got["focused"]
 
 
+# rev 3: updateNav also draws the journal's identity (applyIdentity), and #today loads the "Your clone" aside
+_IDENTITY = ["WEEKDAYS", "fmtShortDay", "fmtWeekday", "firstName", "applyIdentity"]
+_TL = ["fmtValue", "shiftDate", "TL_CHIPS", "tlChanges", "tlAppends", "tlStep", "tlTitle", "tlChips", "tlAdded", "tlSentences",
+       "deltaRows", "tlDays", "tlDayLabel"]
 _CHECKIN = ["persist", "updateNav", "journalPending", "adoptJournal", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
-            "loadFixtures", "submitCheckin"]
+            "loadFixtures", "submitCheckin", "setAside", "cloneSeq", "loadClone", "renderClone"] + _IDENTITY + _TL
 _CI_DOM = """
 mk("ci-load-msg"); var body = mk("ci-body"); ["ci-files", "ci-images"].forEach(function (i) { var b = mk(i); b.append(el("ul")); });
-mk("nav-review", "a");
+mk("nav-review", "a"); mk("ci-grid"); mk("clone-aside", "aside"); mk("ci-form", "form");
 function state() { var n = $("ci-load-msg").querySelector(".notice");
   return { title: n && n.querySelector(".notice-title").textContent, role: n && n.getAttribute("role"),
            bodyHidden: $("ci-body").hidden, text: $("ci-load-msg").textContent }; }
@@ -928,9 +1004,10 @@ def test_d5_checkin_fixture_list_failure_shows_the_generic_notice(resp):
 
 
 def test_d5_checkin_load_notice_sits_directly_under_h1(html):
-    sec = _by_id(_tree(html), "screen-checkin")
-    kids = [c for c in sec.children if isinstance(c, _Node)]
-    assert kids[0].tag == "h1" and kids[1].attrs.get("id") == "ci-load-msg"
+    # rev 3 §3.1: the h1 now sits in the left column of #today, under the eyebrow date
+    hero = _by_id(_tree(html), "ci-hero")
+    kids = [c for c in hero.children if isinstance(c, _Node)]
+    assert kids[0].attrs.get("id") == "ci-date" and kids[1].tag == "h1" and kids[2].attrs.get("id") == "ci-load-msg"
 
 
 def test_d6_inventory_copy_matches_spec():
@@ -995,7 +1072,7 @@ def _handoff_run() -> dict:
     return _run_page(
         _SUBMIT,
         """
-        ["ci-msg", "ci-count", "ci-intro", "real-data-warning", "session-msg", "nav-review"].forEach(function (i) { mk(i); });
+        ["ci-msg", "ci-count", "ci-intro", "ci-grid", "clone-aside", "session-msg", "nav-review"].forEach(function (i) { mk(i); });
         var form = mk("ci-form", "form"); var ta = el("textarea"); ta.id = "ci-text"; form.append(ta); var sb = el("button"); sb.id = "ci-submit"; form.append(sb);
         ta.value = "something the person wrote";
         location.hash = "#checkin";
@@ -1006,7 +1083,7 @@ def _handoff_run() -> dict:
           handoff: (box.querySelector(".handoff-text") || { textContent: null }).textContent,
           links: box.querySelectorAll("a").length, buttons: box.querySelectorAll("button").map(function (b) { return b.textContent; }),
           focused: document.activeElement === n, role: n && n.getAttribute("role"),
-          formHidden: $("ci-form").hidden, introHidden: $("ci-intro").hidden, warnHidden: $("real-data-warning").hidden,
+          formHidden: $("ci-form").hidden, introHidden: $("ci-intro").hidden, asideHidden: $("clone-aside").hidden,
           textarea: ta.value, checkins: Object.keys(S.checkins).length };
         """ % repr(_HANDOFF_TEXT).replace("'", '"'),
     )
@@ -1024,7 +1101,7 @@ def test_t1_handoff_response_routes_to_show_handoff_without_review_or_next():
 def test_t2_handoff_body_is_the_api_text_verbatim_and_the_form_is_gone(html):
     got = _handoff_run()
     assert got["handoff"] == _HANDOFF_TEXT  # verbatim, nothing added or replaced
-    assert got["formHidden"] and got["introHidden"] and got["warnHidden"]
+    assert got["formHidden"] and got["introHidden"] and got["asideHidden"]  # both columns (was: the real-data notice)
     assert got["textarea"] == ""
     # the UI adds no number, link or href of its own (substring bans: no word boundaries to slip past)
     hand = _section(_script(html), "function showHandoff", "\n}\n")
@@ -1272,7 +1349,7 @@ def test_k3_member_facing_api_labels_never_say_demo(client):
 
 def test_k2_persona_checkin_links_say_already_saved():
     got = _run_page(
-        _BASE + ["persist", "updateNav", "adoptJournal", "alreadySavedNotice", "savedNotice", "rvSeq", "rvCurrent", "showReview"],
+        _BASE + _IDENTITY + ["persist", "updateNav", "adoptJournal", "alreadySavedNotice", "savedNotice", "rvSeq", "rvCurrent", "showReview"],
         """
         mk("nav-review", "a"); mk("rv-intro", "p"); mk("rv-msg"); mk("rv-form", "form"); mk("rv-list");
         var sessionStorage = { setItem: function () {} };
@@ -1318,7 +1395,7 @@ def test_t9_fresh_journal_during_the_first_load_is_fresh():
     """QG P6.1 T9 (regression for O1, b2f3ace): "Start a fresh journal" pressed while the persona
     journal is still being created ends on a fresh, empty journal, never the persona's."""
     got = _run_page(
-        _BASE + _API + ["persist", "updateNav", "adoptJournal", "journalPending", "createJournal", "ensureJournal",
+        _BASE + _API + _IDENTITY + ["persist", "updateNav", "adoptJournal", "journalPending", "createJournal", "ensureJournal",
                         "resetCheckin", "startAgain", "sessionEnded"],
         """
         mk("nav-review", "a"); mk("session-msg");
@@ -1344,3 +1421,915 @@ def test_t9_fresh_journal_during_the_first_load_is_fresh():
         """,
     )
     assert got[0] == "jf" and got[1] is None and got[2] == ["POST", "/api/journals", {"member_id": "syn-001"}]
+
+
+# --- HAC-38 P6.2 part A: visual spec rev 3 on the member app (HAC-68) ------------------------------
+
+
+def test_rev3_each_surface_sets_its_palette_on_body(html, admin):
+    for page, surface in ((html, "member"), (admin, "admin")):
+        bodies = [n for n in _tree(page).iter() if n.tag == "body"]
+        assert len(bodies) == 1 and bodies[0].attrs.get("data-surface") == surface, surface
+    css = _style(html)
+    assert '[data-surface="member"]{' in css and '[data-surface="admin"]{' in css
+    assert "[data-shell]" not in css and "SPEC ·" not in css  # the mockup-only rules are dropped
+
+
+def test_rev3_member_shell_header_persona_and_footer(html):
+    root = _tree(html)
+    head = next(n for n in root.iter() if n.tag == "header")
+    assert "m-head" in head.attrs.get("class", "")
+    assert any("orb" in (n.attrs.get("class") or "") for n in head.iter())
+    text = " ".join(head.text().split())
+    assert "Clinical Human Clone" in text and "HEALTH CLONE PASSPORT" in text
+    persona = _by_id(root, "persona")
+    assert _is_inside(persona, head) and "hidden" in persona.attrs  # filled from the journal, never a placeholder
+    foot = next(n for n in root.iter() if n.tag == "footer")
+    assert "m-foot" in foot.attrs.get("class", "")
+    assert [n.tag for n in foot.iter() if n.tag in ("p", "a", "button")] == ["p", "a", "a"]  # the LOINC notice only
+
+
+def test_rev3_member_render_links_no_console_dashboard_or_real_input(html):
+    root = _tree(html)
+    hrefs = [n.attrs.get("href") or "" for n in root.iter() if n.tag == "a"]
+    assert not [h for h in hrefs if "admin" in h or "dashboard" in h or h.startswith("/") and h != "/"], hrefs
+    shipped = re.sub(r"<!--.*?-->", "", html, flags=re.S)  # markup and script, not the source comments
+    assert "/admin" not in shipped and "/dashboard" not in shipped
+    ids = {n.attrs.get("id") for n in root.iter()}
+    assert not ids & {"ri-btn", "ri-panel", "screen-lab", "screen-research", "screen-inventory", "screen-pipeline",
+                      "screen-playground", "screen-input"}
+    assert not [n for n in root.iter() if n.tag in ("a", "button") and "Real input" in n.text()]
+
+
+def test_rev3_nav_marks_the_page_and_checkin_is_an_alias_of_today(html):
+    js = _script(html)
+    rt = _section(js, "function route()", "\n}\n")
+    assert '"page"' in rt and ".mnav a" in rt
+    got = _run_page(
+        ["$", "SCREENS", "ALIASES", "parseHash"],
+        """
+        var out = [];
+        ["#checkin", "#today", "#checkin/x", "#timeline", "#nope", "", "#review/c1"].forEach(function (h) {
+          location.hash = h; var r = parseHash(); out.push([r.base, r.rest]); });
+        return out;
+        """,
+    )
+    assert got == [["today", ""], ["today", ""], ["today", "x"], ["timeline", ""], ["today", ""], ["today", ""], ["review", "c1"]]
+
+
+def test_rev3_member_copy_is_neutral(html):
+    js = _script(html)
+    for s in ("Add a file", "Add an image", "Only the bundled files can be used", "Write a sentence or add a file",
+              "Your clone cannot help with this.", "We had a problem on our side (error ",
+              "We could not reach the server.", "This session has ended", "What your clone knows", "View timeline"):
+        assert s in html, s
+    for s in ("Import a device file", "Import a photo", "This app cannot help", "The service had a problem on its side",
+              "What the clone knows", "Continue to the learning lab"):
+        assert s not in html, s
+    assert '"Mode"' not in js  # rev 3 §3.4: no Mode row on the passport
+    low = " ".join(_string_literals(js)).lower()
+    assert not re.search(r"\bdemo\b", low.replace("not_a_demo_fixture", "")), low
+
+
+def test_rev3_timeline_screen_markup_and_c5_note(html):
+    root = _tree(html)
+    sec = _by_id(root, "screen-timeline")
+    kids = [c for c in sec.children if isinstance(c, _Node)]
+    assert [k.tag for k in kids[:4]] == ["p", "h1", "div", "p"]
+    assert kids[1].attrs.get("id") == "h-timeline" and kids[1].text() == "How your clone changed"
+    assert kids[2].attrs.get("id") == "tl-msg"
+    note = kids[3]
+    assert note.attrs.get("id") == "tl-note" and "muted" in note.attrs.get("class", "")
+    # C5 (P6.1): an entry shows what its save changed on that save's day; no day-only entries are drawn
+    assert " ".join(note.text().split()) == "Each entry shows what one saved check-in added and changed, on the day it was saved."
+    more = _by_id(root, "tl-more")
+    assert more.tag == "button" and more.text() == "Show earlier days" and "btn--secondary" in more.attrs.get("class", "")
+
+
+def test_rev3_today_aside_and_two_columns(html):
+    root = _tree(html)
+    grid = _by_id(root, "ci-grid")
+    aside = _by_id(root, "clone-aside")
+    assert aside.tag == "aside" and _is_inside(aside, grid) and "hidden" in aside.attrs  # fresh journal: no aside
+    assert aside.attrs.get("aria-labelledby") == "h-clone" and _by_id(root, "h-clone").text() == "Your clone"
+    form = _by_id(root, "ci-form")
+    assert "panel--glow" in form.attrs.get("class", "")
+    assert "panel--glow" in _by_id(root, "ns-panel").attrs.get("class", "")
+    assert _by_id(root, "fresh-btn").text() == "Start a fresh journal"
+
+
+_ENTRY = """{ index: 2, checkin_id: "c2", as_of: "2026-09-29T12:00:00Z",
+  appends: [{ display: "Sleep duration", value: 7.5, unit: "h" }, { display: "Steps", value: 9360, unit: "{steps}" }],
+  passport_changes: [
+    { title: "Heart rate", change: "became_ready" }, { title: "Sleep duration (hours)", change: "value_changed" },
+    { title: "Body weight", change: "now_observed" }, { title: "Pulse", change: "withheld" }, { title: "X", change: "bogus" }],
+  next_step: { before: { text: "old" }, after: { text: "Would you like to walk after lunch?" }, changed: true } }"""
+_QUIET = """{ index: 3, checkin_id: "c3", as_of: "2026-09-29T12:00:00Z", appends: [], passport_changes: [],
+  next_step: { before: { text: "same" }, after: { text: "same" }, changed: false } }"""
+
+
+def test_rev3_timeline_entry_maps_each_api_field_once():
+    got = _run_page(
+        _BASE + _TL,
+        f"""
+        var e = {_ENTRY}, q = {_QUIET};
+        var first = Object.assign({{}}, e, {{ index: 1, next_step: {{ before: null, after: {{ text: "First." }}, changed: true }} }});
+        return {{ title: tlTitle(e), firstTitle: tlTitle(first), quietTitle: tlTitle(q),
+          chips: tlChips(e).children.map(function (c) {{ return [c.className, c.textContent]; }}),
+          firstChip: tlChips(first).children.map(function (c) {{ return c.textContent; }}).pop(),
+          quietChips: tlChips(q), sentences: tlSentences(e), quiet: tlSentences(q), firstSentences: tlSentences(first) }};
+        """,
+    )
+    assert got["title"] == "Check-in saved · 2 observations"
+    assert got["firstTitle"] == "First check-in saved · 2 observations"
+    assert got["quietTitle"] == "Check-in saved"
+    assert got["chips"] == [
+        ["tag tag--ready", "✓ Card ready: Heart rate"],
+        ["tag", "↻ Updated: Sleep duration (hours)"],
+        ["tag tag--observed", "● Now observed: Body weight"],
+        ["tag tag--withheld", "○ Withheld: Pulse"],
+        ["tag tag--live", "→ New next step"],
+    ]  # an unknown change kind gets no chip
+    assert got["firstChip"] == "→ First next step"
+    assert got["quietChips"] is None  # no change: no chip list, never a "0 cards" chip
+    assert got["sentences"][0] == "Added: Sleep duration 7.5 h, Steps 9360 steps."
+    assert got["sentences"][-1] == "Next step changed to “Would you like to walk after lunch?”"
+    assert got["quiet"] == ["No passport card changed.", "Next step unchanged."]
+    assert got["firstSentences"][-1] == "First next step: “First.”"  # QG P6.2 K8: no step before this save
+    banned = re.compile(r"\b(high|low|normal|abnormal|better|worse|improv\w*|up|down|increas\w*|decreas\w*)\b", re.I)
+    for s in got["sentences"]:
+        assert not banned.search(s), s  # a value change states that it changed, never its direction
+
+
+def _clone_updated(entry: str, written: int = 2, records: int = 3) -> dict:
+    return _run_page(
+        _BASE + _TL + ["savedLine", "cloneUpdated"],
+        f"""
+        var r = {{ written: Array({written}).fill("e"), records: Array({records}).fill("r") }};
+        var box = cloneUpdated(r, {entry});
+        var ul = box.querySelector("ul.delta");
+        return {{ role: box.getAttribute("role"), tabindex: box.getAttribute("tabindex"), labelled: box.getAttribute("aria-labelledby"),
+          h2: box.querySelector("h2").id + "|" + box.querySelector("h2").textContent, line: box.querySelector("p.small").textContent,
+          ring: box.querySelector("span.cu-ring").getAttribute("aria-hidden"),
+          rows: ul ? ul.children.map(function (li) {{ return [li.children[0].textContent, li.children[1].textContent]; }}) : null,
+          label: ul ? ul.getAttribute("aria-label") : null,
+          links: box.querySelectorAll("a").map(function (a) {{ return [a.href, a.textContent, a.className]; }}) }};
+        """,
+    )
+
+
+def test_rev3_clone_updated_panel_is_built_from_the_entry():
+    got = _clone_updated(_ENTRY)
+    assert (got["role"], got["tabindex"], got["labelled"]) == ("status", "-1", "cu-t")
+    assert got["h2"] == "cu-t|Your clone updated" and got["ring"] == "true"
+    assert got["line"] == "Saved 2 values · 1 saved as unmapped · discarded values were not stored"
+    assert got["label"] == "What changed"
+    assert got["rows"] == [
+        ["Observed", "2 new observations added: Sleep duration 7.5 h, Steps 9360 steps"],
+        ["Card ready", "Heart rate now has enough data and is ready on your passport."],
+        ["Updated", "Sleep duration (hours) now shows your latest value."],
+        ["Now observed", "Body weight now shows a value you saved, not a simulated one."],
+        ["Withheld", "Pulse is withheld on your passport for now."],
+        ["Next step", "New suggestion: “Would you like to walk after lunch?”"],
+    ]
+    assert got["links"] == [["#passport", "Open your passport", "btn btn--primary"],
+                            ["#next", "See your next step", "btn btn--secondary"],
+                            ["#timeline", "View timeline", "btn btn--secondary"]]
+
+
+_SHUFFLED = """{ index: 4, checkin_id: "c4", as_of: "2026-09-29T12:00:00Z", appends: [],
+  passport_changes: [{ title: "Pulse", change: "withheld" }, { title: "Body weight", change: "now_observed" },
+    { title: "Heart rate", change: "became_ready" }, { title: "Sleep duration (hours)", change: "value_changed" }],
+  next_step: { before: { text: "a" }, after: { text: "a" }, changed: false } }"""
+
+
+def test_rev3_clone_updated_rows_follow_the_kind_order_not_the_api_order():
+    """QG P6.2 K9: the API lists the changes in any order; the delta rows always run Card ready,
+    Updated, Now observed, Withheld (rev 3 §3.3). The timeline chips keep the API's order."""
+    got = _clone_updated(_SHUFFLED, written=1, records=1)
+    assert [r[0] for r in got["rows"]] == ["Card ready", "Updated", "Now observed", "Withheld"]
+    chips = _run_page(_BASE + _TL, f"return tlChips({_SHUFFLED}).children.map(function (c) {{ return c.textContent; }});")
+    assert chips == ["○ Withheld: Pulse", "● Now observed: Body weight", "✓ Card ready: Heart rate",
+                     "↻ Updated: Sleep duration (hours)"]
+
+
+def test_rev3_clone_updated_omits_empty_kinds_and_never_says_zero():
+    got = _clone_updated(_QUIET, written=1, records=1)
+    assert got["rows"] is None and got["label"] is None
+    assert got["line"] == "Saved 1 value · discarded values were not stored"
+    assert not re.search(r"\b0 ", got["line"])
+
+
+_SAVE = _BASE + _API + _REVIEW + _TL + ["savedLine", "cloneUpdated"]
+
+
+def _save_then(timeline: str) -> dict:
+    return _run_page(
+        _SAVE,
+        f"""
+        S.checkins = {{ c2: {{ proposals: [], status: "pending_review", result: null }} }};
+        ["rv-intro", "rv-msg", "rv-list", "session-msg"].forEach(function (i) {{ mk(i); }});
+        mk("rv-form", "form"); mk("rv-submit", "button");
+        var sessionStorage = {{ setItem: function () {{}} }};
+        rvCurrent = "c2";
+        RESP.push([200, {{ status: "saved", written: ["e1"], records: ["r1"] }}], {timeline});
+        await submitReview({{ preventDefault: function () {{}} }});
+        var n = $("rv-msg").children[0];
+        return {{ cls: n.className, role: n.getAttribute("role"), focused: document.activeElement === n, text: n.textContent,
+          calls: CALLS.map(function (c) {{ return c[0] + " " + c[1]; }}), formHidden: $("rv-form").hidden }};
+        """,
+    )
+
+
+def test_rev3_save_shows_clone_updated_from_this_checkins_entry():
+    # QG P6.2 K3: c2's entry comes first, so "the last entry" is not this check-in's
+    got = _save_then(f'[200, {{ entries: [{_ENTRY}, {_QUIET}] }}]')
+    assert got["cls"] == "clone-updated" and got["role"] == "status" and got["focused"] and got["formHidden"]
+    assert "Your clone updated" in got["text"] and "Heart rate now has enough data" in got["text"]  # c2's entry, not c3's
+    assert got["calls"] == ["POST /api/checkins/c2/review", "GET /api/journals/j1/timeline"]
+
+
+# QG P6.2 K3: the last case has entries, but none for this check-in (c3's only)
+@pytest.mark.parametrize("timeline", ['[503, null]', '"network"', '[200, { entries: [] }]', f'[200, {{ entries: [{_QUIET}] }}]'])
+def test_rev3_save_falls_back_to_the_saved_notice_without_an_error(timeline):
+    got = _save_then(timeline)
+    assert got["cls"] == "notice notice--ok" and got["role"] == "status" and got["focused"]
+    assert "Saved 1 value to your clone" in got["text"]
+    assert "Something went wrong" not in got["text"] and "error" not in got["text"]
+
+
+@pytest.mark.parametrize("held", ["POST", "GET"])
+def test_rev3_save_never_draws_on_a_review_the_route_moved_to(held):
+    """QG P6.2 K10: the person opens #review/c3 while c2's save (POST) or its timeline GET is in flight.
+    c2's save is recorded, but c3's screen keeps its own form and message and keeps focus, and c3's
+    Save is not blocked by c2's call."""
+    got = _run_page(
+        _SAVE,
+        f"""
+        S.checkins = {{ c2: {{ proposals: [], status: "pending_review", result: null }},
+                       c3: {{ proposals: [], status: "pending_review", result: null }} }};
+        ["rv-intro", "rv-msg", "rv-list", "session-msg"].forEach(function (i) {{ mk(i); }});
+        mk("rv-form", "form"); mk("rv-submit", "button");
+        var sessionStorage = {{ setItem: function () {{}} }};
+        var release, gate = new Promise(function (r) {{ release = r; }});
+        fetch = async function (path, init) {{
+          CALLS.push([init.method, path]);
+          if (init.method === "{held}") await gate;
+          var body = init.method === "POST" ? {{ status: "saved", written: ["e1"], records: ["r1"] }} : {{ entries: [{_ENTRY}] }};
+          return {{ status: 200, ok: true, json: async function () {{ return body; }} }};
+        }};
+        rvCurrent = "c2";
+        var save = submitReview({{ preventDefault: function () {{}} }});
+        await new Promise(function (r) {{ setTimeout(r, 10); }});
+        rvCurrent = "c3";                          /* what showReview("c3") leaves: its own form and message */
+        var mine = el("p", null, "c3 form"); clear($("rv-msg")).append(mine); $("rv-form").hidden = false; mine.focus();
+        var busyWhileHeld = rvBusy;
+        release(); await save;
+        return {{ msg: $("rv-msg").textContent, formHidden: $("rv-form").hidden, focus: document.activeElement === mine,
+          saved: S.checkins.c2.status, busy: rvBusy, busyWhileHeld: busyWhileHeld,
+          disabled: $("rv-submit").getAttribute("aria-disabled"), calls: CALLS.map(function (c) {{ return c[0]; }}) }};
+        """,
+    )
+    assert got["msg"] == "c3 form" and got["formHidden"] is False and got["focus"]  # c3's screen is untouched
+    assert got["saved"] == "saved"  # c2's save happened and is recorded
+    assert got["busy"] is False and got["disabled"] is None
+    if held == "GET":
+        assert got["busyWhileHeld"] is False  # the save settled: c3's Save is not silently ignored during the GET
+        assert got["calls"] == ["POST", "GET"]
+    else:
+        assert got["calls"] == ["POST"]  # the route moved on: no timeline GET for a panel nobody sees
+
+
+_TIMELINE = _BASE + _API + _TL + ["journalPending", "ensureJournal", "sessionEnded", "TL_PAGE", "showTimeline", "tlMore", "tlEntry"]
+_TL_DOM = """
+["tl-msg", "tl-body", "tl-days", "tl-omitted", "tl-more-row", "session-msg"].forEach(function (i) { mk(i); });
+S.today = "2026-09-29";
+function day(n) { var d = new Date(Date.UTC(2026, 8, 29 - n, 12)); return d.toISOString().slice(0, 10); }
+function entry(i, d) { return { index: i, checkin_id: "c" + i, as_of: d + "T12:00:00Z", appends: [{ display: "Steps", value: 9000 + i, unit: "{steps}" }],
+  passport_changes: [], next_step: { before: { text: "a" }, after: { text: "a" }, changed: false } }; }
+"""
+
+
+def test_rev3_timeline_groups_days_newest_first_and_pages_by_7():
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var es = []; for (var i = 1; i <= 10; i++) es.push(entry(i, day(i === 10 ? 0 : 10 - i)));  // 10 saves on 10 days, save order
+        es.splice(9, 0, entry(99, day(0)));  // two saves today
+        RESP.push([200, { entries: es, omitted: 0 }]);
+        await showTimeline();
+        function heads() { return $("tl-days").querySelectorAll("h2").map(function (h) { return h.textContent; }); }
+        var first = { heads: heads(), moreHidden: $("tl-more-row").hidden, bodyHidden: $("tl-body").hidden,
+          items: $("tl-days").querySelectorAll("details").map(function (d) { return [d.open === true, d.parentNode.className]; }).slice(0, 3),
+          today: $("tl-days").querySelectorAll("section")[0].querySelectorAll("li").filter(function (li) { return li.className !== "tag"; }).length };
+        tlMore(true);
+        return { first: first, heads: heads(), moreHidden: $("tl-more-row").hidden, focused: document.activeElement.textContent };
+        """,
+    )
+    f = got["first"]
+    assert f["heads"] == ["Today · 29 Sep", "Yesterday · 28 Sep", "27 Sep", "26 Sep", "25 Sep", "24 Sep", "23 Sep"]
+    assert f["moreHidden"] is False and f["bodyHidden"] is False
+    assert f["items"] == [[True, "is-new"], [False, ""], [False, ""]]  # only the newest is open, with the teal node
+    assert got["heads"][7:] == ["22 Sep", "21 Sep", "20 Sep"] and got["moreHidden"] is True
+    assert got["focused"] == "22 Sep"  # "Show earlier days" moves focus to the first day it added
+
+
+def test_rev3_timeline_groups_a_backdated_save_under_its_own_day():
+    """QG P6.2 K1: the API lists saves in save order, but a backdated save ("yesterday I slept…") made
+    after today's carries an older day. Each day has one header, days run newest first, a day lists its
+    saves newest first, and the newest save (the last the API lists) is the open, teal entry."""
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var es = [entry(1, day(2)), entry(2, day(0)), entry(3, day(1)), entry(4, day(0)), entry(5, day(3))];
+        RESP.push([200, { entries: es, omitted: 0 }]);
+        await showTimeline();
+        return $("tl-days").querySelectorAll("section").map(function (sec) {
+          return [sec.querySelector("h2").textContent].concat(sec.querySelectorAll("details").map(function (d) {
+            return [d.querySelector("span.tl-time").textContent.trim().replace(" ›", ""), d.open === true, d.parentNode.className]; })); });
+        """,
+    )
+    assert got == [
+        ["Today · 29 Sep", ["save 4", False, ""], ["save 2", False, ""]],
+        ["Yesterday · 28 Sep", ["save 3", False, ""]],
+        ["27 Sep", ["save 1", False, ""]],
+        ["26 Sep", ["save 5", True, "is-new"]],  # the newest save is backdated: it stays on its own day
+    ]
+
+
+def test_rev3_clone_aside_last_updated_is_the_latest_day_not_the_last_save():
+    """QG P6.2 K1: "Last updated" names the latest day the clone holds; a backdated last save does not
+    move it back. "Latest update" is still the newest save."""
+    got = _run_page(
+        _CLONE,
+        _CLONE_DOM + f"""
+        var today = Object.assign({{}}, {_ENTRY}, {{ index: 1 }});
+        var back = Object.assign({{}}, {_QUIET}, {{ index: 2, as_of: "2026-09-26T12:00:00Z" }});
+        RESP.push([200, {{ entries: [today, back], omitted: 0 }}], [200, {{ cards: [] }}]);
+        await loadClone();
+        return [$("clone-built").textContent, $("clone-latest").textContent];
+        """,
+    )
+    assert got[0] == "Built from 2 days of your saved check-ins. Last updated 29 Sep 2026."
+    assert got[1] == "Check-in saved"  # the newest save (the backdated one) is the latest update
+
+
+def test_rev3_timeline_says_how_many_older_check_ins_are_not_shown():
+    """QG P6.2 K7: the API keeps the newest 60 saves; ``omitted`` older ones are named under the feed."""
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var out = [];
+        for (var om of [0, 1, 3]) {
+          RESP.push([200, { entries: [entry(1, day(0))], omitted: om }]);
+          await showTimeline();
+          out.push([$("tl-omitted").hidden, $("tl-omitted").textContent]);
+        }
+        return out;
+        """,
+    )
+    assert got == [[True, ""], [False, "1 older check-in is not shown."], [False, "3 older check-ins are not shown."]]
+
+
+def test_rev3_only_the_newest_timeline_load_draws():
+    """QG P6.2 K11: two overlapping #timeline loads; the slow first answer never replaces the newer feed."""
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + _GATED + """
+        var first = showTimeline(), second = showTimeline();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[1]({ entries: [entry(2, day(0))], omitted: 0 }); await second;   // the newer load answers first
+        gates[0]({ entries: [entry(1, day(5))], omitted: 7 }); await first;    // then the stale one
+        return [$("tl-days").querySelectorAll("h2").map(function (h) { return h.textContent; }),
+                $("tl-days").querySelectorAll("span.tl-time").map(function (t) { return t.textContent; }), $("tl-omitted").hidden];
+        """,
+    )
+    assert got == [["Today · 29 Sep"], ["save 2 ›"], True]
+
+
+def test_rev3_timeline_empty_failed_and_ended_states():
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var out = {};
+        globalThis.startAgain = function () {};
+        RESP.push([200, { entries: [] }]); await showTimeline();
+        var n = $("tl-msg").children[0];
+        out.empty = [n.className, n.querySelector(".notice-title").textContent, n.textContent,
+                     n.querySelectorAll("a").map(function (a) { return a.href + "|" + a.textContent; }), $("tl-body").hidden];
+        RESP.push([502, null]); await showTimeline();
+        n = $("tl-msg").children[0];
+        out.failed = [n.getAttribute("role"), n.textContent, $("tl-body").hidden];
+        RESP.push([404, { error: "unknown_journal" }]); await showTimeline();
+        out.ended = [$("session-msg").textContent, $("tl-body").hidden];
+        return out;
+        """,
+    )
+    assert got["empty"][0] == "notice notice--info" and got["empty"][1] == "No updates yet"
+    assert "Your first saved check-in starts the timeline." in got["empty"][2]
+    assert got["empty"][3] == ["#today|Check in"] and got["empty"][4] is True
+    assert got["failed"][0] == "alert" and "We had a problem on our side (error 502)" in got["failed"][1] and got["failed"][2]
+    assert "This session has ended" in got["ended"][0] and got["ended"][1]
+
+
+_CLONE = _BASE + _API + _IDENTITY + _TL + ["setAside", "cloneSeq", "loadClone", "renderClone", "sessionEnded"]
+_CLONE_DOM = """
+["ci-grid", "clone-built", "clone-stats", "clone-latest", "session-msg"].forEach(function (i) { mk(i); });
+mk("clone-aside", "aside").hidden = true; mk("ci-form", "form");
+function tiles() { return $("clone-stats").children.map(function (li) { return li.textContent; }); }
+"""
+
+
+def test_rev3_clone_aside_stats_come_from_the_api_only():
+    got = _run_page(
+        _CLONE,
+        _CLONE_DOM + f"""
+        var e1 = Object.assign({{}}, {_QUIET}, {{ index: 1, as_of: "2026-09-28T12:00:00Z", appends: [{{ display: "Steps", value: 1, unit: "1" }}] }});
+        RESP.push([200, {{ entries: [e1, {_ENTRY}], omitted: 0 }}], [200, {{ cards: [{{ status: "ready" }}, {{ status: "withheld" }}, {{ status: "ready" }}] }}]);
+        await loadClone();
+        var full = {{ tiles: tiles(), built: $("clone-built").textContent, hidden: $("clone-aside").hidden, grid: $("ci-grid").className,
+          latest: $("clone-latest").textContent }};
+        RESP.push([200, {{ entries: [{_ENTRY}], omitted: 60 }}], [503, null]);
+        await loadClone();
+        var partial = {{ tiles: tiles(), built: $("clone-built").textContent }};
+        RESP.push([200, {{ entries: [] }}], [200, {{ cards: [] }}]);
+        await loadClone();
+        return {{ full: full, partial: partial, fresh: [$("clone-aside").hidden, $("ci-grid").className] }};
+        """,
+    )
+    assert got["full"]["tiles"] == ["2 days of history", "2 saved check-ins", "3 observations", "2 cards ready"]
+    assert got["full"]["built"] == "Built from 2 days of your saved check-ins. Last updated 29 Sep 2026."
+    assert got["full"]["hidden"] is False and got["full"]["grid"] == "grid-2"
+    assert got["full"]["latest"].startswith("Check-in saved · 2 observations") and "✓ Card ready: Heart rate" in got["full"]["latest"]
+    # 60 older saves left out: the day and observation totals are unknown and the passport failed, so those tiles go
+    assert got["partial"]["tiles"] == ["61 saved check-ins"]
+    assert got["partial"]["built"] == "Built from your saved check-ins. Last updated 29 Sep 2026."
+    assert got["fresh"] == [True, ""]  # no saved check-in: no aside, one column
+
+
+def test_rev3_identity_greets_by_first_name_and_names_the_passport():
+    got = _run_page(
+        _BASE + _IDENTITY,
+        """
+        ["persona-txt", "ci-date", "pp-eyebrow"].forEach(function (i) { mk(i); }); mk("persona", "p"); mk("persona-av", "span");
+        mk("h-today", "h1"); mk("h-passport", "h1");
+        function look() { return [$("h-today").textContent, $("ci-date").hidden ? null : $("ci-date").textContent, $("h-passport").textContent,
+          $("pp-eyebrow").hidden, $("persona").hidden, $("persona-av").textContent, $("persona-txt").textContent]; }
+        S.displayName = "Rowan Ellis"; S.memberId = "syn-007"; S.today = "2026-09-29";
+        applyIdentity(); var persona = look();
+        S.displayName = null; S.memberId = "syn-001"; S.today = null;
+        applyIdentity(); return [persona, look()];
+        """,
+    )
+    assert got[0] == ["What matters today, Rowan?", "Tuesday 29 Sep", "Rowan's passport", False, False, "R", "Rowan Ellis · syn-007"]
+    assert got[1] == ["What matters today?", None, "Health Clone Passport", True, False, "", "syn-001"]
+
+
+def test_rev3_member_api_strings_never_reach_an_html_sink(html):
+    js = _script(html)
+    for start, end in (("/* ---------- #timeline", "/* ---------- #lab"), ("function cloneUpdated", "\n}\n"),
+                       ("async function loadClone", "/* Fills the bundled-file pickers"), ("function applyIdentity", "\n}\n")):
+        part = _section(js, start, end)
+        for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
+            assert sink not in part, (start, sink)
+
+
+# --- HAC-38 P6.2 part B: visual spec rev 3 on the research console (HAC-68 §4, §5) -----------------------
+
+
+def test_rev3_console_shell_skip_link_sidebar_and_brand(admin):
+    root = _tree(admin)
+    body = next(n for n in root.iter() if n.tag == "body")
+    first, second = [c for c in body.children if isinstance(c, _Node)][:2]
+    assert first.tag == "a" and first.attrs.get("class") == "skip" and first.attrs.get("href") == "#main"
+    assert second.attrs.get("class") == "a-shell"
+    side = next(n for n in second.children if isinstance(n, _Node))
+    assert side.tag == "aside" and side.attrs.get("class") == "a-side"
+    brand = next(n for n in side.iter() if "a-brand" in (n.attrs.get("class") or ""))
+    badge = [n for n in brand.iter() if "tag--console" in (n.attrs.get("class") or "")]
+    assert len(badge) == 1 and badge[0].text() == "Research console"  # drawn uppercase by .tag--console
+    assert "Clinical Human Clone" in brand.text()
+    nav = next(n for n in side.iter() if n.tag == "nav")
+    assert nav.attrs.get("aria-label") == "Research console" and "a-nav" in nav.attrs.get("class", "")
+    mains = [n for n in root.iter() if n.tag == "main"]
+    assert len(mains) == 1 and mains[0].attrs.get("id") == "main" and mains[0].attrs.get("tabindex") == "-1"
+    assert not _is_inside(mains[0], side)
+    for s in ADMIN_SCREENS:
+        assert _is_inside(_by_id(root, "screen-" + s), mains[0]), s
+    # the console carries none of the member shell
+    assert not [n for n in root.iter() if "m-head" in (n.attrs.get("class") or "") or n.attrs.get("aria-label") == "Member"]
+    css = _style(admin)
+    for gone in (".site-head", ".steps", ".site-foot", ".research-label", "p.brand"):  # the temporary pre-rev-3 block
+        assert gone not in css, gone
+    assert "site-head" not in admin and 'class="steps"' not in admin
+
+
+def test_rev3_console_page_header_crumb_h1_and_source(admin):
+    root = _tree(admin)
+    sources = {"pipeline": "GET /api/lab", "lab": "GET /api/lab", "inventory": "GET /api/inventory",
+               "playground": "POST /api/episodes", "input": "POST /api/mode"}
+    for s in ADMIN_SCREENS:
+        top = next(n for n in _by_id(root, "screen-" + s).iter() if n.attrs.get("class") == "a-top")
+        crumb = [n for n in top.iter() if n.attrs.get("class") == "a-crumb"]
+        assert len(crumb) == 1 and crumb[0].text() == "/admin/" + s, s
+        h1 = [n for n in top.iter() if n.tag == "h1"]
+        assert len(h1) == 1 and h1[0].attrs.get("id") == "h-" + s, s
+        src = [n for n in top.iter() if "mono" in (n.attrs.get("class") or "").split() and n is not crumb[0]]
+        assert [n.text() for n in src] == [sources[s]], s
+
+
+def test_rev3_console_router_routes_aliases_and_default(admin):
+    js = _script(admin)
+    assert 'var SCREENS = ["pipeline", "lab", "inventory", "playground", "input"];' in js  # SCREENS[0] is the default
+    assert 'var ALIASES = { research: "playground" };' in js  # the API's #research evidence link still resolves
+    rt = _section(js, "function route()", "\n}\n")
+    assert ".a-nav a" in rt and '"page"' in rt and '"step"' not in rt
+    assert "pipeline: showPipeline" in rt and "playground:" in rt and "input:" in rt
+    from daypart.demo.app import ADMIN_ROUTES
+
+    assert ADMIN_ROUTES == ADMIN_SCREENS  # /admin/<route> is served for exactly these
+
+
+def test_rev3_console_path_routes_serve_the_shell(client, admin):
+    for s in ADMIN_SCREENS:
+        r = client.get(f"/admin/{s}")
+        assert r.status_code == 200 and r.text == admin, s
+    assert client.get("/admin/nope").status_code == 404
+    assert client.get("/admin/today").status_code == 404  # never a member route
+    js = _script(admin)
+    assert 'history.replaceState(null, "", "/admin#" + m[1]' in js
+
+
+def test_rev3_pipeline_lanes_stage_counts_and_copy(admin):
+    root = _tree(admin)
+    sec = _by_id(root, "screen-pipeline")
+    live = _by_id(root, "pipe-live")
+    assert live.tag == "ol" and live.attrs.get("aria-label") == "Live loop, 5 stages"
+    stages = [c for c in live.children if isinstance(c, _Node)]
+    assert len(stages) == 5 and all(c.tag == "li" for c in stages)
+    names = [next(n for n in li.iter() if n.attrs.get("class") == "stage-name").text() for li in stages]
+    assert names == ["Check-in", "Review", "EventLog", "Passport recompute", "Next-step policy"]
+    for li in stages:
+        assert [n.text() for n in li.iter() if n.attrs.get("class") == "tag tag--live"] == ["live"]
+    text = " ".join(sec.text().split())
+    assert "↺ loop: the next saved check-in starts again at stage 1. No model is called in this loop." in text
+    assert "● runs on every saved check-in" in text and "○ offline · not run per check-in" in text
+    assert "Simulated outcomes are not patient outcomes." in text
+    off = _by_id(root, "pipe-offline")
+    assert off.tag == "ol" and not [c for c in off.children if isinstance(c, _Node)]  # drawn from /api/lab only
+    for ident in ("pipe-kpis", "lane-offline"):  # hidden until /api/lab answers
+        assert "hidden" in _by_id(root, ident).attrs, ident
+    assert "hidden" not in _by_id(root, "lane-live").attrs  # the live lane is static and always shown
+
+
+def test_rev3_pipeline_live_lane_names_only_code_that_exists():
+    """§4.1: each live stage's versions are the running code's own constants, and the next-step policy
+    selects by rules and checks with the membrane: nothing in the loop imports a model client."""
+    from daypart.checkin import next_step
+    from daypart.checkin.models import METHOD_FIXTURE, METHOD_TEXT
+    from daypart.memory.registry import SLICE_VERSION
+    from daypart.passport.view import READY_WINDOW_DAYS
+
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    live = _section(src, '<ol class="pipe" id="pipe-live"', "</ol>")
+    # QG P6.2 B1 (G36): the Check-in stage states only what runs: text takes rules-v1 and the PII and
+    # crisis screens; a bundled file takes the fixture sidecar, gated by the sha256 allow-list
+    checkin = _section(live, '<span class="stage-name">Check-in</span>', "</dl>")
+    assert (f"<dt>text</dt><dd>{METHOD_TEXT}</dd><dt>screen</dt><dd>PII + crisis</dd>"
+            f"<dt>file</dt><dd>{METHOD_FIXTURE}</dd><dt>gate</dt><dd>sha256 allow-list</dd>") in checkin
+    assert "bundled file" not in checkin  # no claim that a file passes the text screens
+    assert f"<dd>{SLICE_VERSION}</dd>" in live
+    assert f"<dd>value ≤ {READY_WINDOW_DAYS} days old</dd>" in live
+    assert f"<dd>{next_step.POLICY_VERSION} (rules)</dd>" in live and "<dd>membrane post()</dd>" in live
+    loop = Path(next_step.__file__).read_text()
+    for client in ("anthropic", "openai", "httpx", "requests", "modal", "transformers", "torch", "muse"):
+        assert not re.search(rf"^\s*(import|from)\s+{client}\b", loop, re.M), client
+
+
+def _lab_literals() -> set[str]:
+    """Every number and run id the committed lab rows carry, as the page would print them."""
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    out: set[str] = set()
+
+    def walk(v: object) -> None:
+        if isinstance(v, dict):
+            for x in v.values():
+                walk(x)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x)
+        elif isinstance(v, float) and v not in (0.0, 1.0):
+            out.update({f"{v:.3f}", repr(v)})
+        elif isinstance(v, int) and not isinstance(v, bool) and v >= 100:
+            out.add(str(v))
+        elif isinstance(v, str) and "/" in v and v[0].isalnum():
+            out.add(v)
+
+    walk(t)
+    for r in t["rows"]:
+        if r["run_id"]:
+            out.add(r["run_id"].split("/")[0])  # the run prefix
+    return out
+
+
+def test_rev3_console_has_no_hard_coded_lab_numbers(admin):
+    """§4.1: every pipeline and lab number is read per request from /api/lab, never written into the page."""
+    found = _lab_literals()
+    assert {"0.319", "0.681", "4040", "0.645"} <= found  # the literals the mockup drew from f66f132
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    for lit in sorted(found):
+        for page in (admin, src):
+            assert not re.search(rf"(?<![\w.]){re.escape(lit)}(?![\w])", page), lit
+    assert "needs a trained reward model" not in src  # the grpo reason comes from the API verbatim
+
+
+_PIPE = ["$", "el", "attrs", "safeHref", "link", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError",
+         "parts", "fix3", "delta3", "labRowNamed", "mismatched", "mismatchTag", "rowRate", "intOrNull", "envName", "kpi",
+         "pipeKpis", "OFFLINE", "runLink", "withDelta", "offlineStage", "pipeOffline", "pipeSeq", "showPipeline"]
+_PIPE_BODY = """
+mk("pipe-msg"); var kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
+kp.hidden = true; lane.hidden = true;
+RESP.push(RESPONSE);
+await showPipeline();
+function txt(e) { return e.textContent; }
+return { kpis: kp.children.map(function (li) { return li.children.map(txt); }),
+  stages: ol.children.map(function (li) { return [li.className, li.querySelector("span.stage-name").textContent,
+    li.querySelectorAll("span.tag").map(txt), li.querySelectorAll("dt").map(txt), li.querySelectorAll("dd").map(txt),
+    li.querySelectorAll("a").map(function (a) { return [a.textContent, a.href, a.title]; })]; }),
+  label: ol.getAttribute("aria-label"), note: $("pipe-note").textContent,
+  hidden: [kp.hidden, lane.hidden], msg: $("pipe-msg").textContent };
+"""
+
+
+def _pipeline(response: object) -> dict:
+    import json
+
+    got = _run_page(_PIPE, _PIPE_BODY.replace("RESPONSE", json.dumps(response)))
+    assert isinstance(got, dict)
+    return got
+
+
+def test_rev3_pipeline_maps_every_lab_field_1_to_1():
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    rows = {r["row"]: r for r in t["rows"]}
+    base, sft, dpo, grpo = rows["base"], rows["sft"], rows["dpo"], rows["grpo"]
+
+    def f(v: float) -> str:
+        return f"{v:.3f}"
+
+    def d(v: float) -> str:
+        return ("+" if v >= 0 else "") + f"{v:.3f}"
+
+    envs = [r for r in t["rows"] if r["kind"] == "env_baseline"]
+    best = max(envs, key=lambda r: r["metrics"]["mean_adherence"])
+    got = _pipeline([200, t])
+    assert got["hidden"] == [False, False] and got["msg"] == ""
+    assert got["kpis"] == [
+        ["boundary pass · dpo", f(dpo["metrics"]["boundary_pass_rate"]),
+         f"base {f(base['metrics']['boundary_pass_rate'])} · n = {dpo['split']['n']}"],
+        ["rubric pass · dpo", f(dpo["metrics"]["rubric_pass_rate"]),
+         f"sft {f(sft['metrics']['rubric_pass_rate'])} · base {f(base['metrics']['rubric_pass_rate'])}"],
+        ["builder check I1", "✓ passed" if t["i1_passed"] else "⚠ not passed", f"member failures {t['member_failure_count']}"],
+        ["best env adherence", f(best["metrics"]["mean_adherence"]),
+         f"{best['row'].removeprefix('env_').replace('_', ' ')} · {best['split']['n']} episodes"],
+    ]
+    assert got["label"] == "Offline training, 4 stages"
+    b, s, p, g = got["stages"]
+    assert b[:4] == ["", "Base", ["offline"], ["run", "boundary", "rubric", "failures"]]
+    assert b[4][1:] == [f(base["metrics"]["boundary_pass_rate"]), f(base["metrics"]["rubric_pass_rate"]),
+                        f"{base['failures']} · {base['degenerate']} degenerate"]
+    assert b[5] == [["…/base", "#lab/" + base["run_id"], base["run_id"]]]
+    assert s[2] == ["offline", "✓ gate r3"] and s[3] == ["run", "rows", "boundary", "rubric"]
+    assert s[4][1:] == [str(sft["split"]["training_rows"]),
+                        f"{f(sft['metrics']['boundary_pass_rate'])} (Δ {d(sft['gate']['delta'])})", f(sft["metrics"]["rubric_pass_rate"])]
+    assert s[5][0][0] == "…/" + sft["run_id"].rsplit("/", 1)[1]
+    assert p[2] == ["offline", "✓ gate r4"] and p[3] == ["run", "pairs", "boundary", "rubric"]
+    assert p[4][1:] == [str(dpo["split"]["training_rows"]),
+                        f"{f(dpo['metrics']['boundary_pass_rate'])} · {dpo['gate']['boundary_regressions']} regressions",
+                        f"{f(dpo['metrics']['rubric_pass_rate'])} (Δ {d(dpo['gate']['rubric_delta'])})"]
+    assert g[:4] == ["is-proposed", "GRPO", ["○ proposed, not built"], ["run", "reason"]]
+    assert g[4] == ["not recorded", grpo["reason"]] and g[5] == []  # the reason verbatim from the API
+    prefix = base["run_id"].rsplit("/", 1)[0]
+    sp = base["split"]
+    assert got["note"] == (f"Runs {prefix}/*. Eval split {sp['prompt_set_version']}, n = {sp['n']}, seed {base['seed']}. "
+                           "Trained adapters are evaluated here; the live loop above does not call them in this build.")
+
+
+def test_rev3_pipeline_nulls_and_provenance_mismatch():
+    """A null field is "— not recorded" (nr); a mismatch row shows its tag and no number anywhere."""
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    for r in t["rows"]:
+        if r["row"] == "dpo":
+            r.update(status="provenance mismatch", metrics={"boundary_pass_rate": None, "rubric_pass_rate": None}, gate=None,
+                     split={**r["split"], "n": None, "training_rows": None})
+        if r["row"] == "sft":
+            r["metrics"]["boundary_pass_rate"] = None
+            r["gate"] = {"passed": False}
+        if r["row"] == "grpo":
+            r["reason"] = None
+    t.update(i1_passed=None, member_failure_count=None)
+    t["rows"] = [r for r in t["rows"] if r["kind"] != "env_baseline"]
+    got = _pipeline([200, t])
+    k1, k2, k3, k4 = got["kpis"]
+    assert k1[1] == "⚠ provenance mismatch" and k1[2].endswith("n = not recorded")
+    assert k2[1] == "⚠ provenance mismatch"
+    assert k3[1:] == ["not recorded", "member failures not recorded"]
+    assert k4[1:] == ["not recorded", "not recorded · not recorded"]
+    _b, s, p, g = got["stages"]
+    assert s[2] == ["offline", "⚠ gate r3 not passed"] and s[4][2] == "not recorded"  # no Δ without a boundary number
+    assert p[2] == ["offline", "⚠ provenance mismatch"] and p[3] == ["run"]  # no number, no gate
+    assert g[4] == ["not recorded", "not recorded"]
+
+
+@pytest.mark.parametrize("resp", [[500, {"error": "internal"}], "network", [200, {"rows": "x"}]])
+def test_rev3_pipeline_failed_lab_get_hides_numbers(resp):
+    got = _pipeline(resp)
+    assert got["hidden"] == [True, True] and got["kpis"] == [] and got["stages"] == []
+    assert "Something went wrong" in got["msg"]
+    assert ("error 500" in got["msg"]) if resp[0] == 500 else True
+
+
+def test_rev3_pipeline_delta_signs():
+    """QG P6.2 K13: a gate Δ carries its own sign at 3 decimals; zero is "+0.000"; a null is no Δ."""
+    got = _run_js(["fix3", "delta3"], "[delta3(-0.021), delta3(0.0214), delta3(0), delta3(null)]")
+    assert got == ["-0.021", "+0.021", "+0.000", None]
+
+
+def test_rev3_only_the_newest_pipeline_load_draws():
+    """QG P6.2 K12: two overlapping #pipeline loads; the stale first answer (here a failure) neither
+    hides the newer KPIs and offline lane nor adds a notice, and draws no stale numbers."""
+    import json
+
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    got = _run_page(
+        _PIPE,
+        """
+        mk("pipe-msg"); var kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
+        kp.hidden = true; lane.hidden = true;
+        var answers = [];
+        fetch = function () { return new Promise(function (resolve) { answers.push(resolve); }); };
+        var first = showPipeline(), second = showPipeline();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        answers[1]({ status: 200, ok: true, json: async function () { return LAB; } }); await second;
+        var drawn = kp.textContent;
+        answers[0]({ status: 500, ok: false, json: async function () { return { error: "internal" }; } }); await first;
+        return [kp.hidden, lane.hidden, $("pipe-msg").textContent, kp.textContent === drawn, ol.children.length];
+        """.replace("LAB", json.dumps(t)),
+    )
+    assert got == [False, False, "", True, 4]
+
+
+def test_rev3_lab_deep_link_marks_the_row_and_keeps_stacking(admin):
+    js = _script(admin)
+    lab = _section(js, "async function showLab", "\nfunction labRow")
+    assert 'setAttribute("aria-current", "true")' in lab
+    css = _style(admin)
+    assert 'table.stack tr[aria-current="true"] td{background:var(--a-raised)}' in css
+    assert "@media (max-width:40rem){\n  table.stack thead" in css and "content:attr(data-label)" in css
+
+
+def test_rev3_inventory_table_maps_the_api_and_has_no_cards_column(admin, client):
+    root = _tree(admin)
+    sec = _by_id(root, "screen-inventory")
+    heads = [" ".join(n.text().split()) for n in sec.iter() if n.tag == "th"]
+    assert heads == ["Vertical", "Concepts", "Status"]  # /api/inventory has no card count, so no Cards column
+    assert "cards" not in " ".join(str(k) for k in client.get("/api/inventory").json())
+    got = _run_page(["$", "el", "nr", "clear", "notice", "TIMEOUT_MS", "api", "serverError", "cell", "MONTHS", "fmtDay", "reviewLabel",
+                     "invSeq", "showInventory"], """
+      mk("ainv-msg"); var body = mk("ainv-body"); body.hidden = true; mk("ainv-meta", "dl"); var rows = mk("ainv-rows", "tbody"); mk("ainv-list");
+      RESP.push([200, INV]);
+      await showInventory();
+      return [body.hidden, rows.children.map(function (tr) { return [tr.className].concat(tr.children.map(function (td) {
+        return td.getAttribute("data-label") + "=" + td.textContent; })); })];
+    """.replace("INV", __import__("json").dumps(client.get("/api/inventory").json())))
+    inv = client.get("/api/inventory").json()
+    assert got[0] is False
+    want = [["", f"Vertical={v['label']}", f"Concepts={len(v['concepts'])}", "Status=✓ covered"] for v in inv["verticals"]]
+    want += [["proposed", f"Vertical={g}", "Concepts=0", "Status=○ gap"] for g in inv["gap_labels"]]
+    assert got[1] == want
+
+
+_GATED = """
+var gates = [];
+fetch = function (path) { return new Promise(function (resolve) { gates.push(function (body) {
+  resolve({ status: 200, ok: true, json: async function () { return body; } }); }); }); };
+"""
+
+
+def test_b2_only_the_newest_lab_load_draws():
+    """QG P6.2 B2: #lab/A then quickly #lab/B: the slow first /api/lab answer never redraws the table
+    or marks run A."""
+    got = _run_page(
+        ["$", "el", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError", "labSeq", "showLab"],
+        _GATED + """
+        mk("lab-msg"); mk("lab-body"); mk("lab-meta", "dl"); var rows = mk("lab-rows", "tbody");
+        var drawn = 0;
+        globalThis.labRow = function (r) { drawn++; var tr = el("tr"); tr.dataset.runId = r.run_id; return tr; };
+        var t = { rows: [{ run_id: "A" }, { run_id: "B" }], i1_passed: true, member_failure_count: 0 };
+        var first = showLab("A"), second = showLab("B");
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[1](t); await second;   // the newer load answers first
+        gates[0](t); await first;    // then the stale one
+        return [drawn, rows.children.filter(function (tr) { return tr.getAttribute("aria-current") === "true"; })
+          .map(function (tr) { return tr.dataset.runId; })];
+        """,
+    )
+    assert got == [2, ["B"]]
+
+
+def test_b2_only_the_newest_inventory_load_draws():
+    got = _run_page(
+        ["$", "el", "nr", "clear", "notice", "TIMEOUT_MS", "api", "serverError", "cell", "MONTHS", "fmtDay", "reviewLabel",
+         "invSeq", "showInventory"],
+        _GATED + """
+        mk("ainv-msg"); mk("ainv-body"); mk("ainv-meta", "dl"); var rows = mk("ainv-rows", "tbody"); mk("ainv-list");
+        function inv(label) { return { loinc_version: "2.80", reviewer_status: null, verticals: [{ label: label, concepts: [] }], gap_labels: [] }; }
+        var first = showInventory(), second = showInventory();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[1](inv("new")); await second;
+        gates[0](inv("old")); await first;
+        return rows.children.map(function (tr) { return tr.children[0].textContent; });
+        """,
+    )
+    assert got == ["new"]
+
+
+def test_rev3_playground_has_no_optional_chip_or_synthetic_tag(admin):
+    sec = _by_id(_tree(admin), "screen-playground")
+    text = " ".join(sec.text().split())
+    assert "(optional)" not in text and "synthetic" not in text.lower() and "Research console" not in text
+    assert "research-label" not in admin
+    for ident in ("r-member", "r-intent", "r-text", "r-start", "r-step", "r-days", "r-log", "r-cards"):
+        _by_id(_tree(admin), ident)
+
+
+def test_rev3_real_input_screen_lists_gates_from_the_api(admin, client):
+    from daypart.governance import real_input
+
+    assert real_input.REAL_INPUT_BUILD_ALLOWED is False
+    root = _tree(admin)
+    sec = _by_id(root, "screen-input")
+    panel = _by_id(root, "ri-panel")
+    assert _is_inside(panel, sec) and panel.attrs.get("aria-live") == "polite" and not panel.children
+    r = client.post("/api/mode", json={"real_input": True})
+    assert r.status_code == 403 and len(r.json()["open_gates"]) == 12
+    src = (Path(__file__).resolve().parents[2] / "daypart/demo/static/index.html").read_text()
+    for g in r.json()["open_gates"]:
+        assert g["label"] not in src, g["label"]  # the gate labels come from the API, never the page
+    ri = _section(_script(admin), "async function realInput", "\n}\n")
+    assert '"POST", "/api/mode"' in ri and "res.status === 403" in ri and 'el("ol", "gates' in ri
+    assert ".gates{columns:1" in _style(admin) and "@media (min-width:48rem){.gates{columns:2}}" in _style(admin)
+
+
+@pytest.mark.parametrize("fail", [[500, {"error": "internal"}], "network"])
+def test_rev3_real_input_failure_notice_takes_focus_and_try_again_shows_the_gates(fail):
+    """QG P6.2 K6: a non-403 answer (5xx or no network) shows the §3.8 notice, which takes focus; its
+    Try again re-sends the request and, on the 403, opens the gate list with aria-expanded="true"."""
+    import json
+
+    got = _run_page(
+        ["$", "el", "attrs", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError", "showError", "riBusy", "realInput"],
+        """
+        var b = mk("ri-btn", "button"), panel = mk("ri-panel");
+        b.setAttribute("aria-expanded", "false");
+        RESP.push(FAIL);
+        await realInput();
+        var n = panel.children[0], out = { role: n.getAttribute("role"), text: n.textContent, focused: document.activeElement === n,
+          expanded: b.getAttribute("aria-expanded") };
+        RESP.push([403, { open_gates: [{ label: "Gate one", owner: "Owner" }, { label: "Gate two", owner: "Owner" }] }]);
+        panel.querySelector("button").click();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        out.after = [panel.querySelector("h2").textContent, panel.querySelectorAll("li").map(function (li) { return li.textContent; }),
+          b.getAttribute("aria-expanded"), CALLS.length];
+        return out;
+        """.replace("FAIL", json.dumps(fail)),
+    )
+    assert got["role"] == "alert" and got["focused"] and got["expanded"] == "true"
+    assert "Something went wrong" in got["text"] and "Try again" in got["text"]
+    assert ("error 500" in got["text"]) if fail != "network" else ("could not reach the server" in got["text"])
+    assert got["after"] == ["Real input is off and cannot be turned on in this build",
+                            ["Gate one · open · Owner", "Gate two · open · Owner"], "true", 2]
+
+
+def test_rev3_console_api_strings_never_reach_an_html_sink(admin):
+    js = _script(admin)
+    for start, end in (("/* ---------- #pipeline", "/* ---------- #input"), ("/* ---------- #input", "/* ---------- wiring")):
+        part = _section(js, start, end)
+        for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
+            assert sink not in part, (start, sink)
+
+
+def test_rev3_console_reduced_motion_and_tap_targets(admin):
+    css = _style(admin)
+    assert "@media (prefers-reduced-motion:reduce){\n  *,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important" in css
+    assert ".a-nav a{display:flex;align-items:center;gap:var(--s2);min-height:var(--tap)" in css
+    assert ".a-side-foot a{display:inline-flex;align-items:center;min-height:var(--tap)}" in css
+    assert "--tap:44px" in css

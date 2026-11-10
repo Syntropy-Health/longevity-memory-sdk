@@ -226,7 +226,7 @@ New code lives under `engine/daypart/`. Existing modules are extended, never for
 | Timeline (AM-2 D3, G33) | `passport/timeline.py` | `await timeline(journal) -> Timeline` (read-only; prefix views; newest `MAX_ENTRIES` = 60) | app | passport view, next step, journal |
 | Surfaces (AM-2 D1, G31) | `demo/surfaces.py` | `render_surface(source, "member"\|"admin") -> str`; `SurfaceMarkupError` at startup | app | — |
 | App routes | `demo/app.py` (extended) | the endpoints below | UI | all of the above |
-| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | member app at `/` (4 screens) + research console at `/admin` (3 screens), one source, two shells (AM-2 D1, G31) | judges | API |
+| UI | `demo/static/index.html` (rebuilt); the vendored `axe.min.js` lives in `tests/ui/vendor/` and is never served (plan G10) | member app at `/` (5 screens) + research console at `/admin` (5 screens), one source, two shells, visual spec rev 3 (AM-2 D1, G31, G35, G36) | judges | API |
 | UI CI | `tests/ui/test_journey_a11y.py`, job `demo-ui` in `engine.yml` | axe, keyboard, 375 px, reduced motion | CI | Playwright |
 | Submission pack | `docs/daypart/submission/` + `tests/unit/test_submission_pack_unit.py` | layout §4.11 and the claim-ledger check | judges | — |
 
@@ -534,18 +534,22 @@ The app still starts in demo mode, logs one refusal line listing the open gate i
 
 ### 4.10 UI routes
 
-*As amended by AM-2 D1/D2 (2026-11-10, G31/G32).* Two surfaces, served from one page source
+*As amended by AM-2 D1/D2/D3 (2026-11-10, G31–G33) and visual spec rev 3 (G35, G36).* Two surfaces, served from one page source
 (`static/index.html`, member- and admin-marked blocks; `demo/surfaces.py` keeps one side):
 
-- **Member app** at `/`: hash routes `#checkin` (default), `#review/<id>`, `#passport`, `#next`
-  (P6.2 adds the adaptation timeline). The nav and every link stay on the member app: an
-  evidence-thread link the API points at a research route (`#research`, `#lab/<run>`) is shown as
-  text. It opens on the seeded persona's journal; "Start a fresh journal" makes an empty one.
-- **Research console** at `/admin`: `#lab` (default), `#inventory` (the concept registry from
-  `/api/inventory`), `#research` (the old episode/intent/draft playground, labelled "Research
-  playground"; the only place "Intent"/"Draft" may appear), links to the member app, `/results`
-  and `/docs`. The "Real input" control is in its footer only: it calls `POST /api/mode` and shows
-  the refusal and gate list in an `aria-live` region.
+- **Member app** at `/`: hash routes `#today` (default; `#checkin` is its alias), `#review/<id>`
+  (a save shows "Your clone updated" in place), `#passport`, `#next`, `#timeline` (G33, G35). The
+  nav and every link stay on the member app: an evidence-thread link the API points at a research
+  route (`#research`, `#lab/<run>`) is shown as text. It opens on the seeded persona's journal;
+  "Start a fresh journal" makes an empty one.
+- **Research console** at `/admin` (sidebar shell, rev 3 §4; G36): hash routes `#pipeline`
+  (default: the static live loop plus KPIs and the offline lane read per request from `/api/lab`),
+  `#lab[/<run_id>]`, `#inventory` (the concept registry from `/api/inventory`, one table row per
+  vertical), `#playground` (alias `#research`; the old episode/intent/draft playground, the only
+  place "Intent"/"Draft" may appear) and `#input` (the "Request real input" control: `POST
+  /api/mode` and the refusal with its gate list in an `aria-live` region). `/admin/<route>` serves
+  the same shell and is rewritten to `/admin#<route>`. The nav also links Dashboard ↗ (`/results`,
+  new tab), and the sidebar links the member app and `/docs`.
 
 On each surface there is one `<main>`, one `<h1>` per screen, and focus moves to the screen `<h1>`
 on route change. There is no banner (AM-2 D2).
@@ -616,14 +620,18 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
   of "Demo mode", "Synthetic data only", "Not for clinical use", "Research view (optional)" and
   does not contain "Your real input, evaluation from vetted sources".
 - T1.3 [sealed] no JSON response from the new endpoints contains the real-input phrase.
-- T1.5 [sealed] `/openapi.json` `info.title` == "Clinical Human Clone API" (the FastAPI `title` is
-  renamed; the description says synthetic only, not medical advice).
+- T1.5 [sealed] (as amended by AM-2 D2, G38) `/openapi.json` `info.title` == "Clinical Human Clone
+  API" (the FastAPI `title` is renamed); the description says "Real input is off in this build" and
+  "Not medical advice", and is neutral: it names no synthetic or demo data, no clinical review and no
+  regulatory status (that disclosure lives in `docs/daypart/submission/assumptions-limits.md`).
 - T1.4 the Streamlit dashboard page title and headers say "Clinical Human Clone: research view"
   (unit test on the strings).
 
 **R2: text check-in**
-- T2.1 [ui] `#checkin` shows the heading "What matters today?", a labelled textarea and the
-  warning text "Do not enter real health data".
+- T2.1 [ui] (as amended by G32, G35) `#today` (`#checkin` is its alias) shows the h1 "What matters
+  today, <first name>?" ("What matters today?" on a fresh journal), a labelled textarea and the
+  `#ci-pii` hint "Leave out names, e-mail addresses, phone numbers and dates of birth." in the
+  textarea's `aria-describedby`; the PII refusal (422 `looks_like_personal_data`) is unchanged.
 - T2.2 [sealed] POST text "slept 6 hours and walked 8000 steps" → 201 with ≥2 proposals
   (`93832-4` value 6 `h`, `55423-8` value 8000). Immediately after, the journal's `EventLog` length
   is unchanged and `GET passport` has no observed card for either concept.
@@ -713,11 +721,14 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
   YAML.
 
 **R10: accessibility**
-- T10.1 [ui] axe-core (tags wcag2a, wcag2aa, wcag21a, wcag21aa) on each of the 5 routes with a
-  realistic state → 0 violations with impact serious or critical.
-- T10.2 [ui] a keyboard-only journey (Tab, Shift+Tab, Enter, Space, arrow keys only; no mouse)
-  completes check-in (fixture) → review → passport → open a thread → choose → lab. Each focused
-  element has a computed outline or box-shadow different from its unfocused state.
+- T10.1 [ui] (as amended by G38) axe-core (tags wcag2a, wcag2aa, wcag21a, wcag21aa) on each of the
+  10 routes with a realistic state, the 5 member routes at `/` (today, review, passport, next,
+  timeline) and the 5 console routes at `/admin` (pipeline, lab, inventory, playground, input) →
+  0 violations with impact serious or critical.
+- T10.2 [ui] (as amended by G38) a keyboard-only journey (Tab, Shift+Tab, Enter, Space, arrow keys
+  only; no mouse) completes check-in (fixture) → review → passport → open a thread → choose → View
+  timeline (Enter toggles an entry), then the learning lab on the console at `/admin#lab`. Each
+  focused element has a computed outline or box-shadow different from its unfocused state.
 - T10.3 [ui] at a 375×812 viewport, on every route, `scrollWidth <= clientWidth`.
 - T10.4 [ui] with `prefers-reduced-motion: reduce` emulated, every element has a computed
   `animation-duration` and `transition-duration` of 0s.
