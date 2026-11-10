@@ -146,7 +146,7 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
         description=(
             "Clinical Human Clone and Health Clone Passport API: the member check-in journey (check-in, "
             "review, passport, next step, timeline) and the research console (training results, health "
-            "areas, simulated coaching sessions). Real input is off in this build. Not medical advice."
+            "areas, coaching sessions). Real input is off in this build. Not medical advice."
         ),
         version="0.1.0",
     )

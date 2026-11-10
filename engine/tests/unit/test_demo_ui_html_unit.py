@@ -378,7 +378,7 @@ def test_t1_5_openapi_title_and_description(client):
     # for clinical use"); the synthetic-data disclosure is in docs/daypart/submission/assumptions-limits.md.
     # HAC-76: on-screen labels went; the API contract (T1.5) keeps "Real input is off in this build".
     assert "not medical advice" in d and "real input is off in this build" in d and "playground" not in d
-    for word in ("synthetic", "demo", "not for clinical use", "clinically", "fda", "regulat", "approved", "reviewed by"):
+    for word in ("synthetic", "simulated", "demo", "not for clinical use", "clinically", "fda", "regulat", "approved", "reviewed by"):
         assert word not in d, word
 
 
