@@ -1722,9 +1722,11 @@ function rangeCell(r) {
   dd.append(link(r.source_url, "Range source: " + (host || "not recorded"), "ref-src"));
   return dd;
 }
-/* AM-2 D1 (G31): the member app never links into the research console (#lab, #research, #inventory);
-   such an evidence-thread link is shown as its text only. */
-var ADMIN_HASH = /^#(lab|research|inventory)(\/|$)/;
+/* AM-2 D1 (G31): the member app never links into the research console; such an evidence-thread link
+   is shown as its text only. The list is every console route (app.ADMIN_ROUTES) plus the #research
+   alias, so a later link to any of them stays text too (QG P6.2 B4; a unit test pins the list). */
+var ADMIN_CONSOLE_ROUTES = ["pipeline", "lab", "inventory", "playground", "input", "research"];
+var ADMIN_HASH = new RegExp("^#(" + ADMIN_CONSOLE_ROUTES.join("|") + ")(/|$)");
 function memberLink(u) { return safeHref(u) !== null && !ADMIN_HASH.test(u); }
 function viewText(u) { return u.indexOf("/api/fixtures/") === 0 ? "view file" : "view"; }
 function thread(steps) {

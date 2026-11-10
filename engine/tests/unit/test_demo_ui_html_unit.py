@@ -796,7 +796,7 @@ def test_c3_already_saved_revisit_shows_no_count():
     assert not re.search(r"Saved \d", got[2]), got[2]
 
 
-_THREAD = ["STEP_NAMES", "ADMIN_HASH", "memberLink", "viewText", "thread"]
+_THREAD = ["STEP_NAMES", "ADMIN_CONSOLE_ROUTES", "ADMIN_HASH", "memberLink", "viewText", "thread"]
 _STEPS_TAIL = """{ label: "Memory core-v1+u1", ontology_version: "core-v1+u1", readiness: "ready", link: "#passport/inventory" },
   { label: "none", status: "suppressed", links: [], note: "no source" },
   { label: "none", rule_version: "boundary-v1", run_id: null, link: "" }"""
@@ -843,6 +843,25 @@ def test_am2_d1_learning_run_link_is_text_in_the_member_app():
         """,
     )
     assert got == {"text": got["text"], "links": 0} and "tag/dpo" in got["text"]
+
+
+def test_b4_member_never_links_any_console_route():
+    """QG P6.2 B4: the member app treats every console route (``app.ADMIN_ROUTES``) and the #research
+    alias as the console's, so an evidence link to any of them is text, never a link."""
+    import json
+
+    from daypart.demo.app import ADMIN_ROUTES
+
+    console = list(ADMIN_ROUTES) + ["research"]
+    got = _run_page(_BASE + ["ADMIN_CONSOLE_ROUTES", "ADMIN_HASH", "memberLink"], f"""
+        var c = {json.dumps(console)};
+        return {{ routes: ADMIN_CONSOLE_ROUTES, bare: c.map(function (r) {{ return memberLink("#" + r); }}),
+          deep: c.map(function (r) {{ return memberLink("#" + r + "/x"); }}),
+          member: ["#passport", "#review/ci-1", "#timeline", "#labs", "/api/journals/j1/observations/r1"].map(memberLink) }};
+    """)
+    assert sorted(got["routes"]) == sorted(console)
+    assert not any(got["bare"]) and not any(got["deep"])
+    assert all(got["member"])  # member routes, and a word that only starts like a console route, stay links
 
 
 def test_c5_simulated_source_is_never_called_a_check_in():
