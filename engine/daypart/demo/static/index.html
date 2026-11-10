@@ -5,257 +5,422 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clinical Human Clone</title>
 <style>
-/* ============ 1. Tokens (the only colours allowed) ============ */
+/* =====================================================================================
+   Clinical Human Clone · visual spec rev 3 (HAC-68, AM-2). Shipping CSS: copy as is.
+   Design source: 21st.dev Magic "Deployment Pipeline" (stage rail) and "Timeline"
+   (day-grouped feed, drawing connector). Ported to plain CSS: no Tailwind, no React,
+   no fonts, no CDN, no build step.
+   Two surfaces share the base and differ by [data-surface] on <body>:
+     member  = "Clone" identity: deep navy, periwinkle action, aurora glow, roomy cards.
+     admin   = "Research console": graphite, fuchsia operator accent, grid, dense, mono-first.
+   ===================================================================================== */
 :root{
-  --ink:#183446; --blue:#2B6F8A; --mineral:#E8F2F3; --teal:#247F72; --amber:#A65C16; --white:#FFFFFF;
-
-  /* roles */
-  --c-page:var(--mineral); --c-surface:var(--white); --c-text:var(--ink); --c-text-muted:var(--blue);
-  --c-border:var(--blue); --c-border-quiet:var(--mineral);
-  --c-action:var(--blue); --c-action-hover:var(--ink); --c-on-action:var(--white);
-  --c-observed:var(--teal); --c-warn:var(--amber); --c-focus:var(--ink);
-
-  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-  --fs-sm:.875rem; --fs-md:1rem; --fs-lg:1.25rem; --fs-xl:1.75rem; --lh:1.5;
-
+  /* palette: member */
+  --m-bg:#070B14; --m-surface:#0F1729; --m-raised:#16213A; --m-text:#EAF0FA; --m-muted:#A9B8D0;
+  --m-line:#5E7397; --m-hair:#24324F; --m-action:#9AA8FF; --m-glow-a:#9AA8FF2E; --m-glow-b:#4FD8C41F;
+  /* palette: admin */
+  --a-bg:#09090B; --a-surface:#111114; --a-raised:#18181C; --a-text:#EDEDF0; --a-muted:#A6A6B0;
+  --a-line:#71717E; --a-hair:#26262C; --a-action:#F08CF5; --a-glow-a:#F08CF526; --a-grid:#FFFFFF0A;
+  /* shared semantic hues (provenance and system warning only; never health) */
+  --observed:#4FD8C4; --warn:#F6B95C; --ink-on:#070B14;
+  /* type: system stack only */
+  --font:"Inter var",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --fs-xs:.75rem; --fs-sm:.875rem; --fs-md:1rem; --fs-lg:1.25rem; --fs-xl:1.75rem; --fs-2xl:2.25rem; --lh:1.5;
+  /* space 4-pt */
   --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem; --s5:1.5rem; --s6:2rem; --s7:3rem;
-  --r1:4px; --r2:8px; --bw:1px; --bw-strong:2px; --bar:4px;
-  --focus-w:3px; --focus-off:2px; --tap:44px; --measure:44rem;
-  --t-fast:120ms;
+  --r1:6px; --r2:12px; --r3:20px; --r-pill:999px; --bw:1px; --bw-strong:2px; --bar:3px;
+  --focus-w:3px; --focus-off:2px; --tap:44px; --measure:46rem; --wide:72rem;
+  --t-fast:120ms; --t-enter:520ms; --ease:cubic-bezier(.2,.8,.2,1);
 }
-
-/* ============ 2. Base ============ */
+/* role tokens per surface */
+[data-surface="member"]{
+  --c-bg:var(--m-bg); --c-surface:var(--m-surface); --c-raised:var(--m-raised); --c-text:var(--m-text);
+  --c-muted:var(--m-muted); --c-line:var(--m-line); --c-hair:var(--m-hair); --c-action:var(--m-action);
+  --c-on-action:var(--ink-on); --c-glow:var(--m-glow-a); --c-focus:var(--m-text);
+}
+[data-surface="admin"]{
+  --c-bg:var(--a-bg); --c-surface:var(--a-surface); --c-raised:var(--a-raised); --c-text:var(--a-text);
+  --c-muted:var(--a-muted); --c-line:var(--a-line); --c-hair:var(--a-hair); --c-action:var(--a-action);
+  --c-on-action:var(--a-bg); --c-glow:var(--a-glow-a); --c-focus:var(--a-text);
+}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--c-page);color:var(--c-text);font:var(--fs-md)/var(--lh) var(--font);overflow-wrap:anywhere}
-h1,h2,h3{line-height:1.25;margin:0 0 var(--s3)}
-h1{font-size:var(--fs-xl)} h2{font-size:var(--fs-lg)} h3{font-size:var(--fs-md)}
+body{margin:0;font:var(--fs-md)/var(--lh) var(--font);color:var(--c-text);background:var(--c-bg);
+  overflow-wrap:anywhere;-webkit-font-smoothing:antialiased;min-height:100vh}
+/* decorative backdrops (behind content, never under text without an opaque surface) */
+[data-surface="member"]{background:
+  radial-gradient(60rem 30rem at 85% -10%,var(--m-glow-a),transparent 60%),
+  radial-gradient(40rem 24rem at -10% 10%,var(--m-glow-b),transparent 60%),var(--m-bg) no-repeat}
+[data-surface="admin"]{background:
+  linear-gradient(var(--a-grid) 1px,transparent 1px) 0 0/24px 24px,
+  linear-gradient(90deg,var(--a-grid) 1px,transparent 1px) 0 0/24px 24px,var(--a-bg)}
+h1,h2,h3{line-height:1.2;letter-spacing:-.02em;margin:0 0 var(--s3)}
+h1{font-size:var(--fs-xl);font-weight:700}
+h2{font-size:var(--fs-lg);font-weight:650}
+h3{font-size:var(--fs-md);font-weight:650}
 p{margin:0 0 var(--s3)}
-a{color:var(--blue);text-decoration:underline;text-underline-offset:2px}
-a:hover{color:var(--ink)}
-code,.mono{font-family:var(--mono);font-size:var(--fs-sm)}
-.muted{color:var(--c-text-muted)}
-.small{font-size:var(--fs-sm)}
-.visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wrap{max-width:var(--measure);margin:0 auto;padding:0 var(--s4)}
+a{color:var(--c-action);text-underline-offset:3px}
+a:hover{color:var(--c-text)}
+code,.mono{font-family:var(--mono);font-size:.875em}
+.num{font-variant-numeric:tabular-nums}
+.small{font-size:var(--fs-sm)} .xs{font-size:var(--fs-xs)}
+.muted{color:var(--c-muted)}
+.eyebrow{font:600 var(--fs-xs)/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--c-muted);margin:0 0 var(--s2)}
+.visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:absolute;left:var(--s4);top:-4rem;z-index:10;background:var(--c-action);color:var(--c-on-action);padding:var(--s2) var(--s4);border-radius:var(--r1);font-weight:700}
+.skip:focus{top:var(--s4)}
+/* focus: 3 px outline in the surface text colour + a bg-colour halo so it reads on fills */
+:focus{outline:none}
+:focus-visible{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off);box-shadow:0 0 0 calc(var(--focus-off) + var(--focus-w) + 2px) var(--c-bg)}
+h1[tabindex="-1"]:focus{outline:none;box-shadow:none}
+input:focus,select:focus,textarea:focus,input:focus-within{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off)}
+.opt input:focus{outline:none}
+.notice[tabindex="-1"]:focus,.clone-updated[tabindex="-1"]:focus{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off)}
+
+/* ---------- layout ---------- */
+.wrap{max-width:var(--wide);margin:0 auto;padding:0 var(--s4)}
+.measure{max-width:var(--measure)}
 @media (min-width:48rem){.wrap{padding:0 var(--s5)}}
+main.wrap{padding-top:var(--s5);padding-bottom:var(--s7)}
+.grid-2{display:grid;gap:var(--s4)} @media (min-width:56rem){.grid-2{grid-template-columns:1.25fr 1fr}}
+.stack>*+*{margin-top:var(--s4)}
 
-/* ============ 3. Focus — one rule, every interactive element ============ */
-:where(a,button,input,select,textarea,summary,[tabindex]):focus-visible{
-  outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off);
-  box-shadow:0 0 0 calc(var(--focus-off) + var(--focus-w) + 2px) var(--white);
-}
-h1[tabindex="-1"]:focus,h1[tabindex="-1"]:focus-visible{outline:none;box-shadow:none} /* programmatic focus target on route change; not interactive */
+/* ---------- surfaces ---------- */
+.panel{background:var(--c-surface);border:var(--bw) solid var(--c-hair);border-radius:var(--r2);padding:var(--s5)}
+[data-surface="member"] .panel{border-radius:var(--r3);box-shadow:0 1px 0 #FFFFFF0D inset,0 24px 48px -24px #00000099}
+.panel--glow{position:relative;border-color:var(--c-line)}
+.panel--glow::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg,var(--c-action),transparent 40%,transparent 60%,var(--observed));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.7}
+[data-surface="admin"] .panel{padding:var(--s4)}
 
-/* ============ 4. Motion ============ */
-button,.btn,a,input,textarea,select,summary{transition:background-color var(--t-fast),color var(--t-fast),border-color var(--t-fast)}
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:0s!important;animation-iteration-count:1!important;transition-duration:0s!important;scroll-behavior:auto!important}
-}
-
-/* ============ 5. Banner + header + stepper ============ */
-.banner{background:var(--ink);color:var(--white);font-size:var(--fs-sm);font-weight:600}
-.banner .wrap{display:flex;gap:var(--s2);align-items:center;min-height:2.5rem;padding-block:var(--s2)}
-.banner .ico{flex:none}
-.ico-i{display:inline-grid;place-items:center;width:1.25em;height:1.25em;border:2px solid currentColor;border-radius:50%;font:700 .75em/1 var(--font);font-style:normal}
-.site-head{background:var(--white);border-bottom:var(--bw) solid var(--blue)}
-.site-head .wrap{padding-block:var(--s3)}
-.brand{font-weight:700;font-size:var(--fs-lg);margin:0}
-.brand small{display:block;font-weight:400;font-size:var(--fs-sm);color:var(--blue)}
-.steps{list-style:none;margin:var(--s3) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);counter-reset:step}
-.steps a{display:inline-flex;align-items:center;gap:var(--s1);min-height:var(--tap);padding:0 var(--s2);border-radius:var(--r1);color:var(--ink);text-decoration:none;font-size:var(--fs-sm)}
-.steps a::before{counter-increment:step;content:counter(step);display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;border:var(--bw-strong) solid var(--blue);border-radius:50%;font-weight:700;color:var(--blue)}
-.steps a:hover{text-decoration:underline}
-.steps a[aria-current="step"]{font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
-.steps a[aria-current="step"]::before{background:var(--blue);color:var(--white)}
-
-main{padding-block:var(--s5) var(--s7)}
-.screen-intro{margin-bottom:var(--s5)}
-
-/* ============ 6. Surfaces ============ */
-.panel{background:var(--white);border:var(--bw) solid var(--blue);border-radius:var(--r2);padding:var(--s4);margin-bottom:var(--s4)}
-@media (min-width:48rem){.panel{padding:var(--s5)}}
-
-/* Notice: amber bar + icon + word. Never amber alone. */
-.notice{background:var(--white);border:var(--bw) solid var(--amber);border-left-width:var(--bar);border-radius:var(--r1);padding:var(--s3) var(--s4);margin-bottom:var(--s4);display:grid;grid-template-columns:auto 1fr;gap:var(--s2)}
-.notice .ico{color:var(--amber);font-weight:700}
-.notice-title{color:var(--amber);font-weight:700;margin:0}
-.notice p,.notice ul{margin:0 0 var(--s2)} .notice ul{padding-left:var(--s5)}
-.notice--info{border-color:var(--blue)} .notice--info .ico,.notice--info .notice-title{color:var(--blue)}
-.notice--ok{border-color:var(--teal)} .notice--ok .ico,.notice--ok .notice-title{color:var(--teal)}
-/* HAC-48: crisis hand-off. Ink, not amber (not a system fault) and not teal (not a success). */
-.notice--handoff{border-color:var(--ink)} .notice--handoff .ico,.notice--handoff .notice-title{color:var(--ink)}
-.notice--handoff .handoff-text{font-size:var(--fs-md);font-weight:600}
-.notice:focus{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off)}
-
-/* ============ 7. Buttons ============ */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);min-height:var(--tap);padding:0 var(--s4);border-radius:var(--r1);font:600 var(--fs-md)/1.2 var(--font);cursor:pointer;text-decoration:none;border:var(--bw-strong) solid var(--blue)}
-.btn--primary{background:var(--blue);color:var(--white)}
-.btn--primary:hover{background:var(--ink);border-color:var(--ink);color:var(--white)}
-.btn--secondary{background:var(--white);color:var(--ink)}
-.btn--secondary:hover{background:var(--mineral)}
-.btn:disabled,.btn[aria-disabled="true"]{cursor:not-allowed;background:var(--white);color:var(--blue);border-style:dashed}
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);min-height:var(--tap);padding:0 var(--s5);
+  font:650 var(--fs-md)/1 var(--font);border-radius:var(--r-pill);border:var(--bw-strong) solid var(--c-line);
+  background:transparent;color:var(--c-text);cursor:pointer;text-decoration:none;transition:background-color var(--t-fast),color var(--t-fast),border-color var(--t-fast)}
+.btn--primary{background:var(--c-action);border-color:var(--c-action);color:var(--c-on-action)}
+.btn--primary:hover{background:var(--c-text);border-color:var(--c-text);color:var(--c-on-action)}
+.btn--secondary:hover{background:var(--c-raised);color:var(--c-text);border-color:var(--c-text)}
+.btn[disabled],.btn[aria-disabled="true"]{border-style:dashed;color:var(--c-muted);background:transparent;cursor:not-allowed}
+.btn--primary[aria-disabled="true"]{border-color:var(--c-action);color:var(--c-muted)}
+[data-surface="admin"] .btn{border-radius:var(--r1);font-size:var(--fs-sm);padding:0 var(--s4)}
 .btn-row{display:flex;flex-wrap:wrap;gap:var(--s3);margin-top:var(--s4)}
-@media (max-width:30rem){.btn-row--stack .btn{flex:1 1 100%}}
+@media (max-width:30rem){.btn-row--stack{flex-direction:column}.btn-row--stack .btn{width:100%}}
 
-/* ============ 8. Form controls ============ */
-label,.label{display:block;font-weight:600;margin-bottom:var(--s1)}
-.hint{display:block;font-size:var(--fs-sm);color:var(--blue);margin-bottom:var(--s2);font-weight:400}
-textarea,input[type=text],input[type=number],input[type=date],select{width:100%;max-width:100%;font:inherit;color:var(--ink);background:var(--white);border:var(--bw-strong) solid var(--blue);border-radius:var(--r1);padding:var(--s2) var(--s3);min-height:var(--tap)}
+/* ---------- tags (glyph + word; border style is the third cue) ---------- */
+.tags{display:flex;flex-wrap:wrap;gap:var(--s2);list-style:none;margin:0 0 var(--s3);padding:0}
+.tag{display:inline-flex;align-items:center;gap:.35em;min-height:1.75rem;padding:0 .7em;border-radius:var(--r-pill);
+  border:var(--bw) solid var(--c-line);font:650 var(--fs-xs)/1 var(--font);letter-spacing:.02em;color:var(--c-text);background:var(--c-bg)}
+.tag--observed{background:var(--observed);border-color:var(--observed);color:var(--ink-on)}
+.tag--ready{color:var(--observed);border-color:var(--observed)}
+.tag--simulated,.tag--withheld,.tag--proposed{border-style:dashed;color:var(--c-muted)}
+.tag--flag{color:var(--warn);border-color:var(--warn)}
+.tag--live{color:var(--c-action);border-color:var(--c-action)}
+.tag--offline{color:var(--c-muted);border-style:dashed}
+.tag--console{background:var(--a-action);border-color:var(--a-action);color:var(--a-bg);font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em}
+.nr{color:var(--c-muted);font-style:italic} .nr::before{content:"— "}
+
+/* ---------- notices ---------- */
+.notice{display:flex;gap:var(--s3);align-items:flex-start;background:var(--c-surface);border:var(--bw) solid var(--c-hair);
+  border-left:var(--bar) solid var(--warn);border-radius:var(--r2);padding:var(--s4);margin:0 0 var(--s4)}
+.notice>div{min-width:0}
+.notice .notice-title{font-weight:700;margin:0 0 var(--s1);color:var(--warn)}
+.notice .ico{flex:none;width:1.5rem;height:1.5rem;display:grid;place-items:center;color:var(--warn);font-weight:700}
+.notice--info{border-left-color:var(--c-action)} .notice--info .notice-title,.notice--info .ico{color:var(--c-action)}
+.notice--ok{border-left-color:var(--observed)} .notice--ok .notice-title,.notice--ok .ico{color:var(--observed)}
+.notice--handoff{border-left-color:var(--c-text)} .notice--handoff .notice-title,.notice--handoff .ico{color:var(--c-text)}
+.ico-i{border:var(--bw-strong) solid currentColor;border-radius:50%;font:700 .8rem/1 var(--font)}
+.handoff-text{font-weight:600}
+.notice ul{margin:var(--s2) 0;padding-left:1.2em}
+
+/* ---------- forms ---------- */
+.field{display:grid;gap:var(--s2);margin-bottom:var(--s4)}
+label,legend{font-weight:650}
+.hint{display:block;font-weight:400;color:var(--c-muted);font-size:var(--fs-sm)}
+textarea,input,select{font:inherit;color:var(--c-text);background:var(--c-bg);border:var(--bw-strong) solid var(--c-line);
+  border-radius:var(--r2);padding:var(--s3);min-height:var(--tap);width:100%;max-width:100%}
 textarea{min-height:7rem;resize:vertical}
-[aria-invalid="true"]{border-color:var(--amber);border-left-width:var(--bar)}
-.field{margin-bottom:var(--s4)}
-.counter{font-size:var(--fs-sm);color:var(--blue);text-align:right;margin-top:var(--s1)}
-.choice-list{list-style:none;padding:0;margin:0;display:grid;gap:var(--s2)}
-.unavailable{display:flex;flex-wrap:wrap;gap:var(--s3)}
-
-/* radio "segmented" decision group */
-.decision{border:0;padding:0;margin:var(--s3) 0 0;min-width:0}
-.decision legend{font-weight:600;margin-bottom:var(--s2);padding:0}
-.decision .opts{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
-@media (min-width:40rem){.decision .opts{grid-template-columns:repeat(4,1fr)}}
-.opt{position:relative}
-.opt input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
-.opt span{display:flex;align-items:center;justify-content:center;gap:var(--s1);min-height:var(--tap);padding:var(--s1) var(--s2);border:var(--bw-strong) solid var(--blue);border-radius:var(--r1);background:var(--white);font-weight:600;font-size:var(--fs-sm);text-align:center}
-.opt span::before{content:"○";font-weight:700}
-.opt input:checked + span{background:var(--blue);color:var(--white)}
-.opt input:checked + span::before{content:"●"}
-.opt input:focus-visible + span{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off)}
-.opt input:disabled + span{border-style:dashed;color:var(--blue);cursor:not-allowed}
-.opt input:disabled + span::before{content:"⊘"}
-
-/* ============ 9. Tags (status = icon + word, colour is secondary) ============ */
-.tag{display:inline-flex;align-items:center;gap:var(--s1);font-size:var(--fs-sm);font-weight:700;line-height:1.2;padding:var(--s1) var(--s2);border-radius:var(--r1);border:var(--bw-strong) solid currentColor;background:var(--white);color:var(--ink);white-space:nowrap}
-.tag--observed{background:var(--teal);border-color:var(--teal);color:var(--white)}
-.tag--simulated{color:var(--blue);border-style:dashed}
-.tag--ready{color:var(--teal)}
-.tag--withheld{color:var(--blue);border-style:dashed}
-.tag--flag{color:var(--amber)}
-.tag--conf{color:var(--ink);border-width:var(--bw)}
-.tags{display:flex;flex-wrap:wrap;gap:var(--s2);margin:0 0 var(--s3);padding:0;list-style:none}
-
-/* ============ 10. Definition grid (meta) ============ */
-.meta{display:grid;grid-template-columns:max-content 1fr;gap:var(--s1) var(--s3);margin:0 0 var(--s3);font-size:var(--fs-sm)}
-.meta dt{color:var(--blue);font-weight:600}
-.meta dd{margin:0}
-
-/* ============ 11. Proposal row (review) ============ */
-.proposal{background:var(--white);border:var(--bw) solid var(--blue);border-radius:var(--r2);padding:var(--s4);margin-bottom:var(--s4)}
-.proposal--blocked{border-color:var(--amber);border-left-width:var(--bar)}
-.proposal-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s2);align-items:baseline}
-.proposal-value{font-size:var(--fs-lg);font-weight:700;margin:0 0 var(--s2)}
-.snippet{margin:0 0 var(--s3);padding:var(--s2) var(--s3);background:var(--mineral);border-left:var(--bar) solid var(--blue);font-style:italic}
-.correct-fields{display:grid;gap:var(--s3);margin-top:var(--s3);padding:var(--s3);border:var(--bw) dashed var(--blue);border-radius:var(--r1)}
-@media (min-width:40rem){.correct-fields{grid-template-columns:2fr 1fr 2fr}}
+.counter{text-align:right;font:var(--fs-xs) var(--mono);color:var(--c-muted)}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+.decision legend{margin-bottom:var(--s2);font-size:var(--fs-sm)}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+@media (min-width:40rem){.opts{grid-template-columns:repeat(4,1fr)}}
+.opt{position:relative;display:block}
+.opt input{position:absolute;opacity:0;inset:0;margin:0;width:100%;height:100%;cursor:pointer}
+.opt span{display:flex;align-items:center;justify-content:center;gap:.3em;min-height:var(--tap);padding:0 var(--s2);text-align:center;
+  border:var(--bw-strong) solid var(--c-line);border-radius:var(--r2);font-weight:650;font-size:var(--fs-sm);transition:background-color var(--t-fast)}
+.opt input:checked+span{background:var(--c-action);border-color:var(--c-action);color:var(--c-on-action)}
+.opt input:checked+span::before{content:"●"}
+.opt input:disabled+span{border-style:dashed;color:var(--c-muted)} .opt input:disabled+span::before{content:"⊘"}
+.opt input:focus-visible+span{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off)}
+.correct-fields{display:grid;gap:var(--s3);border:var(--bw) dashed var(--c-line);border-radius:var(--r2);padding:var(--s4);margin-top:var(--s3)}
+@media (min-width:40rem){.correct-fields{grid-template-columns:1fr 1fr 1fr}}
 .correct-fields .field{margin:0}
-.sticky-submit{position:sticky;bottom:0;background:var(--white);border-top:var(--bw-strong) solid var(--blue);padding:var(--s3) var(--s4);margin:0 calc(-1 * var(--s4));display:flex;flex-wrap:wrap;gap:var(--s3);align-items:center;justify-content:space-between}
 
-/* ============ 12. Passport card ============ */
-.cards{display:grid;gap:var(--s4);align-items:start;grid-template-columns:minmax(0,1fr)}
-@media (min-width:48rem){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.card{background:var(--white);border:var(--bw) solid var(--blue);border-radius:var(--r2);padding:var(--s4);display:flex;flex-direction:column;min-width:0}
-.card--simulated{border-style:dashed}
-.card--withheld{background:var(--white);border-style:dashed}
-.card h3{font-size:var(--fs-lg)}
-.card-value{font-size:var(--fs-xl);font-weight:700;margin:0 0 var(--s2)}
-.card-value .unit{font-size:var(--fs-md);font-weight:600;color:var(--blue)}
-.withheld-msg{font-weight:700;margin:0 0 var(--s2)}
-.explain{border-top:var(--bw) solid var(--mineral);padding-top:var(--s3);margin-top:auto}
-.explain--suppressed .ex-title::before{content:"◌ "}
-.limits{margin:0 0 var(--s3);padding-left:var(--s5);font-size:var(--fs-sm)}
-/* HAC-48 (AM-1): reference range = reference text in the meta grid. No colour, bar, marker or glyph. */
+/* ---------- meta grid ---------- */
+.meta{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:var(--s1) var(--s4);margin:0 0 var(--s3);font-size:var(--fs-sm)}
+.meta dt{color:var(--c-muted);font-weight:600} .meta dd{margin:0;min-width:0}
 .ref-pop,.ref-src{display:block}
 
-/* disclosure */
-details.thread{margin-top:var(--s3);border-top:var(--bw) solid var(--blue);padding-top:var(--s2)}
-details.thread>summary{cursor:pointer;min-height:var(--tap);display:flex;align-items:center;gap:var(--s2);font-weight:700;color:var(--blue);list-style:none;border-radius:var(--r1)}
-details.thread>summary::-webkit-details-marker{display:none}
-details.thread>summary::before{content:"▸";color:var(--ink)}
-details.thread[open]>summary::before{content:"▾"}
-.thread ol{list-style:none;margin:var(--s2) 0 0;padding:0;counter-reset:ts}
-.thread li{counter-increment:ts;position:relative;padding:0 0 var(--s3) var(--s6);border-left:var(--bw-strong) solid var(--blue);margin-left:var(--s3)}
-.thread li:last-child{border-left-color:transparent}
-.thread li::before{content:counter(ts);position:absolute;left:calc(-1 * var(--s3) - 1px);top:0;width:1.5rem;height:1.5rem;display:grid;place-items:center;border-radius:50%;background:var(--white);border:var(--bw-strong) solid var(--blue);font-size:var(--fs-sm);font-weight:700;color:var(--ink)}
-.thread li.none::before{border-style:dashed}
-.ts-name{font-weight:700;display:block}
-.ts-body{font-size:var(--fs-sm)}
+/* =========================== MEMBER SHELL =========================== */
+.m-head{position:relative;z-index:1;border-bottom:var(--bw) solid var(--c-hair);background:var(--m-bg)}
+.m-head .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s5);padding-top:var(--s3);padding-bottom:var(--s3)}
+.brand{display:flex;align-items:center;gap:var(--s3);text-decoration:none;color:var(--c-text);margin-right:auto;min-height:var(--tap)}
+.brand-name{font-weight:750;letter-spacing:-.02em;line-height:1.1}
+.brand-sub{display:block;font:500 var(--fs-xs)/1.2 var(--mono);color:var(--c-muted);letter-spacing:.06em}
+.orb{flex:none;width:32px;height:32px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,var(--m-text),var(--m-action) 35%,var(--observed) 70%,var(--m-bg) 72%);
+  box-shadow:0 0 0 1px var(--m-line),0 0 24px var(--m-glow-a)}
+.persona{display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-sm);color:var(--c-muted)}
+.persona .avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--m-raised);border:var(--bw) solid var(--m-line);color:var(--m-text);font-weight:700;font-size:var(--fs-xs)}
+.mnav{width:100%;order:3}
+.mnav ol{list-style:none;margin:0;padding:var(--s1);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s1);
+  background:var(--m-surface);border:var(--bw) solid var(--m-hair);border-radius:var(--r-pill)}
+.mnav a{display:flex;align-items:center;justify-content:center;gap:.35em;min-height:var(--tap);padding:0 var(--s2);border-radius:var(--r-pill);
+  color:var(--m-muted);text-decoration:none;font-weight:600;font-size:var(--fs-sm);text-align:center;line-height:1.1}
+.mnav a:hover{color:var(--m-text);background:var(--m-raised)}
+.mnav a[aria-current="page"]{background:var(--m-action);color:var(--ink-on)}
+.mnav .g{font-family:var(--mono)}
+@media (max-width:30rem){.mnav .g{display:none}.mnav a{font-size:var(--fs-xs);padding:0}}
+.mnav a{overflow-wrap:normal;word-break:keep-all}
+@media (min-width:64rem){.mnav{width:auto;order:0}.mnav ol{display:flex}.mnav a{padding:0 var(--s4)}}
+.m-foot{border-top:var(--bw) solid var(--c-hair);padding:var(--s5) 0;color:var(--c-muted)}
+.m-foot .loinc{font-size:var(--fs-xs);max-width:var(--measure)}
 
-/* inventory */
-.inv{list-style:none;padding:0;margin:0;display:grid;gap:var(--s2)}
-.inv li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s2);padding:var(--s2) var(--s3);background:var(--white);border:var(--bw) solid var(--blue);border-radius:var(--r1)}
+/* hero + clone status */
+.hero h1{font-size:var(--fs-2xl);font-weight:750;letter-spacing:-.03em}
+@media (max-width:30rem){.hero h1{font-size:var(--fs-xl)}}
+.clone-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3);margin:var(--s4) 0 0;padding:0;list-style:none}
+.stat-k{overflow-wrap:normal}
+.clone-status li{background:var(--m-raised);border:var(--bw) solid var(--m-hair);border-radius:var(--r2);padding:var(--s3) var(--s4)}
+.stat-v{display:block;font:700 var(--fs-xl)/1.1 var(--font);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat-k{display:block;font-size:var(--fs-xs);color:var(--c-muted);margin-top:var(--s1)}
+.live-dot{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;background:var(--observed);box-shadow:0 0 0 3px var(--m-glow-b);margin-right:.4em;vertical-align:.05em}
+
+/* proposal (review) */
+.proposal{background:var(--c-surface);border:var(--bw) solid var(--c-hair);border-radius:var(--r3);padding:var(--s5);margin-bottom:var(--s4)}
+.proposal--blocked{border-left:var(--bar) solid var(--warn)}
+.proposal-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s2)}
+.proposal-head h2{margin:0;font-size:var(--fs-lg)}
+.proposal-value{font:700 var(--fs-xl)/1.1 var(--font);font-variant-numeric:tabular-nums;margin:var(--s2) 0}
+.snippet{margin:0 0 var(--s3);padding-left:var(--s3);border-left:var(--bar) solid var(--c-line);color:var(--c-muted);font-style:italic}
+.sticky-submit{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);
+  padding:var(--s3) var(--s4);margin-top:var(--s4);background:var(--m-raised);border:var(--bw) solid var(--m-line);border-radius:var(--r3);box-shadow:0 -12px 32px -12px #000000CC}
+
+/* clone updated moment */
+.clone-updated{position:relative;overflow:hidden;background:var(--m-surface);border:var(--bw) solid var(--m-line);border-radius:var(--r3);padding:var(--s5)}
+.cu-head{display:flex;align-items:center;gap:var(--s4);margin-bottom:var(--s4)}
+.cu-ring{flex:none;position:relative;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle,var(--m-raised) 58%,transparent 60%),conic-gradient(var(--observed),var(--m-action),var(--observed));color:var(--observed);font-weight:800;font-size:var(--fs-lg)}
+.cu-ring::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:var(--bw-strong) solid var(--observed);opacity:0;animation:cu-pulse var(--t-enter) var(--ease) 1 both}
+@keyframes cu-pulse{from{opacity:.9;transform:scale(.8)}to{opacity:0;transform:scale(1.25)}}
+.cu-head h2{margin:0}
+.delta{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.delta li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s3);align-items:start;padding:var(--s3);
+  background:var(--m-raised);border:var(--bw) solid var(--m-hair);border-radius:var(--r2);animation:rise var(--t-enter) var(--ease) both}
+.delta li:nth-child(2){animation-delay:80ms} .delta li:nth-child(3){animation-delay:160ms} .delta li:nth-child(4){animation-delay:240ms}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (max-width:30rem){.delta li{grid-template-columns:minmax(0,1fr);gap:var(--s1)}}
+.delta .k{font:700 var(--fs-xs)/1.6 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--c-muted);min-width:6.5rem}
+
+/* passport cards */
+.cards{display:grid;gap:var(--s4)} @media (min-width:48rem){.cards{grid-template-columns:1fr 1fr}}
+.card{min-width:0;background:var(--c-surface);border:var(--bw) solid var(--c-line);border-radius:var(--r3);padding:var(--s5)}
+.card--simulated,.card--withheld{border-style:dashed}
+.card-value{font:750 var(--fs-2xl)/1 var(--font);letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:var(--s3) 0}
+.card-value .unit{font-size:var(--fs-md);font-weight:600;color:var(--c-muted);letter-spacing:0}
+.withheld-msg{font-weight:700;margin:var(--s3) 0}
+.limits{margin:0 0 var(--s3);padding-left:1.1em;font-size:var(--fs-sm)}
+.explain{border-top:var(--bw) solid var(--c-hair);padding-top:var(--s3);margin-top:var(--s3)}
+.ex-title{font-weight:700;margin-bottom:var(--s1)}
+details.thread{margin-top:var(--s3);border-top:var(--bw) solid var(--c-hair);padding-top:var(--s2)}
+details.thread summary{cursor:pointer;min-height:var(--tap);display:flex;align-items:center;gap:var(--s2);font-weight:650;font-size:var(--fs-sm);list-style:none}
+details.thread summary::-webkit-details-marker{display:none}
+details.thread summary::before{content:"▸";font-family:var(--mono)} details.thread[open] summary::before{content:"▾"}
+details.thread ol{list-style:none;margin:0;padding:0;counter-reset:ts}
+details.thread li{position:relative;counter-increment:ts;display:grid;grid-template-columns:2rem minmax(0,1fr);gap:var(--s2);padding:0 0 var(--s3);font-size:var(--fs-sm)}
+details.thread li::before{content:counter(ts);width:1.5rem;height:1.5rem;border-radius:50%;display:grid;place-items:center;font:700 var(--fs-xs)/1 var(--mono);border:var(--bw-strong) solid var(--c-action);color:var(--c-action)}
+details.thread li::after{content:"";position:absolute;left:.7rem;top:1.6rem;bottom:.1rem;width:2px;background:var(--c-hair)}
+details.thread li:last-child::after{display:none}
+details.thread li.none::before{border-style:dashed;color:var(--c-muted);border-color:var(--c-line)}
+.ts-name{font-weight:700;display:block}
+.inv{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.inv li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--s2);padding:var(--s3) var(--s4);border:var(--bw) solid var(--c-line);border-radius:var(--r2);background:var(--c-surface)}
 .inv li.gap{border-style:dashed}
 
-/* ============ 13. Next step ============ */
-.suggestion{font-size:var(--fs-lg);font-weight:700;margin:0 0 var(--s3)}
-.reason{border-left:var(--bar) solid var(--blue);padding-left:var(--s3)}
+/* next step */
+.suggestion{font:700 var(--fs-lg)/1.35 var(--font);letter-spacing:-.01em}
+.reason{border-left:var(--bar) solid var(--c-action);padding-left:var(--s3);color:var(--c-muted)}
+.reason strong{color:var(--c-text)}
 
-/* ============ 14. Lab table ============ */
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:var(--bw) solid var(--blue);border-radius:var(--r2);background:var(--white)}
-.table-wrap:focus-visible{outline:var(--focus-w) solid var(--c-focus);outline-offset:var(--focus-off)}
-table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
-caption{text-align:left;font-weight:700;padding:var(--s3) var(--s4)}
-th,td{text-align:left;vertical-align:top;padding:var(--s2) var(--s3);border-top:var(--bw) solid var(--blue)}
-thead th{background:var(--mineral);color:var(--ink)}
-td.num{font-variant-numeric:tabular-nums}
-.nr{color:var(--blue);font-style:italic}
-.nr::before{content:"— "}
-tr.proposed td{border-top-style:dashed}
-.footnote{margin-top:var(--s3);font-size:var(--fs-sm);font-weight:600}
-/* phone: rows become stacked cards; no horizontal scroll at 375 */
-@media (max-width:40rem){
-  .table-wrap{overflow:visible;border:0;background:none}
-  table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
-  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-  table.stack caption{display:block;padding:0 0 var(--s2)}
-  table.stack tr{background:var(--white);border:var(--bw) solid var(--blue);border-radius:var(--r2);margin-bottom:var(--s3);padding:var(--s2) 0}
-  table.stack tr.proposed{border-style:dashed}
-  table.stack td{border:0;display:grid;grid-template-columns:7rem minmax(0,1fr);gap:var(--s2);padding:var(--s1) var(--s3)}
-  table.stack td::before{content:attr(data-label);font-weight:700;color:var(--blue)}
-  table.stack .tag{white-space:normal}
+/* timeline (port of Magic "Timeline": day groups, rail, expandable rows) */
+.tl-day{margin:0 0 var(--s5)}
+.tl-day>h2{position:sticky;top:0;z-index:1;font:700 var(--fs-xs)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--c-muted);
+  background:var(--m-bg);padding:var(--s3) 0;margin:0}
+.tl{list-style:none;margin:0;padding:0}
+.tl>li{position:relative;display:grid;grid-template-columns:1.75rem minmax(0,1fr);gap:var(--s3);padding-bottom:var(--s3)}
+.tl>li::before{content:"";grid-row:1;width:.9rem;height:.9rem;margin:.95rem 0 0 .4rem;border-radius:50%;background:var(--m-bg);border:var(--bw-strong) solid var(--m-action);box-shadow:0 0 0 4px var(--m-glow-a)}
+.tl>li::after{content:"";position:absolute;left:.82rem;top:2.1rem;bottom:0;width:2px;background:linear-gradient(var(--m-line),var(--m-hair));transform-origin:top;animation:draw var(--t-enter) var(--ease) both}
+.tl>li:last-child::after{display:none}
+.tl>li.is-new::before{background:var(--observed);border-color:var(--observed)}
+@keyframes draw{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.tl-item{min-width:0;background:var(--m-surface);border:var(--bw) solid var(--m-hair);border-radius:var(--r2)}
+.tl-item summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s1) var(--s3);align-items:center;padding:var(--s3) var(--s4);min-height:var(--tap)}
+.tl-item summary::-webkit-details-marker{display:none}
+.tl-title{font-weight:650}
+.tl-time{font:var(--fs-xs)/1 var(--mono);color:var(--c-muted);white-space:nowrap}
+.tl-chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--s2);margin:var(--s1) 0 0;padding:0;list-style:none}
+.tl-item[open] summary{border-bottom:var(--bw) solid var(--m-hair)}
+.tl-detail{padding:var(--s3) var(--s4);font-size:var(--fs-sm)}
+.tl-detail ul{margin:0;padding-left:1.1em}
+.chev{font-family:var(--mono);color:var(--c-muted)} .tl-item[open] .chev{transform:rotate(90deg)}
+
+/* =========================== ADMIN SHELL =========================== */
+.a-shell{display:grid;min-height:100vh}
+@media (min-width:64rem){.a-shell{grid-template-columns:15rem minmax(0,1fr)}}
+.a-side{background:var(--a-surface);border-bottom:var(--bw) solid var(--a-hair);padding:var(--s4)}
+@media (min-width:64rem){.a-side{border-bottom:0;border-right:var(--bw) solid var(--a-hair);position:sticky;top:0;height:100vh;display:flex;flex-direction:column}}
+.a-brand{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s4);color:var(--a-text);text-decoration:none;min-height:var(--tap)}
+.a-brand .sq{width:22px;height:22px;border-radius:5px;background:conic-gradient(var(--a-action),var(--observed),var(--a-action));box-shadow:0 0 16px var(--a-glow-a)}
+.a-brand b{font:700 var(--fs-sm)/1.1 var(--mono);letter-spacing:.02em}
+.a-nav ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:var(--s1)}
+@media (min-width:64rem){.a-nav ol{grid-template-columns:1fr}}
+.a-nav a{display:flex;align-items:center;gap:var(--s2);min-height:var(--tap);padding:0 var(--s3);border-radius:var(--r1);color:var(--a-muted);text-decoration:none;font:600 var(--fs-sm)/1.1 var(--font);border:var(--bw) solid transparent}
+.a-nav a:hover{background:var(--a-raised);color:var(--a-text)}
+.a-nav a[aria-current="page"]{background:var(--a-raised);color:var(--a-text);border-color:var(--a-line);box-shadow:inset var(--bar) 0 0 var(--a-action)}
+.a-nav .g{font-family:var(--mono);width:1.25rem;text-align:center;color:var(--a-action)}
+.a-side-foot{margin-top:var(--s4);font-size:var(--fs-xs);color:var(--a-muted)}
+@media (min-width:64rem){.a-side-foot{margin-top:auto}}
+.a-side-foot a{display:inline-flex;align-items:center;min-height:var(--tap)}
+.a-main{min-width:0;padding:var(--s5) var(--s4) var(--s7)}
+@media (min-width:48rem){.a-main{padding:var(--s5) var(--s6) var(--s7)}}
+.a-top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s5);padding-bottom:var(--s4);border-bottom:var(--bw) solid var(--a-hair)}
+.a-top h1{margin:0;font-size:var(--fs-xl)}
+.a-crumb{font:var(--fs-xs)/1 var(--mono);color:var(--a-muted);margin:0 0 var(--s2)}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2);list-style:none;margin:0 0 var(--s5);padding:0}
+@media (min-width:56rem){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kpis li{background:var(--a-surface);border:var(--bw) solid var(--a-hair);border-radius:var(--r1);padding:var(--s3)}
+.kpi-k{display:block;font:600 var(--fs-xs)/1.3 var(--mono);color:var(--a-muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi-v{display:block;font:700 var(--fs-lg)/1.2 var(--mono);font-variant-numeric:tabular-nums;margin-top:var(--s1)}
+.kpi-s{display:block;font:var(--fs-xs)/1.3 var(--mono);color:var(--a-muted)}
+
+/* pipeline diagram (port of Magic "Deployment Pipeline": rail, status pill, mono meta) */
+.lane{margin-bottom:var(--s5)}
+.lane-head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin-bottom:var(--s3)}
+.lane-head h2{margin:0;font-size:var(--fs-md);font-family:var(--mono);letter-spacing:.02em}
+.pipe{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.pipe>li{position:relative;display:grid;grid-template-columns:2rem minmax(0,1fr);gap:var(--s3)}
+.pipe .node{position:relative;display:flex;flex-direction:column;align-items:center}
+.pipe .dot{width:1.75rem;height:1.75rem;margin-top:var(--s3);border-radius:50%;display:grid;place-items:center;font:700 var(--fs-xs)/1 var(--mono);
+  background:var(--a-bg);border:var(--bw-strong) solid var(--a-action);color:var(--a-action);box-shadow:0 0 0 4px var(--a-glow-a)}
+.pipe .wire{flex:1;width:2px;margin-top:var(--s1);background:linear-gradient(var(--a-action),var(--a-line))}
+.pipe>li:last-child .wire{display:none}
+.pipe .stage{min-width:0;background:var(--a-surface);border:var(--bw) solid var(--a-hair);border-radius:var(--r1);padding:var(--s3);margin-bottom:var(--s3)}
+.stage-top{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
+.stage-name{font-weight:700;font-size:var(--fs-sm)}
+.stage-meta{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:2px var(--s3);font:var(--fs-xs)/1.5 var(--mono)}
+.stage-meta dt{color:var(--a-muted)} .stage-meta dd{margin:0;min-width:0}
+.pipe--offline .dot{border-style:dashed;border-color:var(--a-line);color:var(--a-text);box-shadow:none}
+.pipe--offline .wire{background:repeating-linear-gradient(var(--a-line) 0 6px,transparent 6px 10px)}
+.pipe .is-proposed .stage{border-style:dashed;border-color:var(--a-line);background:transparent}
+.pipe .is-proposed .dot{border-style:dotted;color:var(--a-muted)}
+.loop-back{font:var(--fs-xs)/1.4 var(--mono);color:var(--a-muted);border:var(--bw) dashed var(--a-line);border-radius:var(--r1);padding:var(--s2) var(--s3);margin:0}
+@media (min-width:72rem){
+  .pipe{grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--s3)}
+  .pipe>li{grid-template-columns:none;grid-template-rows:auto 1fr;gap:var(--s2)}
+  .pipe .node{flex-direction:row;align-items:center}
+  .pipe .dot{margin-top:0}
+  .pipe .wire{height:2px;width:auto;flex:1;margin:0 0 0 var(--s2);background:linear-gradient(90deg,var(--a-action),var(--a-line))}
+  .pipe--offline .wire{background:repeating-linear-gradient(90deg,var(--a-line) 0 6px,transparent 6px 10px)}
+  .pipe .stage{margin:0;height:100%}
 }
+.bar{height:6px;border-radius:var(--r-pill);background:var(--a-raised);border:var(--bw) solid var(--a-line);overflow:hidden;margin-top:2px}
+.bar>i{display:block;height:100%;background:var(--a-action)}
 
-/* ============ 15. Footer + real input ============ */
-.site-foot{border-top:var(--bw) solid var(--blue);background:var(--white);padding-block:var(--s5)}
-.gates{margin:var(--s2) 0 0;padding-left:var(--s5);columns:1}
+/* dense tables */
+.table-wrap{max-width:100%;overflow-x:auto;border:var(--bw) solid var(--a-hair);border-radius:var(--r1);background:var(--a-surface)}
+table.stack{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+table.stack caption{text-align:left;font:700 var(--fs-sm)/1 var(--mono);padding:var(--s3);border-bottom:var(--bw) solid var(--a-hair)}
+table.stack th,table.stack td{text-align:left;padding:var(--s2) var(--s3);border-bottom:var(--bw) solid var(--a-hair);vertical-align:top}
+table.stack th{font:600 var(--fs-xs)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--a-muted);background:var(--a-raised)}
+table.stack td.num,table.stack td .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+table.stack tr.proposed td{border-top:var(--bw) dashed var(--a-line)}
+table.stack tr[aria-current="true"] td{background:var(--a-raised)}
+@media (max-width:40rem){
+  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
+  table.stack tr{border-bottom:var(--bw) solid var(--a-line);padding:var(--s2) 0}
+  table.stack td{display:grid;grid-template-columns:7rem minmax(0,1fr);gap:var(--s2);border:0;padding:var(--s1) var(--s3)}
+  table.stack td::before{content:attr(data-label);font:600 var(--fs-xs)/1.5 var(--mono);color:var(--a-muted);text-transform:uppercase}
+  table.stack tr.proposed{border:var(--bw) dashed var(--a-line)}
+}
+.footnote{font-weight:700;font-size:var(--fs-sm);margin-top:var(--s3)}
+.gates{columns:1;margin:var(--s2) 0 0;padding-left:1.4em;font-family:var(--mono);font-size:var(--fs-xs)}
 @media (min-width:48rem){.gates{columns:2}}
-.gates li{break-inside:avoid;margin-bottom:var(--s1)}
 
-/* research */
-.research-label{display:inline-flex;gap:var(--s2);align-items:center;font-weight:700;border:var(--bw-strong) dashed var(--blue);color:var(--blue);background:var(--white);padding:var(--s1) var(--s3);border-radius:var(--r1);margin-bottom:var(--s3)}
-
-
-/* ============ 16. Build additions (HAC-38 P3 task 11; tokens only) ============ */
+/* ============ Build additions (HAC-38 P6.2; role tokens only, nothing in the rev 3 rules above changed) ============ */
 [hidden]{display:none!important}
+main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target; not interactive */
 .notice>div>:last-child{margin-bottom:0}
-.value-label{margin:0;font-size:var(--fs-sm);color:var(--blue);font-weight:600}
-tr[aria-current="true"] td{background:var(--mineral)}
-table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
+[aria-invalid="true"]{border-color:var(--warn);border-left-width:var(--bar)}
+.label{display:block;font-weight:650;margin-bottom:var(--s1)}
+.screen-intro{margin-bottom:var(--s5)}
+.choice-list{list-style:none;padding:0;margin:0;display:grid;gap:var(--s2)}
+.value-label{margin:0;font-size:var(--fs-sm);color:var(--c-muted);font-weight:600}
+.persona code{color:var(--c-text)}
+#ns-result{margin-top:var(--s4)}
+.tl-more{margin-top:var(--s2)}
+/* research console: the pre-rev-3 shell classes, on console tokens, until part B restyles it */
+.site-head{background:var(--c-surface);border-bottom:var(--bw) solid var(--c-hair)}
+.site-head .wrap{padding-top:var(--s3);padding-bottom:var(--s3)}
+p.brand{display:block;font-weight:700;font-size:var(--fs-lg);margin:0;min-height:0}
+p.brand small{display:block;font-weight:400;font-size:var(--fs-sm);color:var(--c-muted)}
+.steps{list-style:none;margin:var(--s3) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);counter-reset:step}
+.steps a{display:inline-flex;align-items:center;gap:var(--s1);min-height:var(--tap);padding:0 var(--s2);border-radius:var(--r1);color:var(--c-text);text-decoration:none;font-size:var(--fs-sm)}
+.steps a::before{counter-increment:step;content:counter(step);display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;border:var(--bw-strong) solid var(--c-action);border-radius:50%;font-weight:700;color:var(--c-action)}
+.steps a[aria-current="step"]{font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+.steps a[aria-current="step"]::before{background:var(--c-action);color:var(--c-on-action)}
+.site-foot{border-top:var(--bw) solid var(--c-hair);background:var(--c-surface);padding:var(--s5) 0}
 .site-foot .loinc{margin:var(--s4) 0 0}
+.research-label{display:inline-flex;gap:var(--s2);align-items:center;font-weight:700;border:var(--bw-strong) dashed var(--c-line);color:var(--c-muted);padding:var(--s1) var(--s3);border-radius:var(--r1);margin-bottom:var(--s3)}
 .days{display:flex;flex-wrap:wrap;gap:2px;margin:var(--s2) 0 0;padding:0;list-style:none}
-.day{width:1rem;height:1rem;border:var(--bw) solid var(--blue);border-radius:2px;background:var(--white)}
-.day.y{background:var(--teal);border-color:var(--teal)}
+.day{width:1rem;height:1rem;border:var(--bw) solid var(--c-line);border-radius:2px;background:var(--c-bg)}
+.day.y{background:var(--observed);border-color:var(--observed)}
 .day.n{border-style:dashed}
 .rlog{list-style:none;padding:0;margin:0}
-.rlog li{border-top:var(--bw) solid var(--blue);padding:var(--s2) 0;font-size:var(--fs-sm)}
+.rlog li{border-top:var(--bw) solid var(--c-hair);padding:var(--s2) 0;font-size:var(--fs-sm)}
+
+/* motion: entrance only, one-shot; reduced motion removes all of it */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}
+}
 </style>
 </head>
-<body>
 <!-- AM-2 D1 (G31): one source, two shells. The server keeps the member-marked blocks at "/" and the
-     admin-marked blocks at "/admin" (daypart/demo/surfaces.py); everything unmarked is shared. -->
-<!--@member--><header class="site-head">
+     admin-marked blocks at "/admin" (daypart/demo/surfaces.py); everything unmarked is shared.
+     Each shell opens its own <body>, so data-surface picks that surface's palette (visual spec rev 3 §1). -->
+<!--@member--><body data-surface="member">
+<a class="skip" id="skip" href="#main">Skip to content</a>
+<header class="m-head">
   <div class="wrap">
-    <p class="brand">Clinical Human Clone <small>Health Clone Passport</small></p>
-    <nav aria-label="Journey">
-      <ol class="steps">
-        <li><a href="#checkin">Check in</a></li>
-        <li><a href="#review" id="nav-review">Review</a></li>
-        <li><a href="#passport">Passport</a></li>
-        <li><a href="#next">Next step</a></li>
+    <a class="brand" href="#today">
+      <span class="orb" aria-hidden="true"></span>
+      <span><span class="brand-name">Clinical Human Clone</span><span class="brand-sub">HEALTH CLONE PASSPORT</span></span>
+    </a>
+    <nav class="mnav" aria-label="Member">
+      <ol>
+        <li><a href="#today" id="nav-today"><span class="g" aria-hidden="true">◎</span>Today</a></li>
+        <li><a href="#review" id="nav-review"><span class="g" aria-hidden="true">◇</span>Review</a></li>
+        <li><a href="#passport" id="nav-passport"><span class="g" aria-hidden="true">▣</span>Passport</a></li>
+        <li><a href="#next" id="nav-next"><span class="g" aria-hidden="true">→</span>Next</a></li>
+        <li><a href="#timeline" id="nav-timeline"><span class="g" aria-hidden="true">≋</span>Timeline</a></li>
       </ol>
     </nav>
+    <p class="persona" id="persona" hidden><span class="avatar" id="persona-av" aria-hidden="true"></span><span id="persona-txt"></span></p>
   </div>
-</header><!--/@member--><!--@admin--><header class="site-head">
+</header><!--/@member--><!--@admin--><body data-surface="admin">
+<header class="site-head">
   <div class="wrap">
     <p class="brand">Clinical Human Clone <small>Research console</small></p>
     <nav aria-label="Research console">
@@ -268,61 +433,70 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
   </div>
 </header><!--/@admin-->
 
-<main class="wrap" id="main">
+<main class="wrap" id="main" tabindex="-1">
 <div id="session-msg"></div>
 <!--@member-->
-<!-- ================= 1. CHECK IN ================= -->
-<section id="screen-checkin" data-screen="checkin" aria-labelledby="h-checkin" hidden>
-  <h1 id="h-checkin" tabindex="-1">What matters today?</h1>
-  <div id="ci-load-msg"></div>
-  <div id="ci-body">
-  <p class="screen-intro" id="ci-intro">Tell your clone about your day in a sentence, or import a file from a device. Nothing is saved until you review it.</p>
+<!-- ================= 1. TODAY (seeded landing and check-in; #checkin is an alias) ================= -->
+<section id="screen-today" data-screen="today" aria-labelledby="h-today" hidden>
+  <div class="grid-2" id="ci-grid">
+    <div class="hero" id="ci-hero">
+      <p class="eyebrow" id="ci-date" hidden></p>
+      <h1 id="h-today" tabindex="-1">What matters today?</h1>
+      <div id="ci-load-msg"></div>
+      <div id="ci-body">
+        <p class="muted" id="ci-intro">Tell your clone about your day in a sentence, or add a file. Nothing is saved until you review it.</p>
+        <div id="ci-msg"></div>
+        <form class="panel panel--glow" id="ci-form" aria-labelledby="h-today" novalidate>
+          <div class="field">
+            <label for="ci-text">Your check-in <span class="hint">For example: "slept 6 hours and walked 8000 steps"</span></label>
+            <textarea id="ci-text" name="text" maxlength="500" aria-describedby="ci-count ci-pii"></textarea>
+            <div class="counter" id="ci-count">0 / 500 characters</div>
+            <p class="hint" id="ci-pii">Leave out names, e-mail addresses, phone numbers and dates of birth.</p>
+          </div>
+          <button class="btn btn--primary" type="submit" id="ci-submit">Check in</button>
 
-  <div class="notice notice--info" id="real-data-warning">
-    <span class="ico ico-i" aria-hidden="true">i</span>
-    <div><p class="notice-title">Keep personal details out</p>
-    <p>Your clone needs health values only. Leave out names, e-mail addresses, phone numbers and dates of birth.</p></div>
-  </div>
+          <h2 class="small" style="margin-top:var(--s5)">Or add a file</h2>
+          <div class="btn-row btn-row--stack" style="margin-top:0">
+            <button class="btn btn--secondary" type="button" id="ci-files-btn" aria-expanded="false" aria-controls="ci-files">▤ Add a file</button>
+            <button class="btn btn--secondary" type="button" id="ci-images-btn" aria-expanded="false" aria-controls="ci-images">▣ Add an image</button>
+          </div>
+          <div id="ci-files" class="field" style="margin-top:var(--s3)" hidden>
+            <p class="label" id="ci-files-l">Files</p>
+            <ul class="choice-list" aria-labelledby="ci-files-l"></ul>
+          </div>
+          <div id="ci-images" class="field" style="margin-top:var(--s3)" hidden>
+            <p class="label" id="ci-images-l">Images</p>
+            <ul class="choice-list" aria-labelledby="ci-images-l"></ul>
+          </div>
 
-  <div id="ci-msg"></div>
-
-  <form class="panel" id="ci-form" aria-labelledby="h-checkin" novalidate>
-    <div class="field">
-      <label for="ci-text">Your check-in <span class="hint">For example: "slept 6 hours and walked 8000 steps"</span></label>
-      <textarea id="ci-text" name="text" maxlength="500" aria-describedby="ci-count real-data-warning"></textarea>
-      <div class="counter" id="ci-count">0 / 500 characters</div>
-    </div>
-    <button class="btn btn--primary" type="submit" id="ci-submit">Check in</button>
-
-    <h2 class="small" style="margin-top:var(--s5)">Or import a file</h2>
-    <div class="btn-row btn-row--stack" style="margin-top:0">
-      <button class="btn btn--secondary" type="button" id="ci-files-btn" aria-expanded="false" aria-controls="ci-files">▤ Import a device file</button>
-      <button class="btn btn--secondary" type="button" id="ci-images-btn" aria-expanded="false" aria-controls="ci-images">▣ Import a photo</button>
-    </div>
-    <div id="ci-files" class="field" style="margin-top:var(--s3)" hidden>
-      <p class="label" id="ci-files-l">Device files</p>
-      <ul class="choice-list" aria-labelledby="ci-files-l"></ul>
-    </div>
-    <div id="ci-images" class="field" style="margin-top:var(--s3)" hidden>
-      <p class="label" id="ci-images-l">Photos</p>
-      <ul class="choice-list" aria-labelledby="ci-images-l"></ul>
+          <h2 class="small" style="margin-top:var(--s5)">Other ways to check in</h2>
+          <div class="btn-row" style="margin-top:0">
+            <button class="btn" type="button" disabled aria-describedby="na-note">⊘ Voice · Not available</button>
+            <button class="btn" type="button" disabled aria-describedby="na-note">⊘ Video · Not available</button>
+          </div>
+          <p class="hint" id="na-note" style="margin-top:var(--s2)">Voice and video are not available yet.</p>
+        </form>
+        <div class="btn-row"><button class="btn btn--secondary" type="button" id="fresh-btn">Start a fresh journal</button></div>
+      </div>
     </div>
 
-    <h2 class="small" style="margin-top:var(--s5)">Other ways to check in</h2>
-    <div class="unavailable">
-      <button class="btn" type="button" disabled aria-describedby="na-note">⊘ Voice · Not available</button>
-      <button class="btn" type="button" disabled aria-describedby="na-note">⊘ Video · Not available</button>
-    </div>
-    <p class="hint" id="na-note" style="margin-top:var(--s2)">Voice and video check-ins are not available yet.</p>
-  </form>
-  <div class="btn-row"><button class="btn btn--secondary" type="button" id="fresh-btn">Start a fresh journal</button></div>
+    <!-- "Your clone": every number is a field of the journal's timeline or passport GET; a missing field drops its tile -->
+    <aside class="panel" id="clone-aside" aria-labelledby="h-clone" hidden>
+      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span>Clone in sync</p>
+      <h2 id="h-clone">Your clone</h2>
+      <p class="small muted" id="clone-built"></p>
+      <ul class="clone-status" id="clone-stats"></ul>
+      <h3 style="margin-top:var(--s5)">Latest update</h3>
+      <ol class="tl" id="clone-latest"></ol>
+      <div class="btn-row"><a class="btn btn--secondary" href="#timeline">See what changed</a><a class="btn btn--secondary" href="#passport">Open passport</a></div>
+    </aside>
   </div>
 </section>
 
-<!-- ================= 2. REVIEW ================= -->
-<section id="screen-review" data-screen="review" aria-labelledby="h-review" hidden>
+<!-- ================= 2. REVIEW (a 200 save replaces the form with "Your clone updated") ================= -->
+<section id="screen-review" class="measure" data-screen="review" aria-labelledby="h-review" hidden>
   <h1 id="h-review" tabindex="-1">Review before saving</h1>
-  <p class="screen-intro" id="rv-intro"></p>
+  <p class="muted" id="rv-intro"></p>
   <div id="rv-msg"></div>
   <form id="rv-form" aria-labelledby="h-review" novalidate hidden>
     <div id="rv-list"></div>
@@ -335,26 +509,42 @@ table.stack tr[aria-current="true"]{border-width:var(--bw-strong)}
 
 <!-- ================= 3. PASSPORT ================= -->
 <section id="screen-passport" data-screen="passport" aria-labelledby="h-passport" hidden>
+  <p class="eyebrow" id="pp-eyebrow" hidden>Health Clone Passport</p>
   <h1 id="h-passport" tabindex="-1">Health Clone Passport</h1>
   <div id="pp-msg"></div>
   <div id="pp-body" hidden>
     <dl class="meta panel" id="pp-meta" style="padding:var(--s3) var(--s4)"></dl>
-    <h2>Cards</h2>
-    <p class="small muted">Where a public source states a reference range, the card shows it with the group it applies to and the source. It is reference text only, not a judgement of your value.</p>
+    <h2 style="margin-top:var(--s5)">Cards</h2>
+    <p class="small muted measure">Where a public source states a reference range, the card shows it with the group it applies to and the source. It is reference text only, not a judgement of your value.</p>
     <div class="cards" id="pp-cards"></div>
-    <h2 id="h-inventory" tabindex="-1" style="margin-top:var(--s6)">What the clone knows</h2>
+    <h2 id="h-inventory" tabindex="-1" style="margin-top:var(--s6)">What your clone knows</h2>
     <p class="muted small">Each area and whether it has data. A gap means nothing has been confirmed yet.</p>
-    <ul class="inv" id="inventory" aria-labelledby="h-inventory"></ul>
-    <div class="btn-row"><a class="btn btn--primary" href="#next">See a suggested next step</a></div>
+    <ul class="inv measure" id="inventory" aria-labelledby="h-inventory"></ul>
+    <div class="btn-row"><a class="btn btn--primary" href="#next">See your next step</a></div>
   </div>
 </section>
 
 <!-- ================= 4. NEXT STEP ================= -->
-<section id="screen-next" data-screen="next" aria-labelledby="h-next" hidden>
+<section id="screen-next" class="measure" data-screen="next" aria-labelledby="h-next" hidden>
   <h1 id="h-next" tabindex="-1">Suggested next step</h1>
   <div id="ns-msg"></div>
-  <div class="panel" id="ns-panel" hidden></div>
+  <div class="panel panel--glow" id="ns-panel" hidden></div>
   <div id="ns-result" aria-live="polite" class="small"></div>
+</section>
+
+<!-- ================= 5. TIMELINE (GET /api/journals/{id}/timeline; AM-2 D3) ================= -->
+<section id="screen-timeline" class="measure" data-screen="timeline" aria-labelledby="h-timeline" hidden>
+  <p class="eyebrow">Continuous adaptation</p>
+  <h1 id="h-timeline" tabindex="-1">How your clone changed</h1>
+  <div id="tl-msg"></div>
+  <!-- C5 (P6.1): an entry compares its save's before and after on that save's day, so a change that comes
+       only from days passing is on no entry. The page says so, and invents no day-only entries. -->
+  <p class="muted" id="tl-note">Each entry shows what one saved check-in added and changed, on the day it was saved.</p>
+  <div id="tl-body" hidden>
+    <div id="tl-days"></div>
+    <p class="small muted" id="tl-omitted" hidden></p>
+    <div class="btn-row tl-more" id="tl-more-row" hidden><button class="btn btn--secondary" type="button" id="tl-more">Show earlier days</button></div>
+  </div>
 </section>
 
 <!--/@member--><!--@admin-->
@@ -547,21 +737,25 @@ var research = (function () {
 <!--/@admin-->
 </main>
 
-<footer class="site-foot">
+<!--@member--><footer class="m-foot">
   <div class="wrap">
-    <!--@admin--><p class="small muted"><a href="/">Member app</a> · <a href="/results">Full results (research view)</a> · <a href="/docs">API</a></p>
+    <p class="loinc">This material contains content from LOINC® (<a href="https://loinc.org">https://loinc.org</a>). LOINC is copyright © 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee and is available at no cost under the license at <a href="https://loinc.org/license/">https://loinc.org/license/</a>. LOINC® is a registered United States trademark of Regenstrief Institute, Inc. The codes are used for display of synthetic values only; no clinical interpretation.</p>
+  </div>
+</footer><!--/@member--><!--@admin--><footer class="site-foot">
+  <div class="wrap">
+    <p class="small muted"><a href="/">Member app</a> · <a href="/results">Full results (research view)</a> · <a href="/docs">API</a></p>
     <button class="btn btn--secondary" type="button" id="ri-btn" aria-controls="ri-panel" aria-expanded="false">Real input</button>
-    <div id="ri-panel" aria-live="polite" style="margin-top:var(--s4)"></div><!--/@admin-->
+    <div id="ri-panel" aria-live="polite" style="margin-top:var(--s4)"></div>
     <p class="small muted loinc">This material contains content from LOINC® (<a href="https://loinc.org">https://loinc.org</a>). LOINC is copyright © 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee and is available at no cost under the license at <a href="https://loinc.org/license/">https://loinc.org/license/</a>. LOINC® is a registered United States trademark of Regenstrief Institute, Inc. The codes are used for display of synthetic values only; no clinical interpretation.</p>
   </div>
-</footer>
+</footer><!--/@admin-->
 
 <script>
 "use strict";
 /* Clinical Human Clone journey UI (HAC-38 P3). Every node is built with createElement and
    textContent; API strings never reach innerHTML. Links from the API pass safeHref (https:, '#' or a same-origin /api/ path). */
 
-var S = { journal: null, today: null, displayName: null, checkins: {}, lastCheckin: null };
+var S = { journal: null, today: null, displayName: null, memberId: null, checkins: {}, lastCheckin: null };
 var STORE = "chc.session.v1";
 
 /* ---------- DOM helpers ---------- */
@@ -638,6 +832,25 @@ function fmtNum(v) { return typeof v === "number" && isFinite(v) ? String(v) : n
 /* A computed number for display only (pattern scores, simulated values): at most 2 decimals, trailing zeros trimmed. */
 function fmtRound(v) { return typeof v === "number" && isFinite(v) ? String(Number(v.toFixed(2))) : null; }
 function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+var WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+/* "2026-09-29" → "29 Sep" (the timeline's day headings); anything else is returned as is. */
+function fmtShortDay(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m && MONTHS[Number(m[2]) - 1] ? Number(m[3]) + " " + MONTHS[Number(m[2]) - 1] : iso;
+}
+/* "2026-09-29" → "Tuesday 29 Sep" (the #today eyebrow); null for anything else. */
+function fmtWeekday(iso) {
+  if (typeof iso !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  var d = new Date(iso + "T12:00:00Z");
+  return isNaN(d.getTime()) ? null : WEEKDAYS[d.getUTCDay()] + " " + fmtShortDay(iso);
+}
+/* The first word of the persona's display name, or null (a fresh journal has none). */
+function firstName() {
+  var w = typeof S.displayName === "string" ? S.displayName.trim().split(/\s+/)[0] : "";
+  return w || null;
+}
+/* A value as recorded, with its display unit: "7.5 h", "9360 steps", "63 /min". */
+function fmtValue(v, u) { var n = fmtNum(v), s = fmtUnit(u); return n === null ? null : (s ? n + " " + s : n); }
 
 /* ---------- API ---------- */
 var TIMEOUT_MS = 15000;
@@ -663,7 +876,7 @@ function failed(res) { return res.status === 0 || res.status >= 500 || (res.data
    opts.focus: a failed POST (focus moves to the notice); a failed GET leaves focus on the h1. */
 function serverError(res, retry, opts) {
   var st = res && typeof res.status === "number" && res.status > 0 ? Math.floor(res.status) : 0;
-  var body = st ? "The service had a problem on its side (error " + st + "). Try again in a moment."
+  var body = st ? "We had a problem on our side (error " + st + "). Try again in a moment."
     : "We could not reach the server. Check your connection and try again.";
   var again = el("button", "btn btn--secondary", "Try again");
   again.type = "button";
@@ -674,7 +887,7 @@ function showError(box, n) { clear(box).append(n); if (n.hasAttribute("tabindex"
 
 /* ---------- session (journal) ---------- */
 function persist() {
-  try { sessionStorage.setItem(STORE, JSON.stringify({ journal: S.journal, today: S.today, displayName: S.displayName, checkins: S.checkins, lastCheckin: S.lastCheckin })); }
+  try { sessionStorage.setItem(STORE, JSON.stringify({ journal: S.journal, today: S.today, displayName: S.displayName, memberId: S.memberId, checkins: S.checkins, lastCheckin: S.lastCheckin })); }
   catch (e) { /* storage off: memory only */ }
 }
 function restore() {
@@ -683,6 +896,7 @@ function restore() {
     if (v && typeof v.journal === "string") {
       S.journal = v.journal; S.today = v.today || null;
       S.displayName = typeof v.displayName === "string" ? v.displayName : null;
+      S.memberId = typeof v.memberId === "string" ? v.memberId : null;
       S.checkins = v.checkins && typeof v.checkins === "object" ? v.checkins : {};
       S.lastCheckin = typeof v.lastCheckin === "string" ? v.lastCheckin : null;
     }
@@ -692,6 +906,7 @@ var journalPending = null, journalErr = null, nextFresh = false;
 function adoptJournal(d) {
   S.journal = d.journal_id; S.today = d.today || null;
   S.displayName = typeof d.display_name === "string" ? d.display_name : null;
+  S.memberId = typeof d.member_id === "string" ? d.member_id : null;
   S.checkins = {}; S.lastCheckin = null;
   /* a persona journal's check-ins were saved on the server (G32): record them so their #review/<id>
      evidence links say "Already saved" (QG P6.1 C1) */
@@ -747,33 +962,61 @@ async function startAgain(fresh) {
   /* a journal still being created (the first load) settles first, so this request is never folded into it */
   if (journalPending) { try { await journalPending; } catch (e) { /* replaced below */ } }
   clear($("session-msg"));
-  S.journal = null; S.today = null; S.displayName = null; S.checkins = {}; S.lastCheckin = null;
+  S.journal = null; S.today = null; S.displayName = null; S.memberId = null; S.checkins = {}; S.lastCheckin = null;
   nextFresh = fresh === true;
   try { sessionStorage.removeItem(STORE); } catch (e) { /* ignore */ }
   resetCheckin();
   var ok = await ensureJournal();
   if (!ok) { showError($("session-msg"), serverError(journalErr, function () { startAgain(fresh); }, { focus: true })); return; }
-  if (location.hash === "#checkin") route(); else location.hash = "#checkin";
+  if (location.hash === "#today" || location.hash === "#checkin") route(); else location.hash = "#today";
 }
 function isGone(res) { return res.status === 404 && code(res) === "unknown_journal"; }
 function updateNav() {
   var a = $("nav-review");
   a.href = safeHref(S.lastCheckin ? "#review/" + S.lastCheckin : "#review");
+  applyIdentity();
+}
+/* The journal's own name and id (visual spec rev 3 §2, §3.1, §3.4): the persona chip, the #today
+   greeting and date, and the passport h1. A fresh journal has no display name, so no greeting. */
+function applyIdentity() {
+  var name = firstName(), chip = $("persona");
+  if (chip) {
+    chip.hidden = !S.memberId;
+    $("persona-av").hidden = !S.displayName;
+    $("persona-av").textContent = S.displayName ? S.displayName.trim().charAt(0).toUpperCase() : "";
+    var txt = clear($("persona-txt"));
+    if (S.displayName) txt.append(S.displayName + " · ");
+    if (S.memberId) txt.append(el("code", null, S.memberId));
+  }
+  var h = $("h-today");
+  if (h) {
+    h.textContent = name ? "What matters today, " + name + "?" : "What matters today?";
+    var day = fmtWeekday(S.today);
+    $("ci-date").hidden = day === null;
+    $("ci-date").textContent = day || "";
+  }
+  var hp = $("h-passport");
+  if (hp) {
+    hp.textContent = name ? name + "'s passport" : "Health Clone Passport";
+    $("pp-eyebrow").hidden = !name;
+  }
 }
 
 /* ---------- router ---------- */
 /*@member*/
-var SCREENS = ["checkin", "review", "passport", "next"];
-var TITLES = { checkin: "What matters today?", review: "Review before saving", passport: "Health Clone Passport", next: "Suggested next step" };
+var SCREENS = ["today", "review", "passport", "next", "timeline"];
+/* #checkin (API evidence links, older bookmarks) opens #today */
+var ALIASES = { checkin: "today" };
 /*/@member*//*@admin*/
 var SCREENS = ["lab", "inventory", "research"];
-var TITLES = { lab: "Learning lab", inventory: "Concept inventory", research: "Research playground" };
+var ALIASES = {};
 /*/@admin*/
 function parseHash() {
   var h = location.hash.replace(/^#/, "");
   var i = h.indexOf("/");
   var base = i < 0 ? h : h.slice(0, i), rest = i < 0 ? "" : h.slice(i + 1);
   try { rest = decodeURIComponent(rest); } catch (e) { /* keep raw */ }
+  if (Object.prototype.hasOwnProperty.call(ALIASES, base)) base = ALIASES[base];
   if (SCREENS.indexOf(base) < 0) { base = SCREENS[0]; rest = ""; }
   return { base: base, rest: rest };
 }
@@ -782,25 +1025,26 @@ function route() {
   /* section ids are "screen-<route>", never the hash itself, so a direct load does not fragment-scroll
      to the section and drop the h1 focus (QG P3.1 U1) */
   SCREENS.forEach(function (s) { $("screen-" + s).hidden = s !== r.base; });
-  document.querySelectorAll(".steps a").forEach(function (a) {
+  /* the member nav marks its page (rev 3 §2); the console's step nav keeps "step" until part B */
+  document.querySelectorAll(".mnav a, .steps a").forEach(function (a) {
     var b = (a.getAttribute("href") || "").slice(1).split("/")[0];
-    if (b === r.base) a.setAttribute("aria-current", "step"); else a.removeAttribute("aria-current");
+    if (b === r.base) a.setAttribute("aria-current", a.closest(".mnav") ? "page" : "step"); else a.removeAttribute("aria-current");
   });
-  document.title = TITLES[r.base] + " · Clinical Human Clone";
+  document.title = $("h-" + r.base).textContent + " · Clinical Human Clone";
   var focusInventory = r.base === "passport" && r.rest === "inventory";
   if (!focusInventory) $("h-" + r.base).focus();
-  var render = { checkin: showCheckin, review: showReview, passport: showPassport, next: showNext, lab: showLab,
-    inventory: showInventory, research: function () { research.init(); } }[r.base];
+  var render = { today: showCheckin, review: showReview, passport: showPassport, next: showNext, timeline: showTimeline,
+    lab: showLab, inventory: showInventory, research: function () { research.init(); } }[r.base];
   Promise.resolve(render(r.rest)).catch(function () { /* each screen renders its own errors */ });
 }
 
-/* ---------- #checkin ---------- */
+/* ---------- #today (was #checkin, still its alias) ---------- */
 var CI_ERRORS = {
-  not_a_demo_fixture: ["warn", "Only supported device files can be used", "That file is not one of the supported files, so it was dropped. Pick one from “Import a device file” or “Import a photo”."],
+  not_a_demo_fixture: ["warn", "Only the bundled files can be used", "That file is not one of the bundled files, so it was dropped. Pick one from “Add a file” or “Add an image”."],
   too_large: ["warn", "That file is too large", "Files must be 1 MiB or smaller. Nothing was saved."],
-  unsupported_type: ["warn", "That file type is not supported", "Use a PNG or JPEG photo, or a CSV or JSON file from a supported device. Nothing was saved."],
+  unsupported_type: ["warn", "That file type is not supported", "Use a PNG or JPEG image, or a CSV or JSON file from the bundled set. Nothing was saved."],
   nothing_extracted: ["info", "We could not find anything to record", "Try something like “slept 7 hours” or “walked 5000 steps”."],
-  empty_checkin: ["info", "Write a sentence or import a file", null],
+  empty_checkin: ["info", "Write a sentence or add a file", null],
   text_too_long: ["warn", "That is too long, so nothing was saved", "Keep your check-in to 500 characters."],
   one_source_only: ["info", "Use one input at a time", "Send a sentence or one file, not both."]
 };
@@ -812,16 +1056,60 @@ var PII_REASONS = {
   date_of_birth: "It contains something like a date of birth."
 };
 var ciBusy = false, fixturesLoaded = false;
-/* Screen load: the journal and the demo-file list. A failure (5xx, network, timeout, or no journal) is the
-   §3.8 GET notice under the h1 in place of the screen body; Try again re-runs the load. */
+/* Screen load: the journal and the bundled-file list. A failure (5xx, network, timeout, or no journal) is the
+   §3.8 GET notice under the h1 in place of the screen body; Try again re-runs the load. Then the
+   "Your clone" aside (rev 3 §3.1), which only a journal with a saved check-in has. */
 async function showCheckin() {
   var box = clear($("ci-load-msg")), body = $("ci-body");
-  function fail(res) { body.hidden = true; box.append(serverError(res, showCheckin)); }
+  function fail(res) { body.hidden = true; setAside(false); box.append(serverError(res, showCheckin)); }
   if (!(await ensureJournal())) { fail(journalErr); return; }
   if (!fixturesLoaded) { var res = await loadFixtures(); if (res) { fail(res); return; } }
   body.hidden = false;
+  await loadClone();
 }
-/* Fills the demo-file pickers. Returns null on success, else the failed GET result. */
+/* The aside sits beside the check-in at >= 56 rem; without it the column takes the full width. */
+function setAside(on) {
+  $("clone-aside").hidden = !on;
+  $("ci-grid").className = on ? "grid-2" : "";
+}
+var cloneSeq = 0;
+/* "Your clone": the stats come from the journal's timeline (saved check-ins, days, observations) and
+   passport (cards ready), never from the page. A tile whose source is missing is dropped; a journal
+   with no saved check-in, or a failed GET, shows no aside at all. */
+async function loadClone() {
+  var seq = ++cloneSeq, jid = encodeURIComponent(S.journal);
+  var both = await Promise.all([api("GET", "/api/journals/" + jid + "/timeline"), api("GET", "/api/journals/" + jid + "/passport")]);
+  if (seq !== cloneSeq) return; /* a newer load started while this one waited */
+  var tl = both[0], pp = both[1];
+  if (isGone(tl)) { setAside(false); sessionEnded(); return; }
+  var entries = tl.ok && tl.data && Array.isArray(tl.data.entries) ? tl.data.entries : [];
+  if (!entries.length || $("ci-form").hidden) { setAside(false); return; } /* no saved check-in, or the hand-off is showing */
+  renderClone(tl.data, pp.ok && pp.data && Array.isArray(pp.data.cards) ? pp.data.cards : null);
+  setAside(true);
+}
+function renderClone(t, cards) {
+  var entries = t.entries, omitted = typeof t.omitted === "number" ? t.omitted : 0, newest = entries[entries.length - 1];
+  var days = {}, obs = 0;
+  entries.forEach(function (e) { days[String(e.as_of).slice(0, 10)] = true; obs += Array.isArray(e.appends) ? e.appends.length : 0; });
+  var nDays = Object.keys(days).length, whole = omitted === 0; /* older saves left out: day and observation totals are unknown */
+  var last = fmtDay(String(newest.as_of).slice(0, 10));
+  $("clone-built").textContent = (whole ? "Built from " + plural(nDays, "day", "days") + " of your saved check-ins. " : "Built from your saved check-ins. ") +
+    "Last updated " + last + ".";
+  var stats = clear($("clone-stats"));
+  function tile(v, k) { var li = el("li"); li.append(el("span", "stat-v", v), " ", el("span", "stat-k", k)); stats.append(li); }
+  if (whole) tile(nDays, nDays === 1 ? "day of history" : "days of history");
+  tile(entries.length + omitted, entries.length + omitted === 1 ? "saved check-in" : "saved check-ins");
+  if (whole) tile(obs, obs === 1 ? "observation" : "observations");
+  if (cards) { var ready = cards.filter(function (c) { return c.status === "ready"; }).length; tile(ready, ready === 1 ? "card ready" : "cards ready"); }
+  var li = el("li", "is-new"), item = el("div", "tl-item"), inner = el("div");
+  inner.style.padding = "var(--s3) var(--s4)";
+  inner.append(el("span", "tl-title", tlTitle(newest)));
+  var chips = tlChips(newest);
+  if (chips) inner.append(chips);
+  item.append(inner); li.append(item);
+  clear($("clone-latest")).append(li);
+}
+/* Fills the bundled-file pickers. Returns null on success, else the failed GET result. */
 async function loadFixtures() {
   var res = await api("GET", "/api/fixtures");
   if (!res.ok || !Array.isArray(res.data)) return res;
@@ -842,20 +1130,20 @@ function togglePicker(btnId, boxId) {
   b.setAttribute("aria-expanded", String(open));
   box.hidden = !open;
 }
-/* node: the notice; fault: true when the demo failed (not the person's input), so no aria-invalid and focus moves to the notice */
+/* node: the notice; fault: true when the app failed (not the person's input), so no aria-invalid and focus moves to the notice */
 function setCiError(node, fault) {
   var msg = clear($("ci-msg")), ta = $("ci-text");
-  ta.removeAttribute("aria-invalid"); ta.setAttribute("aria-describedby", "ci-count real-data-warning");
+  ta.removeAttribute("aria-invalid"); ta.setAttribute("aria-describedby", "ci-count ci-pii");
   if (!node) return;
   node.id = "ci-error";
   msg.append(node);
   if (fault) { node.setAttribute("tabindex", "-1"); node.focus(); return; }
   ta.setAttribute("aria-invalid", "true");
-  ta.setAttribute("aria-describedby", "ci-error ci-count real-data-warning");
+  ta.setAttribute("aria-describedby", "ci-error ci-count ci-pii");
 }
 function resetCheckin() {
   setCiError(null);
-  $("ci-intro").hidden = false; $("real-data-warning").hidden = false; $("ci-form").hidden = false;
+  $("ci-intro").hidden = false; $("ci-form").hidden = false;
   $("ci-text").value = "";
   updateCount();
 }
@@ -886,7 +1174,7 @@ async function submitCheckin(input) {
     var c = code(res);
     if (res.status === 500 && c === "extractor_output_invalid") {
       setCiError(notice("warn", "Something went wrong reading your check-in, so nothing was saved",
-        ["This is a fault on our side, not in what you wrote. Try again, or import a file."], { role: "alert" }), true);
+        ["This is a fault on our side, not in what you wrote. Try again, or add a file."], { role: "alert" }), true);
       return;
     }
     if (failed(res)) { setCiError(serverError(res, retry), true); return; }
@@ -895,7 +1183,7 @@ async function submitCheckin(input) {
       var items = reasons.map(function (r) { return PII_REASONS[r] || "It contains something that looks like personal data."; });
       if (!items.length) items = ["It contains something that looks like personal data."];
       setCiError(notice("warn", "This looks like personal data, so nothing was saved",
-        [bullets(items), "Remove these and try again. Do not enter real health data."], { role: "alert" }));
+        [bullets(items), "Remove these and try again."], { role: "alert" }));
       return;
     }
     var spec = CI_ERRORS[c];
@@ -905,16 +1193,19 @@ async function submitCheckin(input) {
     setBusy(false);
   }
 }
-/* Crisis hand-off (HAC-48 §3.1.1): the API text verbatim is the body; the UI adds no number, link or copy of its own. */
+/* Crisis hand-off (HAC-48 §3.1.1, rev 3 §3.1): the API text verbatim is the body; the UI adds no number,
+   link or copy of its own. It replaces both columns: the check-in and the "Your clone" aside. */
 function showHandoff(text) {
   setCiError(null);
   $("ci-text").value = ""; updateCount();
-  $("ci-intro").hidden = true; $("real-data-warning").hidden = true; $("ci-form").hidden = true;
+  $("ci-intro").hidden = true; $("ci-form").hidden = true;
+  var asideWas = !$("clone-aside").hidden;
+  setAside(false);
   var again = el("button", "btn btn--secondary", "Write a different check-in");
   again.type = "button";
-  again.addEventListener("click", function () { resetCheckin(); $("ci-text").focus(); });
+  again.addEventListener("click", function () { resetCheckin(); if (asideWas) setAside(true); $("ci-text").focus(); });
   var n = notice("handoff", "Please talk to a person about this", [
-    el("p", "handoff-text", text), "This app cannot help with this. Nothing from your check-in was saved.", again
+    el("p", "handoff-text", text), "Your clone cannot help with this. Nothing from your check-in was saved.", again
   ], { role: "alert", focus: true, titleId: "handoff-title" });
   clear($("ci-msg")).append(n);
   n.focus();
@@ -975,7 +1266,7 @@ async function showReview(id) {
   if (!ci) {
     msg.append(notice("info", id ? "This check-in is not available here" : "Nothing to review yet",
       [para(id ? "Check-ins can only be reviewed in the session that made them. " : "Check in first, then review what the clone found. ",
-        link("#checkin", "Go to check-in"))]));
+        link("#today", "Go to check-in"))]));
     return;
   }
   if (ci.status === "saved") { msg.append(ci.alreadySaved && !ci.result ? alreadySavedNotice(false) : savedNotice(ci.result)); return; }
@@ -1157,6 +1448,37 @@ function savedNotice(result) {
   body.push(btnLink("#passport", "Open your Health Clone Passport", true));
   return notice("ok", "Saved " + plural(written, "value", "values") + " to your clone", body, { role: "status" });
 }
+/* "Saved N values · M saved as unmapped · discarded values were not stored" (rev 3 §3.3); no "0 saved as unmapped". */
+function savedLine(result) {
+  var written = result && Array.isArray(result.written) ? result.written.length : 0;
+  var records = result && Array.isArray(result.records) ? result.records.length : written;
+  var unmapped = Math.max(0, records - written);
+  return "Saved " + plural(written, "value", "values") + (unmapped ? " · " + unmapped + " saved as unmapped" : "") + " · discarded values were not stored";
+}
+/* "Your clone updated" (rev 3 §3.3): this save's own timeline entry, one row per kind of change it
+   reports and none for a kind it does not. role=status, focusable, labelled by its h2. */
+function cloneUpdated(result, entry) {
+  var box = attrs(el("div", "clone-updated"), { role: "status", tabindex: "-1", "aria-labelledby": "cu-t" });
+  var head = el("div", "cu-head"), ring = attrs(el("span", "cu-ring", "✓"), { "aria-hidden": "true" }), txt = el("div");
+  var h2 = el("h2", null, "Your clone updated"); h2.id = "cu-t";
+  var line = el("p", "small muted", savedLine(result)); line.style.margin = "0";
+  txt.append(h2, line); head.append(ring, txt); box.append(head);
+  var rows = deltaRows(entry);
+  if (rows.length) {
+    var ul = attrs(el("ul", "delta"), { "aria-label": "What changed" });
+    rows.forEach(function (r) {
+      var li = el("li"), body = el("span");
+      r.slice(1).forEach(function (part) { body.append(part); });
+      li.append(el("span", "k", r[0]), body);
+      ul.append(li);
+    });
+    box.append(ul);
+  }
+  var row = el("div", "btn-row btn-row--stack");
+  row.append(btnLink("#passport", "Open your passport", true), btnLink("#next", "See your next step", false), btnLink("#timeline", "View timeline", false));
+  box.append(row);
+  return box;
+}
 /* 409 already_saved: a neutral notice with no count (this session never saw the save's result). */
 function alreadySavedNotice(fromPost) {
   return notice("info", "Already saved", [para("This check-in was saved before. ", link("#passport", "Open your Health Clone Passport"))],
@@ -1175,7 +1497,12 @@ async function submitReview(ev) {
     if (res.status === 200 && res.data && res.data.status === "saved") {
       S.checkins[id].status = "saved"; S.checkins[id].result = res.data; persist();
       $("rv-form").hidden = true; $("rv-intro").textContent = "";
-      var n = savedNotice(res.data); n.setAttribute("tabindex", "-1"); msg.append(n); n.focus();
+      /* the save happened: a failed timeline GET is not an error, it falls back to the saved notice */
+      var tl = await api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/timeline");
+      var entry = tl.ok && tl.data && Array.isArray(tl.data.entries)
+        ? tl.data.entries.find(function (e) { return e && e.checkin_id === id; }) : null;
+      var n = entry ? cloneUpdated(res.data, entry) : savedNotice(res.data);
+      n.setAttribute("tabindex", "-1"); clear(msg).append(n); n.focus();
       return;
     }
     if (res.status === 409 && code(res) === "already_saved") {
@@ -1186,7 +1513,7 @@ async function submitReview(ev) {
       return;
     }
     if (res.status === 404) {
-      msg.append(notice("info", "This check-in is not available here", [para(link("#checkin", "Check in again"))], { role: "alert" }));
+      msg.append(notice("info", "This check-in is not available here", [para(link("#today", "Check in again"))], { role: "alert" }));
       return;
     }
     if (res.status === 422 && ["missing_decision", "unresolved_flags", "invalid_correction"].indexOf(code(res)) >= 0) { refused(res); return; }
@@ -1226,7 +1553,7 @@ function renderPassport(pp, inv) {
   var meta = clear($("pp-meta"));
   function row(k, v) { meta.append(el("dt", null, k)); var dd = el("dd"); dd.append(v === null ? nr() : v); meta.append(dd); }
   row("As of", fmtDate(pp.as_of));
-  row("Member", S.displayName || "Member " + pp.member_id);
+  row("Member", el("code", null, pp.member_id));
   var ont = el("span"); ont.append(el("code", null, pp.ontology_version), " · LOINC " + pp.loinc_version); row("Ontology", ont);
   row("Review", reviewLabel(inv && inv.reviewer_status));
   var cards = clear($("pp-cards"));
@@ -1338,8 +1665,8 @@ function thread(steps) {
   for (var i = 0; i < 5; i++) {
     var s = steps[i] || { label: "none", link: "" };
     var none = s.label === "none";
-    var li = el("li", none ? "none" : null);
-    li.append(el("span", "ts-name", STEP_NAMES[i]));
+    var li = el("li", none ? "none" : null), cellS = el("span");
+    cellS.append(el("span", "ts-name", STEP_NAMES[i]));
     var b = el("span", "ts-body");
     if (none) {
       b.append("none" + (s.note ? " · " + s.note : ""));
@@ -1368,7 +1695,8 @@ function thread(steps) {
       if (s.run_id) { b.append(" · "); var a = memberLink(s.link) ? link(s.link, null) : el("span"); a.append(el("code", null, s.run_id)); b.append(a); }
       if (s.note) b.append(" · " + s.note);
     }
-    li.append(b);
+    cellS.append(b);
+    li.append(cellS); /* one grid cell beside the numbered node (rev 3 §3.4) */
     ol.append(li);
   }
   d.append(ol);
@@ -1385,7 +1713,7 @@ async function showNext() {
 /* HAC-48 §3.4.1: 409 no_saved_checkin replaces the panel. From a POST it is an alert and takes focus. */
 function noSaved(fromPost) {
   return notice("info", "Check in first", ["A next step comes from your last saved check-in, and you have not saved one yet.",
-    btnLink("#checkin", "Go to check-in", true)], fromPost ? { role: "alert", focus: true } : {});
+    btnLink("#today", "Go to check-in", true)], fromPost ? { role: "alert", focus: true } : {});
 }
 /* GET the step into the panel. On failure the panel is hidden and the notice takes its place. Returns true on success.
    fromPost: the GET re-fetches after a POST (422 unknown_step), so a failure notice is an alert and takes focus (§3.4.1, §3.8). */
@@ -1439,10 +1767,10 @@ async function choose(stepId, choice) {
     var res = await api("POST", "/api/journals/" + encodeURIComponent(S.journal) + "/next-step", { step_id: stepId, choice: choice });
     clear(out); clear(msg);
     if (isGone(res)) { sessionEnded(); return; }
-    var cont = link("#passport", "Back to your passport");
     if (res.status === 200 && res.data) {
-      if (choice === "choose") out.append(notice("ok", "Goal set", [para("Added to your clone. ", cont)]));
-      else out.append(notice("info", "Nothing was saved", [para("You can come back to this later. ", cont)]));
+      /* rev 3 §3.5: the learning lab is console-only now, so Choose links the member's own timeline */
+      if (choice === "choose") out.append(notice("ok", "Goal set", [para("Added to your clone. ", link("#timeline", "View timeline"))]));
+      else out.append(notice("info", "Nothing was saved", [para("You can come back to this later. ", link("#passport", "Back to your passport"))]));
       return;
     }
     if (res.status === 422 && code(res) === "unknown_step") {
@@ -1465,6 +1793,143 @@ async function choose(stepId, choice) {
     nsBusy = false;
     nsPanelBusy(false);
   }
+}
+
+/* ---------- #timeline (GET /api/journals/{id}/timeline, AM-2 D3) ----------
+   Every chip, row and sentence below is one field of a timeline entry, mapped 1:1:
+     appends[]                                  → "N observations", "Added: <display value unit>, …"
+     passport_changes[].change "became_ready"   → ✓ Card ready: <title>
+     passport_changes[].change "value_changed"  → ↻ Updated: <title> (that it changed; never the direction)
+     passport_changes[].change "now_observed"   → ● Now observed: <title>
+     passport_changes[].change "withheld"       → ○ Withheld: <title>
+     next_step.changed (before null: the first) → → New next step / → First next step, with next_step.after.text
+   Next-step choices are not saves, so the API has no entry for them and the page draws none. */
+var TL_CHIPS = {
+  became_ready: ["tag tag--ready", "✓ Card ready: "],
+  value_changed: ["tag", "↻ Updated: "],
+  now_observed: ["tag tag--observed", "● Now observed: "],
+  withheld: ["tag tag--withheld", "○ Withheld: "]
+};
+function tlChanges(e) { return Array.isArray(e.passport_changes) ? e.passport_changes.filter(function (c) { return c && TL_CHIPS[c.change]; }) : []; }
+function tlAppends(e) { return Array.isArray(e.appends) ? e.appends : []; }
+function tlStep(e) { var n = e.next_step; return n && n.changed === true && n.after && typeof n.after.text === "string" ? n : null; }
+function tlTitle(e) {
+  var n = tlAppends(e).length, first = e.index === 1;
+  return (first ? "First check-in saved" : "Check-in saved") + (n ? " · " + plural(n, "observation", "observations") : "");
+}
+/* The change chips, or null when the entry reports no change. */
+function tlChips(e) {
+  var ul = el("ul", "tl-chips");
+  tlChanges(e).forEach(function (c) { var k = TL_CHIPS[c.change]; ul.append(el("li", k[0], k[1] + c.title)); });
+  var st = tlStep(e);
+  if (st) ul.append(el("li", "tag tag--live", st.before ? "→ New next step" : "→ First next step"));
+  return ul.children.length ? ul : null;
+}
+function tlAdded(e) {
+  return tlAppends(e).map(function (a) { var v = fmtValue(a.value, a.unit); return String(a.display) + (v === null ? "" : " " + v); }).join(", ");
+}
+/* The expanded entry: plain sentences, one per thing the entry reports. */
+function tlSentences(e) {
+  var out = [], added = tlAdded(e), changes = tlChanges(e), st = tlStep(e);
+  if (added) out.push("Added: " + added + ".");
+  changes.forEach(function (c) {
+    out.push(String(c.title) + {
+      became_ready: " became ready on your passport.",
+      value_changed: " now shows your latest value.",
+      now_observed: " now shows a value you saved, not a simulated one.",
+      withheld: " is withheld on your passport for now."
+    }[c.change]);
+  });
+  if (!changes.length) out.push("No passport card changed.");
+  if (st) out.push((st.before ? "Next step changed to “" : "First next step: “") + st.after.text + "”");
+  else out.push("Next step unchanged.");
+  return out;
+}
+/* The "Your clone updated" rows (rev 3 §3.3): [key, ...text parts]; a kind with no change has no row. */
+function deltaRows(e) {
+  var rows = [], n = tlAppends(e).length, st = tlStep(e);
+  if (n) rows.push(["Observed", plural(n, "new observation", "new observations") + " added: " + tlAdded(e)]);
+  var words = {
+    became_ready: ["Card ready", " now has enough data and is ready on your passport."],
+    value_changed: ["Updated", " now shows your latest value."],
+    now_observed: ["Now observed", " now shows a value you saved, not a simulated one."],
+    withheld: ["Withheld", " is withheld on your passport for now."]
+  };
+  ["became_ready", "value_changed", "now_observed", "withheld"].forEach(function (kind) {
+    tlChanges(e).filter(function (c) { return c.change === kind; }).forEach(function (c) {
+      rows.push([words[kind][0], el("strong", null, c.title), words[kind][1]]);
+    });
+  });
+  if (st) rows.push(["Next step", "New suggestion: “" + st.after.text + "”"]);
+  return rows;
+}
+/* "Today · 29 Sep", "Yesterday · 28 Sep", "14 Sep": relative to the journal's own today. */
+function tlDayLabel(day) {
+  var short = fmtShortDay(day);
+  if (S.today && day === S.today) return "Today · " + short;
+  if (S.today && day === shiftDate(S.today, -1)) return "Yesterday · " + short;
+  return short;
+}
+var TL_PAGE = 7, tlSeq = 0, tlGroups = [], tlShown = 0;
+async function showTimeline() {
+  var seq = ++tlSeq, msg = clear($("tl-msg")), body = $("tl-body");
+  body.hidden = true;
+  if (!(await ensureJournal())) { if (seq === tlSeq) msg.append(serverError(journalErr, showTimeline)); return; }
+  var res = await api("GET", "/api/journals/" + encodeURIComponent(S.journal) + "/timeline");
+  if (seq !== tlSeq) return; /* a newer load started while this one waited */
+  if (isGone(res)) { sessionEnded(); return; }
+  if (!res.ok || !res.data || !Array.isArray(res.data.entries)) { msg.append(serverError(res, showTimeline)); return; }
+  var entries = res.data.entries.slice().reverse(); /* newest first */
+  if (!entries.length) {
+    msg.append(notice("info", "No updates yet", ["Your first saved check-in starts the timeline.", btnLink("#today", "Check in", true)]));
+    return;
+  }
+  tlGroups = [];
+  entries.forEach(function (e) {
+    var day = String(e.as_of).slice(0, 10), g = tlGroups[tlGroups.length - 1];
+    if (!g || g.day !== day) tlGroups.push(g = { day: day, entries: [] });
+    g.entries.push(e);
+  });
+  tlShown = 0;
+  clear($("tl-days"));
+  var om = typeof res.data.omitted === "number" ? res.data.omitted : 0;
+  $("tl-omitted").hidden = om === 0;
+  $("tl-omitted").textContent = om ? plural(om, "older check-in is", "older check-ins are") + " not shown." : "";
+  tlMore(false);
+  body.hidden = false;
+}
+/* Draws the next TL_PAGE days ("Show earlier days"; no infinite scroll). focus: the button was used, so
+   focus moves to the first day it added. */
+function tlMore(focus) {
+  var box = $("tl-days"), first = null;
+  tlGroups.slice(tlShown, tlShown + TL_PAGE).forEach(function (g, k) {
+    var i = tlShown + k, sec = attrs(el("section", "tl-day"), { "aria-labelledby": "tl-d" + i });
+    var h = attrs(el("h2", null, tlDayLabel(g.day)), { id: "tl-d" + i, tabindex: "-1" });
+    var ol = el("ol", "tl");
+    g.entries.forEach(function (e, j) { ol.append(tlEntry(e, i === 0 && j === 0)); });
+    sec.append(h, ol);
+    box.append(sec);
+    if (!first) first = h;
+  });
+  tlShown = Math.min(tlGroups.length, tlShown + TL_PAGE);
+  $("tl-more-row").hidden = tlShown >= tlGroups.length;
+  if (focus && first) first.focus();
+}
+function tlEntry(e, newest) {
+  var li = el("li", newest ? "is-new" : null), d = el("details", "tl-item"), sum = el("summary");
+  if (newest) d.open = true;
+  var time = el("span", "tl-time", "save " + e.index + " ");
+  time.append(attrs(el("span", "chev", "›"), { "aria-hidden": "true" }));
+  sum.append(el("span", "tl-title", tlTitle(e)), time);
+  var chips = tlChips(e);
+  if (chips) sum.append(chips);
+  var det = el("div", "tl-detail");
+  det.append(bullets(tlSentences(e)));
+  var p = el("p", "small"); p.style.margin = "var(--s2) 0 0"; p.append(link("#passport", "Open passport"));
+  det.append(p);
+  d.append(sum, det);
+  li.append(d);
+  return li;
 }
 
 /* ---------- #lab ---------- */
@@ -1617,6 +2082,9 @@ $("ci-files-btn").addEventListener("click", function () { togglePicker("ci-files
 $("ci-images-btn").addEventListener("click", function () { togglePicker("ci-images-btn", "ci-images"); });
 $("rv-form").addEventListener("submit", submitReview);
 $("fresh-btn").addEventListener("click", function () { startAgain(true); });
+$("tl-more").addEventListener("click", function () { tlMore(true); });
+/* the skip link moves focus to the content; it never changes the route hash */
+$("skip").addEventListener("click", function (ev) { ev.preventDefault(); $("main").focus(); });
 restore();
 updateNav();
 updateCount();
