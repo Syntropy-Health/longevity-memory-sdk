@@ -944,7 +944,7 @@ def test_d4_stale_step_refetch_failure_takes_focus(second):
 # rev 3: updateNav also draws the journal's identity (applyIdentity), and #today loads the "Your clone" aside
 _IDENTITY = ["WEEKDAYS", "fmtShortDay", "fmtWeekday", "firstName", "applyIdentity"]
 _TL = ["fmtValue", "shiftDate", "TL_CHIPS", "tlChanges", "tlAppends", "tlStep", "tlTitle", "tlChips", "tlAdded", "tlSentences",
-       "deltaRows", "tlDayLabel"]
+       "deltaRows", "tlDays", "tlDayLabel"]
 _CHECKIN = ["persist", "updateNav", "journalPending", "adoptJournal", "createJournal", "ensureJournal", "ciBusy", "showCheckin",
             "loadFixtures", "submitCheckin", "setAside", "cloneSeq", "loadClone", "renderClone"] + _IDENTITY + _TL
 _CI_DOM = """
@@ -1652,6 +1652,46 @@ def test_rev3_timeline_groups_days_newest_first_and_pages_by_7():
     assert f["items"] == [[True, "is-new"], [False, ""], [False, ""]]  # only the newest is open, with the teal node
     assert got["heads"][7:] == ["22 Sep", "21 Sep", "20 Sep"] and got["moreHidden"] is True
     assert got["focused"] == "22 Sep"  # "Show earlier days" moves focus to the first day it added
+
+
+def test_rev3_timeline_groups_a_backdated_save_under_its_own_day():
+    """QG P6.2 K1: the API lists saves in save order, but a backdated save ("yesterday I slept…") made
+    after today's carries an older day. Each day has one header, days run newest first, a day lists its
+    saves newest first, and the newest save (the last the API lists) is the open, teal entry."""
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var es = [entry(1, day(2)), entry(2, day(0)), entry(3, day(1)), entry(4, day(0)), entry(5, day(3))];
+        RESP.push([200, { entries: es, omitted: 0 }]);
+        await showTimeline();
+        return $("tl-days").querySelectorAll("section").map(function (sec) {
+          return [sec.querySelector("h2").textContent].concat(sec.querySelectorAll("details").map(function (d) {
+            return [d.querySelector("span.tl-time").textContent.trim().replace(" ›", ""), d.open === true, d.parentNode.className]; })); });
+        """,
+    )
+    assert got == [
+        ["Today · 29 Sep", ["save 4", False, ""], ["save 2", False, ""]],
+        ["Yesterday · 28 Sep", ["save 3", False, ""]],
+        ["27 Sep", ["save 1", False, ""]],
+        ["26 Sep", ["save 5", True, "is-new"]],  # the newest save is backdated: it stays on its own day
+    ]
+
+
+def test_rev3_clone_aside_last_updated_is_the_latest_day_not_the_last_save():
+    """QG P6.2 K1: "Last updated" names the latest day the clone holds; a backdated last save does not
+    move it back. "Latest update" is still the newest save."""
+    got = _run_page(
+        _CLONE,
+        _CLONE_DOM + f"""
+        var today = Object.assign({{}}, {_ENTRY}, {{ index: 1 }});
+        var back = Object.assign({{}}, {_QUIET}, {{ index: 2, as_of: "2026-09-26T12:00:00Z" }});
+        RESP.push([200, {{ entries: [today, back], omitted: 0 }}], [200, {{ cards: [] }}]);
+        await loadClone();
+        return [$("clone-built").textContent, $("clone-latest").textContent];
+        """,
+    )
+    assert got[0] == "Built from 2 days of your saved check-ins. Last updated 29 Sep 2026."
+    assert got[1] == "Check-in saved"  # the newest save (the backdated one) is the latest update
 
 
 def test_rev3_timeline_empty_failed_and_ended_states():

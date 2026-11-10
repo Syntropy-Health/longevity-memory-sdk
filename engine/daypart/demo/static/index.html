@@ -1152,7 +1152,7 @@ function renderClone(t, cards) {
   var days = {}, obs = 0;
   entries.forEach(function (e) { days[String(e.as_of).slice(0, 10)] = true; obs += Array.isArray(e.appends) ? e.appends.length : 0; });
   var nDays = Object.keys(days).length, whole = omitted === 0; /* older saves left out: day and observation totals are unknown */
-  var last = fmtDay(String(newest.as_of).slice(0, 10));
+  var last = fmtDay(tlDays(entries)[0].day); /* the latest day the clone holds, not the last save's (K1) */
   $("clone-built").textContent = (whole ? "Built from " + plural(nDays, "day", "days") + " of your saved check-ins. " : "Built from your saved check-ins. ") +
     "Last updated " + last + ".";
   var stats = clear($("clone-stats"));
@@ -1923,6 +1923,21 @@ function deltaRows(e) {
   if (st) rows.push(["Next step", "New suggestion: “" + st.after.text + "”"]);
   return rows;
 }
+/* The timeline's days (rev 3 §3.6), newest day first; inside a day, its saves newest first. The API
+   lists saves in save order, and a backdated save (made after today's) carries an older day, so the
+   grouping goes through a day map, never by adjacent entries (QG P6.2 K1). */
+function tlDays(entries) {
+  var byDay = {}, days = [];
+  entries.forEach(function (e, k) {
+    var day = String(e.as_of).slice(0, 10);
+    if (!byDay[day]) { byDay[day] = []; days.push(day); }
+    byDay[day].push({ e: e, k: k });
+  });
+  days.sort(function (a, b) { return a < b ? 1 : a > b ? -1 : 0; });
+  return days.map(function (day) {
+    return { day: day, entries: byDay[day].sort(function (a, b) { return b.k - a.k; }).map(function (x) { return x.e; }) };
+  });
+}
 /* "Today · 29 Sep", "Yesterday · 28 Sep", "14 Sep": relative to the journal's own today. */
 function tlDayLabel(day) {
   var short = fmtShortDay(day);
@@ -1930,7 +1945,7 @@ function tlDayLabel(day) {
   if (S.today && day === shiftDate(S.today, -1)) return "Yesterday · " + short;
   return short;
 }
-var TL_PAGE = 7, tlSeq = 0, tlGroups = [], tlShown = 0;
+var TL_PAGE = 7, tlSeq = 0, tlGroups = [], tlShown = 0, tlNewest = null;
 async function showTimeline() {
   var seq = ++tlSeq, msg = clear($("tl-msg")), body = $("tl-body");
   body.hidden = true;
@@ -1939,17 +1954,13 @@ async function showTimeline() {
   if (seq !== tlSeq) return; /* a newer load started while this one waited */
   if (isGone(res)) { sessionEnded(); return; }
   if (!res.ok || !res.data || !Array.isArray(res.data.entries)) { msg.append(serverError(res, showTimeline)); return; }
-  var entries = res.data.entries.slice().reverse(); /* newest first */
+  var entries = res.data.entries;
   if (!entries.length) {
     msg.append(notice("info", "No updates yet", ["Your first saved check-in starts the timeline.", btnLink("#today", "Check in", true)]));
     return;
   }
-  tlGroups = [];
-  entries.forEach(function (e) {
-    var day = String(e.as_of).slice(0, 10), g = tlGroups[tlGroups.length - 1];
-    if (!g || g.day !== day) tlGroups.push(g = { day: day, entries: [] });
-    g.entries.push(e);
-  });
+  tlGroups = tlDays(entries);
+  tlNewest = entries[entries.length - 1]; /* the newest save: open, with the teal node, on whichever day it holds */
   tlShown = 0;
   clear($("tl-days"));
   var om = typeof res.data.omitted === "number" ? res.data.omitted : 0;
@@ -1966,7 +1977,7 @@ function tlMore(focus) {
     var i = tlShown + k, sec = attrs(el("section", "tl-day"), { "aria-labelledby": "tl-d" + i });
     var h = attrs(el("h2", null, tlDayLabel(g.day)), { id: "tl-d" + i, tabindex: "-1" });
     var ol = el("ol", "tl");
-    g.entries.forEach(function (e, j) { ol.append(tlEntry(e, i === 0 && j === 0)); });
+    g.entries.forEach(function (e) { ol.append(tlEntry(e, e === tlNewest)); });
     sec.append(h, ol);
     box.append(sec);
     if (!first) first = h;
