@@ -738,6 +738,8 @@ function sessionEnded() {
 }
 /* fresh === true: an empty journal; anything else (the "Start again" click event) re-seeds the persona. */
 async function startAgain(fresh) {
+  /* a journal still being created (the first load) settles first, so this request is never folded into it */
+  if (journalPending) { try { await journalPending; } catch (e) { /* replaced below */ } }
   clear($("session-msg"));
   S.journal = null; S.today = null; S.displayName = null; S.checkins = {}; S.lastCheckin = null;
   nextFresh = fresh === true;

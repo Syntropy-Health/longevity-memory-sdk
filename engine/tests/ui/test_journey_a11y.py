@@ -148,7 +148,7 @@ def fresh_journal(page: Page, base_url: str) -> None:
     """An empty journal ("Start a fresh journal") instead of the seeded persona's (AM-2 D2)."""
     goto(page, base_url, "checkin")
     wait_route_ready(page, "checkin")
-    page.click("#fresh-btn")
+    page.click("#fresh-btn")  # even while the first (persona) journal is still being created
     page.wait_for_function(
         "(() => { const v = JSON.parse(sessionStorage.getItem('chc.session.v1') || 'null');"
         " return !!v && typeof v.journal === 'string' && v.displayName === null; })()"
