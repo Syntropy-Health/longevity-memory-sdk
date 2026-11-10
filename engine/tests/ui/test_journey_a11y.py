@@ -1201,14 +1201,22 @@ def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe
     expect(stages.nth(1)).to_contain_text(f"{sft['split']['training_rows']}")
     expect(stages.nth(1)).to_contain_text(f"(Δ +{sft['gate']['delta']:.3f})")
     expect(stages.nth(2)).to_contain_text(f"{dpo['gate']['boundary_regressions']} regressions")
-    expect(stages.nth(3)).to_contain_text(rows["grpo"]["reason"])
-    expect(stages.nth(3)).to_contain_text("○ proposed, not built")
+    grpo = rows["grpo"]  # HAC-79: the ran grpo arm is a "policy" row, env-scored like an env baseline
+    assert grpo["kind"] == "policy"
+    expect(stages.nth(3)).to_contain_text(f"{grpo['metrics']['mean_adherence']:.3f}")
+    expect(stages.nth(3)).to_contain_text(f"{grpo['metrics']['episode_violation_rate']:.3f}")
+    expect(stages.nth(3)).not_to_contain_text("proposed")
+    expect(stages.nth(3)).not_to_contain_text("not recorded")
     expect(page.locator("#screen-pipeline")).to_contain_text("Simulated outcomes are not patient outcomes.")
     # a run links its lab row, which the deep link marks
     stages.nth(1).locator("a").click()
     expect(screen(page, "lab")).to_be_visible()
     expect(page.locator(f"#lab-rows tr[data-run-id='{sft['run_id']}']")).to_have_attribute("aria-current", "true")
     expect(page.locator("#lab-rows tr[aria-current=true]")).to_have_count(1)
+    gr = page.locator(f"#lab-rows tr[data-run-id='{grpo['run_id']}']")
+    expect(gr.locator("td[data-label=Row]")).to_have_text("GRPO")
+    expect(gr.locator("td[data-label=Metric]")).to_have_text(
+        f"mean adherence {grpo['metrics']['mean_adherence']:g} · violation rate {grpo['metrics']['episode_violation_rate']:g}")  # JS String(): 0 not 0.0
     assert_axe_clean(page, axe_source, "lab deep link")
 
 

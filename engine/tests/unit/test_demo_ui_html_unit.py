@@ -2396,8 +2396,8 @@ def test_hac79_lab_policy_row_renders_like_an_env_row():
 
 _INCL = {
     "drivers": [
-        {"driver_id": "a", "label": "Mornings are busy", "direction": "makes_harder", "share": 0.304},
-        {"driver_id": "b", "label": "A clear plan", "direction": "helps", "share": 0.162},
+        {"driver_id": "a", "label": "Mornings are busy", "direction": "makes_harder", "weight": "strong"},
+        {"driver_id": "b", "label": "A clear plan", "direction": "helps", "weight": "moderate"},
     ],
     "insights": [{"insight_id": "i1", "title": "Plan around it", "action": "Do one thing.", "reason": "Why: A clear plan.", "driver": "b"}],
     "note": "Estimated from simulated members, not from patient data.",
@@ -2430,8 +2430,8 @@ def test_hac79_inclinations_order_headings_and_tags():
     assert kinds == ["p", "h3", "ul", "h3", "div"]  # the simulated caveat first, before the numbers it qualifies
     assert got["kids"][2][2] == "h-incl-drv" and got["kids"][4][2] == "h-incl-ins"  # lists named by their visible headings
     assert got["h3"] == ["What weighs most", "Next steps"] and got["h4"] == ["Plan around it"]  # h2 > h3 > h4
-    assert got["tags"] == [["tag tag--harder", "▼ Makes it harder · 30% of what we can explain"],
-                           ["tag tag--ready", "▲ Helps · 16% of what we can explain"]]
+    assert got["tags"] == [["tag tag--harder", "▼ Makes it harder · weighs strongly"],
+                           ["tag tag--ready", "▲ Helps · weighs moderately"]]
     assert "tag--withheld" not in str(got["tags"])  # withheld means "no data", not a direction
     assert got["art"] == [["pp-ins0", "pp-drv-1"]] and "Linked to: A clear plan" in got["text"]
 
