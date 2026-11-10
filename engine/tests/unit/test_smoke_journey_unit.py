@@ -6,8 +6,12 @@ healthy build, and it must fail when the passport 500s (the hosted defect it exi
 
 from __future__ import annotations
 
+import http.server
 import importlib.util
+import json
 import sys
+import threading
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -115,3 +119,78 @@ def test_deploy_job_runs_the_journey_on_the_hosted_url():
     run = steps[smoke_steps[0]]["run"]
     assert "https://supermomo668--daypart-demo-playground.us-east.modal.run" in run
     assert "|| true" not in run and not steps[smoke_steps[0]].get("continue-on-error")
+
+
+# --- QG P5.1 B1: network errors and malformed bodies end in a FAIL line, exit 1 -------------------
+
+
+@pytest.mark.parametrize(
+    "transport",
+    [
+        pytest.param(lambda m, p, b: (_ for _ in ()).throw(urllib.error.URLError("refused")), id="url-error"),
+        pytest.param(lambda m, p, b: (_ for _ in ()).throw(TimeoutError("timed out")), id="timeout"),
+        pytest.param(lambda m, p, b: (201, None), id="no-body"),
+        pytest.param(lambda m, p, b: (201, []), id="list-body"),
+    ],
+)
+def test_main_reports_fail_line_on_transport_errors(monkeypatch, capsys, transport):
+    monkeypatch.setattr(smoke, "http_transport", lambda base, timeout: transport)
+    assert smoke.main(["https://example.invalid"]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("FAIL create journal:"), err
+
+
+# --- QG P5.1 B2: the real urllib transport (the only code path CI runs) --------------------------
+
+
+class _Handler(http.server.BaseHTTPRequestHandler):
+    seen: list[tuple[str, str, str | None, bytes]] = []
+
+    def _reply(self):
+        n = int(self.headers.get("content-length") or 0)
+        body = self.rfile.read(n) if n else b""
+        _Handler.seen.append((self.command, self.path, self.headers.get("content-type"), body))
+        status, payload = {
+            "/conflict": (409, b'{"error": "no_saved_checkin"}'),
+            "/boom": (500, b"Internal Server Error"),
+            "/empty": (200, b""),
+        }.get(self.path, (201, b'{"ok": true}'))
+        self.send_response(status)
+        self.send_header("content-length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    do_GET = do_POST = _reply
+
+    def log_message(self, *a):
+        pass
+
+
+@pytest.fixture
+def stub_url():
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    _Handler.seen.clear()
+    try:
+        yield f"http://127.0.0.1:{srv.server_address[1]}/"
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_http_transport_returns_error_statuses_without_raising(stub_url):
+    call = smoke.http_transport(stub_url, timeout=5)
+    assert call("GET", "/conflict", None) == (409, {"error": "no_saved_checkin"})
+    assert call("GET", "/boom", None) == (500, None)
+    assert call("GET", "/empty", None) == (200, None)
+
+
+def test_http_transport_sends_json_and_strips_trailing_slash(stub_url):
+    call = smoke.http_transport(stub_url, timeout=5)
+    assert call("POST", "/api/journals", {"member_id": "syn-001"}) == (201, {"ok": True})
+    assert call("GET", "/api/lab", None) == (201, {"ok": True})
+    (m1, p1, ct1, b1), (m2, p2, ct2, b2) = _Handler.seen
+    assert (m1, p1, ct1) == ("POST", "/api/journals", "application/json")
+    assert json.loads(b1) == {"member_id": "syn-001"}
+    assert (m2, p2, ct2, b2) == ("GET", "/api/lab", None, b"")

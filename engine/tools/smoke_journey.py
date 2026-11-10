@@ -9,9 +9,10 @@ both saved values shown as observed) → next step → choose → lab → refuse
 
 Standard library only, so CI runs it without the engine's dependencies::
 
-    python tools/smoke_journey.py https://supermomo668--daypart-demo-playground.us-east.modal.run
+    uv run --no-project python tools/smoke_journey.py https://supermomo668--daypart-demo-playground.us-east.modal.run
 
-Exit status 0 when every step passes, 1 on the first failure (the step and response are printed).
+Run from ``engine/``, as the ``deploy-demo`` CI job does. Exit status 0 when every step passes, 1 on
+the first failure: a wrong status, a network error or a malformed body prints ``FAIL <step>: …``.
 The journey is synthetic and writes only to an in-memory demo journal (A&D D-A3).
 """
 
@@ -58,42 +59,52 @@ def http_transport(base: str, timeout: float = 180.0) -> Transport:
     return call
 
 
-def _expect(step: str, got: tuple[int, Any], status: int) -> Any:
-    code, body = got
+def _expect(step: str, call: Transport, method: str, path: str, body: Any, status: int) -> Any:
+    """Make one call; fail with the step name on a network error, a wrong status or a non-object body."""
+    try:
+        code, data = call(method, path, body)
+    except (OSError, ValueError) as e:  # URLError, TimeoutError, connection reset, bad URL
+        raise SmokeFailure(f"{step}: {type(e).__name__}: {e}") from e
     if code != status:
-        raise SmokeFailure(f"{step}: expected {status}, got {code}: {json.dumps(body)[:500]}")
+        raise SmokeFailure(f"{step}: expected {status}, got {code}: {json.dumps(data)[:500]}")
+    if not isinstance(data, dict):
+        raise SmokeFailure(f"{step}: expected a JSON object, got {json.dumps(data)[:500]}")
     print(f"ok  {step}: {code}")
-    return body
+    return data
 
 
 def run(call: Transport) -> None:
-    jid = _expect("create journal", call("POST", "/api/journals", {"member_id": MEMBER}), 201)["journal_id"]
-    body = _expect("next step before any save", call("GET", f"/api/journals/{jid}/next-step", None), 409)
-    if not isinstance(body, dict) or body.get("error") != "no_saved_checkin":
+    try:
+        _run(call)
+    except (KeyError, TypeError, ValueError, AttributeError) as e:  # a 2xx body without the fields
+        raise SmokeFailure(f"malformed response: {type(e).__name__}: {e}") from e
+
+
+def _run(call: Transport) -> None:
+    jid = _expect("create journal", call, "POST", "/api/journals", {"member_id": MEMBER}, 201)["journal_id"]
+    body = _expect("next step before any save", call, "GET", f"/api/journals/{jid}/next-step", None, 409)
+    if body.get("error") != "no_saved_checkin":
         raise SmokeFailure(f"next step before any save: expected no_saved_checkin, got {body}")
 
-    ck = _expect("text check-in", call("POST", "/api/checkins", {"journal_id": jid, "text": TEXT}), 201)
+    ck = _expect("text check-in", call, "POST", "/api/checkins", {"journal_id": jid, "text": TEXT}, 201)
     proposed = sorted(float(p["value"]) for p in ck["proposals"])
     if tuple(proposed) != EXPECTED_VALUES:
         raise SmokeFailure(f"text check-in: expected values {EXPECTED_VALUES}, got {proposed}")
     decisions = [{"proposal_id": p["proposal_id"], "action": "confirm"} for p in ck["proposals"]]
-    _expect("review, confirm all", call("POST", f"/api/checkins/{ck['checkin_id']}/review", {"decisions": decisions}), 200)
+    _expect("review, confirm all", call, "POST", f"/api/checkins/{ck['checkin_id']}/review", {"decisions": decisions}, 200)
 
-    pp = _expect("passport", call("GET", f"/api/journals/{jid}/passport", None), 200)
+    pp = _expect("passport", call, "GET", f"/api/journals/{jid}/passport", None, 200)
     observed = sorted(float(c["value"]) for c in pp.get("cards", []) if c.get("origin") == "observed")
     if tuple(observed) != EXPECTED_VALUES:
         raise SmokeFailure(f"passport: expected observed values {EXPECTED_VALUES}, got {observed}")
 
-    step = _expect("next step", call("GET", f"/api/journals/{jid}/next-step", None), 200)
-    _expect(
-        "choose next step",
-        call("POST", f"/api/journals/{jid}/next-step", {"step_id": step["step_id"], "choice": "choose"}),
-        200,
-    )
-    lab = _expect("lab", call("GET", "/api/lab", None), 200)
+    step = _expect("next step", call, "GET", f"/api/journals/{jid}/next-step", None, 200)
+    choice = {"step_id": step["step_id"], "choice": "choose"}
+    _expect("choose next step", call, "POST", f"/api/journals/{jid}/next-step", choice, 200)
+    lab = _expect("lab", call, "GET", "/api/lab", None, 200)
     if not lab.get("rows"):
         raise SmokeFailure("lab: no rows")
-    _expect("real-input mode refused", call("POST", "/api/mode", {}), 403)
+    _expect("real-input mode refused", call, "POST", "/api/mode", {"real_input": True}, 403)
 
 
 def main(argv: list[str] | None = None) -> int:
