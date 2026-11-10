@@ -1312,3 +1312,35 @@ def test_k4_only_the_newest_passport_load_draws():
         """,
     )
     assert got == ["new"]
+
+
+def test_t9_fresh_journal_during_the_first_load_is_fresh():
+    """QG P6.1 T9 (regression for O1, b2f3ace): "Start a fresh journal" pressed while the persona
+    journal is still being created ends on a fresh, empty journal, never the persona's."""
+    got = _run_page(
+        _BASE + _API + ["persist", "updateNav", "adoptJournal", "journalPending", "createJournal", "ensureJournal",
+                        "resetCheckin", "startAgain", "sessionEnded"],
+        """
+        mk("nav-review", "a"); mk("session-msg");
+        var sessionStorage = { setItem: function () {}, removeItem: function () {} };
+        globalThis.resetCheckin = function () {}; globalThis.route = function () {};
+        S.journal = null;
+        var release;
+        var held = new Promise(function (r) { release = r; });
+        fetch = async function (path, init) {
+          CALLS.push([init.method, path, init.body === undefined ? null : JSON.parse(init.body)]);
+          if (path === "/api/personas") await held;  // the first load is slow
+          var r = path === "/api/personas" ? [200, [{ persona_id: "persona-v1", display_name: "Rowan Ellis" }]]
+            : path === "/api/members" ? [200, [{ member_id: "syn-001" }]]
+            : init.body && JSON.parse(init.body).persona ? [201, { journal_id: "jp", today: "2026-09-29", display_name: "Rowan Ellis", saved_checkins: [] }]
+            : [201, { journal_id: "jf", today: "2026-09-29" }];
+          return { status: r[0], ok: true, json: async function () { return r[1]; } };
+        };
+        var first = ensureJournal();
+        var again = startAgain(true);       // clicked while the persona journal is pending
+        release();
+        await first; await again;
+        return [S.journal, S.displayName, CALLS[CALLS.length - 1]];
+        """,
+    )
+    assert got[0] == "jf" and got[1] is None and got[2] == ["POST", "/api/journals", {"member_id": "syn-001"}]
