@@ -299,6 +299,20 @@ def test_wrong_value_fails_without_retry(client, sleeps):
     assert sleeps == []
 
 
+@pytest.mark.parametrize("status", [500, 409, 503])
+def test_rollover_code_on_a_non_404_fails_without_retry(client, sleeps, status):
+    # Only a 404 means "this container never saw the journal"; a 500 is a real failure whatever its body.
+    call = _transport(client)
+
+    def odd(method, path, b):
+        return (status, {"error": "unknown_journal"}) if path.endswith("/passport") else call(method, path, b)
+
+    wrapped, creates = _count_creates(odd)
+    with pytest.raises(smoke.SmokeFailure, match=f"passport: expected 200, got {status}"):
+        smoke.run_with_retry(wrapped)
+    assert len(creates) == 1 and sleeps == []
+
+
 @pytest.mark.parametrize("body", [{"error": "unknown_step"}, {"error": "not_found"}, None])
 def test_other_404s_fail_without_retry(client, sleeps, body):
     call = _transport(client)
