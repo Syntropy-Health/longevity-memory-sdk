@@ -338,7 +338,7 @@ def test_persistent_rollover_gives_up_after_5_tries(sleeps):
         smoke.run_with_retry(always_gone)
     assert calls.count("/api/journals") == 5
     assert len(sleeps) == 4
-    assert sleeps == sorted(sleeps) and sleeps[0] > 0, "backoff grows"
+    assert sleeps == [10.0, 20.0, 30.0, 40.0], "back-off grows 10/20/30/40 s"
 
 
 def test_retry_stops_when_the_time_budget_is_spent(monkeypatch, sleeps):
