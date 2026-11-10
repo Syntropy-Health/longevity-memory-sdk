@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "workstream": "daypart",
-  "updated_at": "2026-11-10T15:34:38.450513+00:00",
+  "updated_at": "2026-11-10T17:42:25.334410+00:00",
   "linear": {
     "initiative_url": "",
     "initiative_id": ""
@@ -224,6 +224,18 @@
       "summary": "AM-2 P6.1: / member app + /admin console, tags removed, persona, timeline API",
       "pr": "",
       "updated_at": "2026-11-10T15:34:38.450426+00:00"
+    },
+    "P6.2": {
+      "status": "done",
+      "artifact": "",
+      "linear": "",
+      "paperclip": "",
+      "gh": "",
+      "commit": "52235a2",
+      "qgr": "workstreams/daypart/qgr/longevity-memory-sdk-matt-mo-worktree-agent-daypart-longevity-memory-sdk-qgr-iteration-complete-20261110-1741-db8ccf0.md",
+      "summary": "AM-2 visual spec rev 3 on / and /admin: today, clone-updated, timeline, pipeline, console routes",
+      "pr": "",
+      "updated_at": "2026-11-10T17:42:25.334312+00:00"
     }
   }
 }
