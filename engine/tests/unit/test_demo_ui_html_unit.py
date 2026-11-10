@@ -1268,3 +1268,17 @@ def test_k3_member_facing_api_labels_never_say_demo(client):
     labels = {c["source"] for c in pp["cards"]} | {c["thread"]["steps"][0]["label"] for c in pp["cards"]}
     assert "Imported photo" in labels
     assert not [s for s in labels if "demo" in s.lower()], labels
+
+
+def test_k2_persona_checkin_links_say_already_saved():
+    got = _run_page(
+        _BASE + ["persist", "updateNav", "adoptJournal", "alreadySavedNotice", "savedNotice", "rvSeq", "rvCurrent", "showReview"],
+        """
+        mk("nav-review", "a"); mk("rv-intro", "p"); mk("rv-msg"); mk("rv-form", "form"); mk("rv-list");
+        var sessionStorage = { setItem: function () {} };
+        adoptJournal({ journal_id: "j1", today: "2026-09-29", display_name: "Rowan Ellis", saved_checkins: ["j1-c1", "j1-c2"] });
+        await showReview("j1-c2");
+        return [$("rv-msg").textContent, $("rv-form").hidden, Object.keys(S.checkins)];
+        """,
+    )
+    assert "Already saved" in got[0] and "not available" not in got[0] and got[1] is True and got[2] == ["j1-c1", "j1-c2"]

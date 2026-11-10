@@ -136,3 +136,11 @@ def test_a_persona_text_that_does_not_replay_cleanly_fails_loudly(monkeypatch):
         r = c.post("/api/journals", json={"persona": persona.PERSONA_ID})
     assert r.status_code == 500 and r.json() == {"error": "persona_seed_failed"}
     assert len(c.app.state.journals) == 0  # the half-seeded journal is dropped
+
+
+def test_k2_seed_response_names_the_saved_checkins(client):
+    """QG P6.1 C1: the member app needs the persona's saved check-in ids, so its #review/<id> evidence
+    links say "Already saved" instead of "not available here"."""
+    body = _seeded(client)
+    j = client.app.state.journals.get(body["journal_id"])
+    assert body["saved_checkins"] == j.saved_order and len(body["saved_checkins"]) == 28

@@ -269,7 +269,8 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
             return _error(500, {"error": "persona_seed_failed"})
         content = {"journal_id": j.journal_id, "member_id": j.member.member_id, "today": j.today.isoformat()}
         if j.persona_id is not None:
-            content |= {"persona_id": j.persona_id, "display_name": j.display_name}
+            # QG P6.1 C1: the saved check-in ids, so the member app's #review/<id> links say "Already saved"
+            content |= {"persona_id": j.persona_id, "display_name": j.display_name, "saved_checkins": list(j.saved_order)}
         return JSONResponse(status_code=201, content=content)
 
     @app.get("/api/personas")

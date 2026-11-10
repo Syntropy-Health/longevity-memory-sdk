@@ -692,7 +692,13 @@ var journalPending = null, journalErr = null, nextFresh = false;
 function adoptJournal(d) {
   S.journal = d.journal_id; S.today = d.today || null;
   S.displayName = typeof d.display_name === "string" ? d.display_name : null;
-  S.checkins = {}; S.lastCheckin = null; persist(); updateNav();
+  S.checkins = {}; S.lastCheckin = null;
+  /* a persona journal's check-ins were saved on the server (G32): record them so their #review/<id>
+     evidence links say "Already saved" (QG P6.1 C1) */
+  (Array.isArray(d.saved_checkins) ? d.saved_checkins : []).forEach(function (id) {
+    if (typeof id === "string") S.checkins[id] = { status: "saved", alreadySaved: true, result: null, proposals: [] };
+  });
+  persist(); updateNav();
 }
 /* AM-2 D2 (G32): the app opens on the seeded persona's journal (28 days already saved through review).
    fresh: an empty journal for the first member instead (the "Start a fresh journal" button). */
