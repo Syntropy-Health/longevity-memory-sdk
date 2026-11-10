@@ -140,9 +140,9 @@ curated-25 never enter (the I1 check covers the training fold, builder `rm.train
   violations [L79]. The policy is myopic (same-day reward only), and the gain is small.
 - **Inclinations on the passport (`engine/daypart/rm/inclinations.py`).** For the journal's member,
   the answers whose reward-model terms weigh most are shown in plain language, with whether each
-  helps or makes the routine harder and its share of the explained effect. Up to three next steps
-  follow: each is a message type with a positive estimated lift, written as an action, with the
-  reason ("Why: …", the estimated extra days in 100 with the routine kept, on days when it slips)
+  helps or makes the routine harder and how strongly it weighs (in words, not numbers). Up to three
+  next steps follow: each is a message type with a positive estimated lift, written as an action,
+  with the reason ("Why: …", and whether the gain in days kept was small, moderate or clear)
   and the answer it is linked to. The link is the answer with the strongest personal term for that
   message type; when no personal term is strong enough, the step is shown as a general effect and
   linked to the member's own answer to the question that message type speaks to. Every string
