@@ -89,3 +89,85 @@ does not exist or any assumption id is not defined.
 | L40 | The repository is licensed Apache-2.0. | `LICENSE` · ASSUMPTION O3 |
 | L41 | The framing follows the challenge statements; no judging rubric is published. | `docs/daypart/submission/sources/organiser-research-2026-11-06.md` · ASSUMPTION O4 |
 | L42 | The team registered before registration closed on 2026-11-10 18:29 UTC. | `docs/daypart/submission/organiser-rules.md` · ASSUMPTION O5 |
+
+## Submission form, deck and appendix (HAC-64)
+
+The rows below back the [form responses](form-responses.md), the [deck outline](deck-outline.md)
+and the [technical appendix](technical-appendix.md). Each quantitative claim carries its
+denominator. Claims that rest on an internal report rather than on a test, a run or a committed
+result are labelled *reported*.
+
+### The hosted build
+
+| id | claim | evidence |
+|---|---|---|
+| L43 | The hosted prototype serves `daypart/build` @ 68236f1, deployed by CI run 42873055419 on 2026-11-10 after every gate job passed; agents probed it on 2026-11-10. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `.github/workflows/engine.yml` |
+| L44 | The hosted SC1 smoke passed 9 of 9 steps: journal, next step refused before a save (409), check-in, review, passport (200), next step, choose, lab, real input refused (403). | `engine/tools/smoke_journey.py` · `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` |
+| L45 | One four-part sentence gave 3 proposals (sleep, pain, steps), each with its snippet, method and confidence; the fourth part ("mood 3 out of 5") gave none, because the rules do not read it. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/checkin/extract_text.py` |
+| L46 | A sentence the rules cannot read is answered with 422 "nothing extracted" and saves nothing. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/tests/unit/test_checkin_extract_unit.py` |
+| L47 | A crisis message on the hosted build got the fixed hand-off text (status "handoff") and was not extracted. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/checkin/crisis.py` · `engine/tests/unit/test_checkin_extract_unit.py` |
+| L48 | Text with an e-mail address and a self-name was refused whole (422, reasons "email" and "self_name"). | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/checkin/tripwire.py` |
+| L49 | The prepared fictional member's passport has 24 cards: 9 ready and 15 withheld; 8 observed (7 ready) and 16 simulated (2 ready). | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/demo/persona_v1.json` · `engine/daypart/passport/view.py` |
+| L50 | 4 of those 24 cards show a sourced reference range beside the value; none is marked high, low or abnormal. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/evidence/sources_v1.json` · `engine/tests/unit/test_passport_view_unit.py` |
+| L51 | An observed value older than 14 days is withheld: the pain card's last value is 16 days old, so it shows no number and its explanation is suppressed. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/passport/view.py` · `engine/tests/unit/test_passport_view_unit.py` |
+| L52 | The timeline lists 28 of 28 saved check-ins, each with its saved observations and the passport changes it caused. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/passport/timeline.py` |
+| L53 | The next step for the prepared member passed the membrane with no rule hits and offers choose, defer or ask a professional. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/checkin/next_step.py` |
+| L54 | The concept inventory lists 5 gaps: lab results, conditions, medications, care history, screenings and check-ups. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/memory/registry_a4.json` |
+| L55 | File and photo check-in accepts only 4 bundled synthetic files (2 photos, 2 device files); no device, sensor or account is connected. | `engine/daypart/demo/fixtures/manifest.json` · `engine/daypart/checkin/fixtures.py` · `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` |
+| L56 | The hosted build refused real input with 403 "build_disallowed" and 12 of 12 governance gates open and unassigned. | `docs/daypart/submission/sources/hosted-probe-2026-11-10.md` · `engine/daypart/governance/real_input.yaml` |
+
+### Synthetic and simulated results
+
+Every row here is measured on synthetic data, a simulator or a synthetic held-out prompt set.
+None is a patient outcome.
+
+| id | claim | evidence |
+|---|---|---|
+| L57 | Two post-training stages ran in run hac28-20261105T081951Z: supervised fine-tuning on 4,040 rows (1,010 steps, 852 s) and preference tuning on 84 pairs (22 steps, 60 s), as adapters on one fixed base model. | `docs/daypart/results/training.json` · `docs/daypart/results/pipeline.json` |
+| L58 | GRPO, the reward model and the question library were not run; the results record each as not run. | `docs/daypart/results/metrics.json` · ASSUMPTION A9 |
+| L59 | The held-out boundary evaluation has 141 prompts (51 check-in, 90 probe), seed 0, greedy decoding: one seed only, so no spread across seeds is reported. | `docs/daypart/results/boundary_eval.json` |
+| L60 | Boundary pass rate on the 141 held-out prompts: base 45 of 141 (0.319), SFT and DPO 141 of 141 (1.0). | `docs/daypart/results/boundary_eval.json` · `docs/daypart/submission/outcomes.md` |
+| L61 | 90 of the base model's 141 replies were empty; the boundary rules fired 7 times on it (3 banned lexicon, 4 named prescription substance). Most of the base gap is empty output, not unsafe text. | `docs/daypart/results/metrics.json` · `docs/daypart/results/boundary_eval.json` |
+| L62 | Failure slice: the lapse-recovery rubric passes on 7 of 51 check-in prompts for SFT and 6 of 51 for DPO, against 81 of 90 and 85 of 90 probes; the "invitation" check fails 53 (SFT) and 50 (DPO) of 141. | `docs/daypart/results/boundary_eval.json` · `docs/daypart/results/metrics.json` |
+| L63 | Promotion gates: SFT had to beat the base boundary rate by at least 0.05 with rubric parity, and DPO had to keep every SFT boundary pass (0 regressions); both passed. | `docs/daypart/results/boundary_eval.json` · `engine/daypart/demo/lab.py` |
+| L64 | Leakage control: 3,239 training turns were excluded from the held-out prompts, and the I1 check passed on 7 of 7 data builders. | `docs/daypart/results/boundary_eval.json` · `docs/daypart/results/metrics.json` · `engine/daypart/ci/i1_check.py` |
+| L65 | The boundary rules caught 74 of 74 labelled violations with 0 false positives on 128 compliant rows of a sealed 202-row corpus (8 rules). This is a measurement on that corpus, not a proof. | `docs/daypart/results/metrics.json` · `engine/daypart/membrane/dsl.py` |
+| L66 | Scripted simulator baselines, 50 scenarios × 3 seeds = 150 episodes of 14 days each: mean simulated adherence 0.637 (no support), 0.833 (always problem-solving), 0.719 (random); 0 rule violations. | `docs/daypart/results/metrics.json` · `docs/daypart/submission/outcomes.md` |
+| L67 | The training data came from 175 synthetic members (0 generation failures), 6,516 narrative rows; the pipeline's own cost estimate was USD 1.14 for generation (*reported*: an estimate the run recorded, not an invoice). | `docs/daypart/results/pipeline.json` |
+
+### Foundation and challenge work
+
+| id | claim | evidence |
+|---|---|---|
+| L68 | The pre-existing foundation is Syntropy Health's health-metrics SDK, committed byte-identical as the repository's first commit (f170784, 2026-11-02) and unchanged since; a CI job checks it. | `ATTRIBUTION.md` · `.github/workflows/engine.yml` |
+| L69 | The SDK's own history, 41 commits from 2026-07-09 to 2026-10-22 in its upstream repository, is pre-existing work and is not claimed as challenge work (*reported*: read from the upstream history on 2026-11-10). | `ATTRIBUTION.md` |
+| L70 | All new work is under `engine/`, `docs/daypart/` and the CI workflow, committed 2026-11-03 to 2026-11-10: simulator, safety rules and training pipeline from 2026-11-03, training run 2026-11-05, check-in, review, registry, passport, evidence and governance on 2026-11-07, prepared member, timeline and the two surfaces on 2026-11-10. | `ATTRIBUTION.md` · `engine/daypart/simmember` · `engine/daypart/membrane` · `engine/daypart/checkin/service.py` · `engine/daypart/passport/view.py` · `engine/daypart/demo/persona.py` · `engine/daypart/passport/timeline.py` |
+| L71 | The team name *Syntropy*, its tagline and the working challenge are as the owner supplied them (*reported*). | ASSUMPTION O7 |
+| L72 | The form limits used here (2,000, 1,500, 1,024 characters) are the brief's, not checked against the live form. | ASSUMPTION O6 |
+
+## Clinical evidence
+
+There is none, and this pack claims none. No clinician reviewed the content, no person's health
+data was used, and no clinical study or pilot ran. The rows above are synthetic or simulated.
+
+| id | claim | evidence |
+|---|---|---|
+| L73 | The prototype has no clinical evidence: no clinical review, no patient data, no clinical study. Its content carries a board sign-off, not a clinical review. | ASSUMPTION A2 · ASSUMPTION A3 · `engine/daypart/memory/registry_a4.json` |
+
+## Pending or omitted claims
+
+Claims the brief or a draft might make that this pack does not, because nothing in the repository
+or the hosted build supports them yet.
+
+| pending | claim | status |
+|---|---|---|
+| P1 | The deck follows the organiser's official template. | *pending*: the template is not public (HAC-63); the deck is built on its own issue. |
+| P2 | The form limits are the live form's. | *pending*: a person with the dashboard login must check them (O6). |
+| P3 | A demo video exists. | *pending*: built on its own issue; no link until it is reviewed and the owner authorises it. |
+| P4 | Conflict-of-interest declarations. | *pending*: owner input required for each member. |
+| P5 | A named clinical reviewer. | *omitted*: none is named (A3). |
+| P6 | A reinforcement-learning (GRPO) stage, a reward model or a question library ran. | *omitted*: not built (L58). |
+| P7 | Any patient benefit, adherence improvement in people, or clinical importance. | *omitted*: no clinical evidence (L73). |
+| P8 | Real health-data input, accounts, persistence or record-system integration. | *omitted*: off by design (L56). |
+| P9 | Running cost, latency or scale of the hosted demo. | *pending*: not measured. |
+| P10 | The team's eligibility (size and ages). | *pending*: not in the repository. |
