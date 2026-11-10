@@ -399,3 +399,30 @@ def test_main_passes_after_a_rollover(monkeypatch, sleeps, client):
     monkeypatch.setattr(smoke, "http_transport", lambda base, timeout: rollover)
     assert smoke.main(["https://example.invalid"]) == 0
     assert len(sleeps) == 1
+
+
+# --- QG P5.2 K1: the budget is real: requests are short enough to leave room for a retry, and the
+# CI step has a hard cap ----------------------------------------------------------------------------
+
+
+def test_default_request_timeout_leaves_room_for_a_retry(monkeypatch, sleeps):
+    seen = []
+
+    def capture(base, timeout):
+        seen.append(timeout)
+        return lambda m, p, b: (500, None)
+
+    monkeypatch.setattr(smoke, "http_transport", capture)
+    assert smoke.main(["https://example.invalid"]) == 1
+    # One timed-out request plus the first back-off must fit inside the budget, so a cold-start
+    # timeout is retried rather than spending the whole budget.
+    assert seen and seen[0] + smoke.BACKOFF_S[0] <= smoke.BUDGET_S / 2
+
+
+def test_journey_step_has_a_hard_time_cap():
+    import yaml
+
+    workflow = Path(__file__).resolve().parents[3] / ".github" / "workflows" / "engine.yml"
+    steps = yaml.safe_load(workflow.read_text())["jobs"]["deploy-demo"]["steps"]
+    (step,) = [s for s in steps if "tools/smoke_journey.py" in s.get("run", "")]
+    assert 0 < int(step.get("timeout-minutes", 0)) <= 10

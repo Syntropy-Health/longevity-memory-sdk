@@ -19,8 +19,10 @@ Rollover (P5.2, CTO hand-back 83506a31): right after ``modal deploy`` the old an
 both serve for a while, and journals live in memory per container, so a call can reach a container
 that never saw the journal and get 404 ``unknown_journal`` (or ``unknown_checkin``). Only that miss
 and a network error are retried: the whole journey starts over with a fresh journal, up to
-``TRIES`` times with growing back-off inside a ``BUDGET_S`` wall-clock budget. A 500, any other
-wrong status, a wrong value or a malformed body fails on the first try.
+``TRIES`` times with growing back-off. No retry starts once it would begin past ``BUDGET_S``
+(180 s) from the first try; each request is capped by ``--timeout`` (60 s), and the CI step's
+``timeout-minutes`` caps the whole run. A 500, any other wrong status, a wrong value or a malformed
+body fails on the first try.
 """
 
 from __future__ import annotations
@@ -61,7 +63,10 @@ class RolloverMiss(SmokeFailure):
     """A failure the rollover can explain: retry the journey with a fresh journal."""
 
 
-def http_transport(base: str, timeout: float = 180.0) -> Transport:
+REQUEST_TIMEOUT_S = 60.0  # the health checks before this step already woke the container
+
+
+def http_transport(base: str, timeout: float = REQUEST_TIMEOUT_S) -> Transport:
     base = base.rstrip("/")
 
     def call(method: str, path: str, body: Any) -> tuple[int, Any]:
@@ -150,7 +155,7 @@ def _run(call: Transport) -> None:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("base_url", help="the deployed playground, e.g. https://…-playground.us-east.modal.run")
-    ap.add_argument("--timeout", type=float, default=180.0, help="seconds per request (cold starts are slow)")
+    ap.add_argument("--timeout", type=float, default=REQUEST_TIMEOUT_S, help="seconds per request")
     args = ap.parse_args(argv)
     try:
         run_with_retry(http_transport(args.base_url, args.timeout))
