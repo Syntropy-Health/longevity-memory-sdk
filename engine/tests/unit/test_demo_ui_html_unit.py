@@ -1738,6 +1738,23 @@ def test_rev3_clone_aside_last_updated_is_the_latest_day_not_the_last_save():
     assert got[1] == "Check-in saved"  # the newest save (the backdated one) is the latest update
 
 
+def test_rev3_timeline_says_how_many_older_check_ins_are_not_shown():
+    """QG P6.2 K7: the API keeps the newest 60 saves; ``omitted`` older ones are named under the feed."""
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + """
+        var out = [];
+        for (var om of [0, 1, 3]) {
+          RESP.push([200, { entries: [entry(1, day(0))], omitted: om }]);
+          await showTimeline();
+          out.push([$("tl-omitted").hidden, $("tl-omitted").textContent]);
+        }
+        return out;
+        """,
+    )
+    assert got == [[True, ""], [False, "1 older check-in is not shown."], [False, "3 older check-ins are not shown."]]
+
+
 def test_rev3_timeline_empty_failed_and_ended_states():
     got = _run_page(
         _TIMELINE,
