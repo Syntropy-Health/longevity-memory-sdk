@@ -272,3 +272,61 @@ def test_spearman_averages_ties_and_constant_is_zero():  # QG C1
     assert abs(model._spearman(a, b) - model._spearman(a[perm], b[perm])) < 1e-12
     # scipy.stats.spearmanr([1, 1, 2, 3], [4, 3, 2, 1]) == -0.9486832980505138
     assert abs(model._spearman(a, b) - (-0.9486832980505138)) < 1e-9
+
+
+def test_tiers_match_the_rounded_numbers_shown(cohort, rm):  # QG T1
+    for p in cohort.training_profiles():
+        out = inc.inclinations(rm, jev.answers_for(p))
+        for d in out.drivers:
+            assert d.weight == inc._tier(d.share, inc.WEIGHT_TIERS), (p.member_id, d)
+        for i in out.insights:
+            assert i.strength == inc._tier(i.estimated_lift_points / 100.0, inc.LIFT_TIERS), (p.member_id, i)
+
+
+def test_driver_weight_counts_only_shown_next_steps(cohort, rm):  # QG C3
+    for p in cohort.training_profiles():
+        answers = jev.answers_for(p)
+        out = inc.inclinations(rm, answers)
+        feats = jev.features(answers)
+        shown_intents = [i.insight_id.split(":", 1)[1] for i in out.insights]
+        terms = {i: inc._terms(rm, feats, i) for i in model.MESSAGE_INTENTS}
+        member = terms[model.MESSAGE_INTENTS[0]]
+        w = {d.driver_id: abs(member[d.driver_id][0]) + max((abs(terms[i][d.driver_id][1]) for i in shown_intents), default=0.0)
+             for d in out.drivers}
+        total = sum(w.values()) or 1.0
+        for d in out.drivers:
+            assert abs(d.share - round(w[d.driver_id] / total, 3)) < 1e-9, (p.member_id, d.driver_id)
+
+
+def test_insight_and_section_validators_enforce_the_contract():  # QG C2 (hardening)
+    base = dict(insight_id="insight:reminder", title="A reminder at the right moment", action="Set a reminder.",
+                reason="Why: test.", driver="mood", strength="small", estimated_lift_points=1.0)
+    with pytest.raises(pydantic.ValidationError):
+        inc.Insight(**{**base, "estimated_lift_points": 0.0})
+    with pytest.raises(pydantic.ValidationError):
+        inc.Insight(**{**base, "reason": "Because."})
+    with pytest.raises(pydantic.ValidationError):
+        inc.Insight(**{**base, "insight_id": "reminder"})
+    d = inc.Driver(driver_id="mood", label="Your recent mood", direction="helps", share=1.0, weight="strong", question_ids=("jev.mood",))
+    with pytest.raises(pydantic.ValidationError, match="at least one"):
+        inc.Inclinations(rm_version="rm-v1", jev_version="jev-v1", drivers=(d,), insights=())
+
+
+def test_no_positive_lift_means_no_section(rm):  # QG C2: never an empty section
+    import dataclasses
+
+    w = rm.weights.copy()
+    for j in range(1, len(INTENTS)):
+        w[j * model._BLOCK : (j + 1) * model._BLOCK] = 0.0
+        w[j * model._BLOCK] = -5.0
+    flat = dataclasses.replace(rm, weights=w)
+    with pytest.raises(ValueError):
+        inc.inclinations(flat, jev.answers_for(generate(0).training_profiles()[0]))
+
+
+def test_each_next_step_has_its_own_reason(cohort, rm):  # QG U2
+    for p in cohort.training_profiles():
+        out = inc.inclinations(rm, jev.answers_for(p))
+        tails = [i.reason.split(". ", 1)[1] for i in out.insights]
+        assert len(set(tails)) == len(tails), p.member_id
+        assert all("this kind of message" not in i.reason for i in out.insights)

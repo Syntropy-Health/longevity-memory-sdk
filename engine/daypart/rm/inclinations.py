@@ -44,13 +44,24 @@ WEIGHT_TIERS: tuple[tuple[float, str], ...] = ((0.4, "strong"), (0.2, "moderate"
 LIFT_TIERS: tuple[tuple[float, str], ...] = ((0.08, "clear"), (0.03, "moderate"), (0.0, "small"))
 _LIFT_PHRASE = {"clear": "a clear gain", "moderate": "a moderate gain", "small": "a small gain"}
 
+#: What each next step responds to, finished with the strength phrase: one sentence per message type.
+INSIGHT_WHY: Mapping[str, str] = MappingProxyType({
+    "reminder": "A prompt at the usual time went with {gain} in days kept",
+    "encouragement": "Recognising effort on harder days went with {gain} in days kept",
+    "barrier_problem_solving": "Planning one change around the obstacle went with {gain} in days kept",
+    "celebrate_streak": "Marking runs of days kept went with {gain} in days kept",
+    "check_in_question": "A short weekly question went with {gain} in days kept",
+    "clinician_handoff": "Offering time with the care team went with {gain} in days kept",
+})
+
 
 def _tier(x: float, tiers: tuple[tuple[float, str], ...]) -> Any:
     return next(name for lo, name in tiers if x >= lo)
 
 
 SOURCE_NOTE = (
-    "Estimated from simulated members, not from patient data. "
+    "Estimated from simulated members, not from patient data, by comparing members who answered "
+    "alike, on days when the routine was slipping. "
     "These are prompts to discuss with your care team, not a care plan."
 )
 
@@ -141,6 +152,12 @@ class Insight(pydantic.BaseModel):
 
     @model_validator(mode="after")
     def _check(self) -> Insight:
+        if not self.insight_id.startswith("insight:") or self.insight_id[len("insight:"):] not in MESSAGE_INTENTS:
+            raise ValueError("insight_id must be insight:<message type>")
+        if not self.estimated_lift_points > 0.0:
+            raise ValueError("estimated_lift_points must be > 0")
+        if not self.reason.startswith("Why: "):
+            raise ValueError('reason must start with "Why: "')
         for text in (self.title, self.action, self.reason):
             if not _safe(text):
                 raise ValueError("insight text failed the narration guard")
@@ -164,8 +181,8 @@ class Inclinations(pydantic.BaseModel):
         missing = [i.insight_id for i in self.insights if i.driver not in ids]
         if missing:
             raise ValueError(f"insights not linked to a shown driver: {missing}")
-        if len(self.insights) > MAX_INSIGHTS:
-            raise ValueError("at most three insights")
+        if not 1 <= len(self.insights) <= MAX_INSIGHTS:
+            raise ValueError("at least one and at most three insights")
         if not _safe(self.note):
             raise ValueError("note failed the narration guard")
         return self
@@ -193,15 +210,11 @@ def inclinations(rm: RewardModel, answers: Mapping[str, str]) -> Inclinations:
     lifts = {i: rm.lift(feats, i) for i in MESSAGE_INTENTS}
     ranked = sorted(MESSAGE_INTENTS, key=lambda i: (-lifts[i], i))
     chosen = [i for i in ranked if lifts[i] >= MIN_LIFT and _safe(INSIGHT_TEXT[i][1])][:MAX_INSIGHTS]
-    if not chosen and lifts[ranked[0]] > 0.0:
+    if not chosen and round(100.0 * lifts[ranked[0]], 1) > 0.0:
         chosen = [ranked[0]]
 
     terms = {i: _terms(rm, feats, i) for i in MESSAGE_INTENTS}
     member_term = terms[MESSAGE_INTENTS[0]]  # the member part does not depend on the message type
-    weight = {
-        k: abs(member_term[k][0]) + max((abs(terms[i][k][1]) for i in chosen), default=0.0)
-        for k in present
-    }
     links: dict[str, str] = {}
     personal: dict[str, bool] = {}
     for i in chosen:
@@ -214,46 +227,45 @@ def inclinations(rm: RewardModel, answers: Mapping[str, str]) -> Inclinations:
             personal[i] = False
     # A general effect whose only link is a "nothing in particular" answer is not shown.
     chosen = [i for i in chosen if personal[i] or not links[i].endswith(".none")]
+    if not chosen:
+        raise ValueError("no next step has a positive estimated gain")  # never an empty section
 
+    # Driver weight: its member term plus its strongest message term among the steps actually shown.
+    weight = {
+        k: abs(member_term[k][0]) + max((abs(terms[i][k][1]) for i in chosen), default=0.0)
+        for k in present
+    }
     order = sorted(present, key=lambda k: (-weight[k], k))
     shown: list[str] = []
     for k in [*dict.fromkeys(links[i] for i in chosen), *order]:
         if k not in shown and _safe(FEATURE_LABELS[k]):
             shown.append(k)
-    shown = shown[: max(MAX_DRIVERS, len(set(links.values())))]
-    for k in shown:
-        weight.setdefault(k, 0.0)
+    shown = shown[: max(MAX_DRIVERS, len({links[i] for i in chosen}))]
     total = sum(weight[k] for k in shown) or 1.0
     shown.sort(key=lambda k: (-weight[k], k))
 
-    drivers = tuple(
-        Driver(
+    drivers = []
+    for k in shown:
+        share = round(weight[k] / total, 3)
+        drivers.append(Driver(
             driver_id=k,
             label=FEATURE_LABELS[k],
             direction="helps" if member_term[k][0] >= 0 else "makes_harder",
-            share=round(weight[k] / total, 3),
-            weight=_tier(weight[k] / total, WEIGHT_TIERS),
+            share=share,
+            weight=_tier(share, WEIGHT_TIERS),  # the tier of the number shown (QG T1)
             question_ids=_QUESTIONS_FOR[k.split(".")[0]],
-        )
-        for k in shown
-    )
+        ))
     insights = []
     for i in chosen:
         title, action = INSIGHT_TEXT[i]
-        strength = _tier(lifts[i], LIFT_TIERS)
-        if personal[i]:
-            basis = "Among simulated members who answered like you"
-        else:
-            basis = "Across most simulated members, including those who answered like you"
-        reason = (
-            f"Why: {FEATURE_LABELS[links[i]]}. {basis}, this kind of message was linked to "
-            f"{_LIFT_PHRASE[strength]} in days with the routine kept, on days when it was slipping."
-        )
+        points = round(100.0 * lifts[i], 1)
+        strength = _tier(points / 100.0, LIFT_TIERS)
+        basis = "for members who answered like you" if personal[i] else "for most members"
+        reason = f"Why: {FEATURE_LABELS[links[i]]}. {INSIGHT_WHY[i].format(gain=_LIFT_PHRASE[strength])} {basis}."
         insights.append(Insight(insight_id=f"insight:{i}", title=title, action=action, reason=reason,
-                                driver=links[i], strength=strength,
-                                estimated_lift_points=round(100.0 * lifts[i], 1)))
+                                driver=links[i], strength=strength, estimated_lift_points=points))
     return Inclinations(rm_version=rm.version, jev_version=jev.LIBRARY_VERSION,
-                        drivers=drivers, insights=tuple(insights))
+                        drivers=tuple(drivers), insights=tuple(insights))
 
 
 __all__ = ["FEATURE_LABELS", "INSIGHT_TEXT", "Driver", "Inclinations", "Insight", "inclinations"]
