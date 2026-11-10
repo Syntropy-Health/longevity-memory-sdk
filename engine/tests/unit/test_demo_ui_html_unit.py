@@ -2131,6 +2131,32 @@ def test_rev3_pipeline_failed_lab_get_hides_numbers(resp):
     assert ("error 500" in got["msg"]) if resp[0] == 500 else True
 
 
+def test_rev3_only_the_newest_pipeline_load_draws():
+    """QG P6.2 K12: two overlapping #pipeline loads; the stale first answer (here a failure) neither
+    hides the newer KPIs and offline lane nor adds a notice, and draws no stale numbers."""
+    import json
+
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    got = _run_page(
+        _PIPE,
+        """
+        mk("pipe-msg"); var kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
+        kp.hidden = true; lane.hidden = true;
+        var answers = [];
+        fetch = function () { return new Promise(function (resolve) { answers.push(resolve); }); };
+        var first = showPipeline(), second = showPipeline();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        answers[1]({ status: 200, ok: true, json: async function () { return LAB; } }); await second;
+        var drawn = kp.textContent;
+        answers[0]({ status: 500, ok: false, json: async function () { return { error: "internal" }; } }); await first;
+        return [kp.hidden, lane.hidden, $("pipe-msg").textContent, kp.textContent === drawn, ol.children.length];
+        """.replace("LAB", json.dumps(t)),
+    )
+    assert got == [False, False, "", True, 4]
+
+
 def test_rev3_lab_deep_link_marks_the_row_and_keeps_stacking(admin):
     js = _script(admin)
     lab = _section(js, "async function showLab", "\nfunction labRow")
