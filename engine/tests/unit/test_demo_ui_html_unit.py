@@ -1772,6 +1772,22 @@ def test_rev3_timeline_says_how_many_older_check_ins_are_not_shown():
     assert got == [[True, ""], [False, "1 older check-in is not shown."], [False, "3 older check-ins are not shown."]]
 
 
+def test_rev3_only_the_newest_timeline_load_draws():
+    """QG P6.2 K11: two overlapping #timeline loads; the slow first answer never replaces the newer feed."""
+    got = _run_page(
+        _TIMELINE,
+        _TL_DOM + _GATED + """
+        var first = showTimeline(), second = showTimeline();
+        await new Promise(function (r) { setTimeout(r, 10); });
+        gates[1]({ entries: [entry(2, day(0))], omitted: 0 }); await second;   // the newer load answers first
+        gates[0]({ entries: [entry(1, day(5))], omitted: 7 }); await first;    // then the stale one
+        return [$("tl-days").querySelectorAll("h2").map(function (h) { return h.textContent; }),
+                $("tl-days").querySelectorAll("span.tl-time").map(function (t) { return t.textContent; }), $("tl-omitted").hidden];
+        """,
+    )
+    assert got == [["Today · 29 Sep"], ["save 2 ›"], True]
+
+
 def test_rev3_timeline_empty_failed_and_ended_states():
     got = _run_page(
         _TIMELINE,
