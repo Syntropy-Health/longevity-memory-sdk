@@ -61,8 +61,9 @@ def dashboard() -> None:
 
 
 # One container: journals are in memory per process (A&D Concurrency, T4.6). More containers
-# would need journals in a modal.Dict, which is out of scope.
-@app.function(min_containers=0, max_containers=1, scaledown_window=600, timeout=600)
+# would need journals in a modal.Dict, which is out of scope. scaledown_window matches the 60-minute
+# journal idle eviction (journal.IDLE_SECONDS, D-A3/J4); 3600 is Modal's maximum.
+@app.function(min_containers=0, max_containers=1, scaledown_window=3600, timeout=600)
 @modal.concurrent(max_inputs=50)
 @modal.asgi_app()
 def playground():
