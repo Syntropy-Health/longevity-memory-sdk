@@ -102,13 +102,15 @@ All paths are under [`engine/daypart/`](../../../engine/daypart/).
 | Route | Purpose |
 |---|---|
 | `GET /api/mode`, `POST /api/mode` | Demo-mode status; a request to enable real input always gets 403 with the open gates. |
-| `POST /api/journals` | Start a per-visitor journal for a synthetic member. |
+| `POST /api/journals` | Start a per-visitor journal for a synthetic member, or `{"persona"}` for the prepared fictional member (28 check-ins replayed through review). |
+| `GET /api/personas` | The prepared member the app opens on. |
 | `GET /api/fixtures`, `GET /api/fixtures/{fixture_id}` | The bundled synthetic demo files and images. |
 | `POST /api/checkins` | Text or a demo fixture in; proposals out. Nothing is saved. |
 | `POST /api/checkins/{id}/review` | Confirm, correct, discard or save as unmapped; all-or-nothing. |
 | `GET /api/journals/{id}/observations/{record_id}` | One saved observation with all its provenance fields. |
 | `GET /api/journals/{id}/passport` | The Health Clone Passport (optionally `?day=`). |
 | `GET`, `POST /api/journals/{id}/next-step` | The suggested next step, and the person's choice. |
+| `GET /api/journals/{id}/timeline` | How the clone adapted: per saved check-in, its EventLog appends and the passport and next-step change (read-only). |
 | `GET /api/lab` | The learning-lab table. |
 | `GET /api/inventory`, `GET /api/units` | The concept inventory with its gaps; the allowed units per concept. |
 

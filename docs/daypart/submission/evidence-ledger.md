@@ -14,7 +14,7 @@ does not exist or any assumption id is not defined.
 |---|---|---|
 | L1 | The hosted app is the five-screen journey: check in, review, passport, next step, learning lab, plus the optional research view. | `engine/daypart/demo/static/index.html` · `engine/tests/ui/test_journey_a11y.py` |
 | L2 | The demo URLs are the existing Modal hosts, redeployed by CI only when every gate job passes. | `.github/workflows/engine.yml` · `engine/deploy/modal_demo.py` |
-| L3 | Every screen shows the banner "Demo mode: synthetic inputs and simulated results". | `engine/daypart/demo/static/index.html` · `engine/tests/unit/test_demo_ui_html_unit.py` |
+| L3 | No screen shows a demo banner or a synthetic-data tag; the member app (`/`) and the research console (`/admin`) are separate shells (AM-2). | `engine/daypart/demo/static/index.html` · `engine/daypart/demo/surfaces.py` · `engine/tests/unit/test_demo_ui_html_unit.py` · `engine/tests/unit/test_surfaces_unit.py` |
 | L4 | The API title is "Clinical Human Clone API"; module and app names are unchanged. | `engine/daypart/demo/app.py` · ASSUMPTION D-A1 |
 
 ## Check-in and review (SC9)
