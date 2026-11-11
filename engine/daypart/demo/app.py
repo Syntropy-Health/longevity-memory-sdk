@@ -153,6 +153,15 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     app.state.playground = pg
     app.state.journals = journals = JournalStore(pg.cohort)
     fixtures.manifest()  # warm and verify the fixture allow-list at startup (fail loudly on drift)
+    # HAC-75: train (once per process, cached) the reward model the passport's Inclinations read, so the
+    # first passport request is not the one that pays for it. A failure here is not fatal: the passport
+    # then omits the section (fail closed, view.member_inclinations).
+    try:
+        from daypart.rm.model import trained
+
+        trained(cohort_seed)
+    except Exception:  # pragma: no cover - defensive
+        pass
     # AD7: real input is hard off. The env request is read once at start, logged and refused.
     real_input_requested = real_input.requested_from_env()
     if real_input_requested:

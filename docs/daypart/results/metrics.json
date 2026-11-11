@@ -206,6 +206,7 @@
           "escalation.fit_rows": "ok",
           "eval.boundary_prompts": "ok",
           "eval.scenarios": "ok",
+          "rm.train_members": "ok",
           "simmember.training_profiles": "ok",
           "simmember.training_trajectories": "ok",
           "train.dpo_pairs": "ok",
@@ -417,25 +418,156 @@
       "status": "ok"
     },
     {
-      "kind": "not_run",
-      "metrics": null,
+      "kind": "grpo_policy",
+      "metrics": {
+        "compute": "CPU, numpy; no GPU and no paid API",
+        "data": "synthetic",
+        "episode_violation_rate": 0.0,
+        "grpo_version": "grpo-v1",
+        "heldout_members": {
+          "mean_adherence": 0.855795,
+          "n_episodes": 53
+        },
+        "horizon": 14,
+        "label": "Simulated SimMember cohort; not clinical evidence.",
+        "mean_adherence": 0.84,
+        "message_mix": {
+          "barrier_problem_solving": 0.29619,
+          "celebrate_streak": 0.0,
+          "check_in_question": 0.0,
+          "clinician_handoff": 0.019048,
+          "encouragement": 0.081905,
+          "none": 0.0,
+          "reminder": 0.602857
+        },
+        "n_scenarios": 50,
+        "per_seed": [
+          {
+            "episode_violation_rate": 0.0,
+            "mean_adherence": 0.835714,
+            "mean_return": 11.7,
+            "n_episodes": 50,
+            "scenario_manifest_sha256": "eac764ac3702f148877e07777da156410eddc60060bed9e0eebb790c3f6e3945",
+            "seed": 0
+          },
+          {
+            "episode_violation_rate": 0.0,
+            "mean_adherence": 0.825714,
+            "mean_return": 11.56,
+            "n_episodes": 50,
+            "scenario_manifest_sha256": "98a74e820211d2fa7064f79bf4243062fa2baa02b3fb663eb94e3a57adf01e8e",
+            "seed": 1
+          },
+          {
+            "episode_violation_rate": 0.0,
+            "mean_adherence": 0.858571,
+            "mean_return": 12.02,
+            "n_episodes": 50,
+            "scenario_manifest_sha256": "90b3b38a57388a29baaa05485c612521661a0d82271cf789e2a927c87600e5c0",
+            "seed": 2
+          }
+        ],
+        "policy": "linear softmax over message types (not a language model); greedy at eval",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "training": {
+          "batch": 64,
+          "beta_kl": 0.02,
+          "curve_every": 50,
+          "expected_reward_curve": [
+            0.551174,
+            0.680114,
+            0.67746,
+            0.663717,
+            0.748519,
+            0.697162,
+            0.694786
+          ],
+          "group": 8,
+          "lr": 0.05,
+          "steps": 300
+        }
+      },
       "name": "grpo",
-      "reason": "needs a trained reward model (4.2) and policy (4.3), neither built",
-      "status": "not_run"
+      "reason": null,
+      "status": "ok"
     },
     {
-      "kind": "not_run",
-      "metrics": null,
+      "kind": "reward_model",
+      "metrics": {
+        "attribution_recovery": {
+          "lift_pearson": 0.86138,
+          "lift_spearman": 0.749376,
+          "top_message_agreement": 0.827586,
+          "top_message_chance": 0.166667
+        },
+        "data": "synthetic",
+        "heldout": {
+          "auc": 0.832942,
+          "base_rate_log_loss": 0.59721,
+          "brier": 0.125576,
+          "log_loss": 0.408079,
+          "n_members": 58,
+          "n_rows": 19488,
+          "status_only_auc": 0.833629,
+          "status_only_log_loss": 0.407529
+        },
+        "jev_version": "jev-v1",
+        "label": "Simulated SimMember cohort; not clinical evidence.",
+        "n_components_per_score": 49,
+        "n_parameters": 196,
+        "rm_version": "rm-v1",
+        "train": {
+          "n_members": 117,
+          "n_rows": 39312
+        }
+      },
       "name": "rm",
-      "reason": "reward model (4.2) is not built",
-      "status": "not_run"
+      "reason": null,
+      "status": "ok"
     },
     {
-      "kind": "not_run",
-      "metrics": null,
+      "kind": "jev_library",
+      "metrics": {
+        "data": "synthetic",
+        "heldout_recovery": {
+          "axis_accuracy": {
+            "barrier_type": 0.844828,
+            "engagement_pattern": 0.793103,
+            "escalation_trigger": 0.793103,
+            "literacy": 0.913793,
+            "motivation": 0.758621
+          },
+          "chance_accuracy": {
+            "barrier_type": 0.166667,
+            "engagement_pattern": 0.2,
+            "escalation_trigger": 0.2,
+            "literacy": 0.333333,
+            "motivation": 0.333333
+          },
+          "mood_mean_abs_error": 0.247379,
+          "n_members": 58
+        },
+        "jev_version": "jev-v1",
+        "label": "Simulated SimMember answers; not clinical evidence.",
+        "n_features": 23,
+        "n_questions": 7,
+        "question_ids": [
+          "jev.barrier",
+          "jev.barrier_help",
+          "jev.motivation",
+          "jev.rhythm",
+          "jev.literacy",
+          "jev.reach_out",
+          "jev.mood"
+        ]
+      },
       "name": "jev",
-      "reason": "Jev question library (4.1) is not built",
-      "status": "not_run"
+      "reason": null,
+      "status": "ok"
     },
     {
       "kind": "escalation",
@@ -717,12 +849,12 @@
     "valence": "valence-v2"
   },
   "rule_version": "boundary-v1",
-  "runs_digest": "f1c0709dca7d4838b014e95a43219fd73ec03d250918c4c6f2a8cb6bcd9f36fd",
+  "runs_digest": "fdaf4e856f5ebf05491694f78a9147a3d755fc05f3993621aff45c952534d692",
   "runs_version": "eval-v1",
   "schema": "daypart-metrics/v1",
   "summary": {
     "failed": 0,
-    "not_run": 3,
-    "ok": 9
+    "not_run": 0,
+    "ok": 12
   }
 }

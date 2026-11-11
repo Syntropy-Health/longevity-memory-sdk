@@ -301,7 +301,9 @@ _NUMBER_TOKEN = re.compile(r"(?<![\w.\-])-?\d+(?:\.\d+)?(?![\w.\-])")
 _BOUNDS = {t for c in load_registry().concepts() for b in c.plausible for t in (f"{b:g}", repr(float(b)))}
 # The member's recorded value and the day count are not leak channels; range numbers are checked
 # against their source below.
-_EXEMPT = frozenset({"value", "data_age_days", "reference_range"})
+# HAC-75: the inclinations' share / estimated_lift_points are reward-model outputs, not registry
+# values; their member-facing strings carry no digits (test_passport_inclinations_unit).
+_EXEMPT = frozenset({"value", "data_age_days", "reference_range", "share", "estimated_lift_points"})
 # UCUM "1" (dimensionless, adherence) is a unit, not a number.
 _UNITS = frozenset(u for c in load_registry().concepts() for u in (c.unit, *c.alt_units))
 # A concept's name may hold digits ("Steps in 24 hours", "PHQ-2"): a name, not a bound.

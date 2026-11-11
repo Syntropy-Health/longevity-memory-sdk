@@ -53,6 +53,13 @@ def _escalation_rows(cohort: Cohort) -> list[dict]:
     return training_rows(cohort, cohort.seed)
 
 
+def _rm_train_members(cohort: Cohort) -> list[dict]:
+    """The members the reward model (4.2) and GRPO policy (4.3) train on (the training fold)."""
+    from daypart.rm.model import split
+
+    return [p.model_dump(mode="json") for p in split(cohort)[0]]
+
+
 _I1_MEMBERS = 12  # small fixed set of training members (<= 20) keeps the gate fast
 
 
@@ -91,6 +98,7 @@ BUILDERS: dict[str, Callable[[Cohort], Iterable[Mapping[str, Any]]]] = {
     "train.sft_dataset": _sft_dataset,
     "train.dpo_pairs": _dpo_pairs,
     "escalation.fit_rows": _escalation_rows,
+    "rm.train_members": _rm_train_members,
 }
 
 

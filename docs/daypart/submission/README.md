@@ -29,6 +29,7 @@ is synthetic, and the prototype gives no diagnosis, treatment or dosing advice
 | [deck-outline.md](deck-outline.md) | The 8-slide deck outline: one message, ledger rows and illustration per slide |
 | [technical-appendix.md](technical-appendix.md) | Technical and responsible-AI appendix: mechanisms, training, rigour, safety, data rights, validation path |
 | [sources/hosted-probe-2026-11-10.md](sources/hosted-probe-2026-11-10.md) | What the hosted build at 68236f1 did when tested as a judge would |
+| [sources/hosted-probe-2026-11-11.md](sources/hosted-probe-2026-11-11.md) | HAC-75 re-probe of the hosted build at 92d57c8: Inclinations and the GRPO lab row |
 
 ## Demo
 
@@ -56,11 +57,13 @@ The member app and the research console are separate: the member app never links
 3. **Health Clone Passport**: a card per concept, marked observed or simulated, with its data age,
    source and limits. A sourced reference range sits beside a ready value with its population and
    source link; nothing is marked high or low. Open **Evidence thread** on any card. Cards without
-   enough evidence say so instead of showing a number.
+   enough evidence say so instead of showing a number. **Inclinations** lists what weighs most on
+   keeping the routine and up to three next steps, each linked to it with its reason (simulated
+   members only; [technical appendix §4a](technical-appendix.md#4a-inclinations-question-library-reward-model-and-grpo)).
 4. **Suggested next step**: a plain-language suggestion and its reason. Choose it, defer it, or
    ask a professional.
 5. **Learning lab** (research console, `/admin`): the base, SFT and DPO results and three scripted
-   baselines, each with its run ID, split, seed and failure count. GRPO reads "proposed, not built".
+   baselines, each with its run ID, split, seed and failure count, and the GRPO policy measured on the same scenarios (simulated).
    The same table is in [outcomes.md](outcomes.md).
 
 On the research console, the footer's **Real input** control asks the server to turn real input on.

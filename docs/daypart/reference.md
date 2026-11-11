@@ -97,7 +97,9 @@ Modal apps.
   per-journal cap on check-ins.
 - Ranges exist only for the 7 concepts a fetched public source states (MedlinePlus vital signs,
   NHLBI BMI and sleep). AHA and CDC pages blocked automated fetches, so they are not cited.
-- GRPO is "proposed, not built" (out of scope). No new training or evaluation environment.
+- GRPO was "proposed, not built" (out of scope) at this stage. Superseded by HAC-75 (2026-11-10): a small
+  GRPO message-type policy, a reward model and the Jev question library are built and run on synthetic
+  members only ([technical appendix §4a](submission/technical-appendix.md#4a-inclinations-question-library-reward-model-and-grpo)).
 - The Test Author's sealed suite covers P1 only (HAC-39); it passes inside the engine suite at
   plan completion. No sealed P2–P4 suite exists; the unit and browser suites are the evidence there.
 - Organiser team registration was confirmed by a board member on 2026-11-09 (HAC-58,

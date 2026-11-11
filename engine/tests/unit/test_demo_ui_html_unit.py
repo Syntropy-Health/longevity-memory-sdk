@@ -1178,8 +1178,8 @@ def test_hac76_results_tables_speak_plain_language_and_read_every_number_from_th
         """
         var t = LAB;
         function cells(tr) { return tr.children.map(function (c) { return c.textContent; }); }
-        return { models: t.rows.filter(function (r) { return r.kind !== "env_baseline"; }).map(function (r) { return cells(modelRow(r)); }),
-          envs: t.rows.filter(function (r) { return r.kind === "env_baseline"; }).map(function (r) { return cells(envRow(r)); }) };
+        return { models: t.rows.filter(function (r) { return r.kind === "model" || r.kind === "proposed"; }).map(function (r) { return cells(modelRow(r)); }),
+          envs: t.rows.filter(function (r) { return r.kind === "env_baseline" || r.kind === "policy"; }).map(function (r) { return cells(envRow(r)); }) };
         """.replace("LAB", json.dumps(t)),
     )
     rows = {r["row"]: r for r in t["rows"]}
@@ -1195,7 +1195,8 @@ def test_hac76_results_tables_speak_plain_language_and_read_every_number_from_th
     assert got["models"][2][1] == f"{dpo['split']['training_rows']:,} pairs of better and worse replies"
     assert got["models"][2][4] == (f"✓ Passed its checkQuality {pt(dpo['gate']['rubric_delta'])} · vs. step 1 · "
                                    f"safety regressions: {dpo['gate']['boundary_regressions']}")
-    envs = [r for r in t["rows"] if r["kind"] == "env_baseline"]
+    envs = [r for r in t["rows"] if r["kind"] in ("env_baseline", "policy")]
+    assert len(envs) == len(got["envs"])
     for r, row in zip(envs, got["envs"]):
         assert row[1] == pc(r["metrics"]["mean_adherence"]) and row[2] == pc(r["metrics"]["episode_violation_rate"])
         assert row[3] == f"{r['split']['n']} sessions{r['split']['n_scenarios']} members, {r['split']['horizon']} days each"
@@ -2129,7 +2130,7 @@ def test_rev3_console_has_no_hard_coded_lab_numbers(admin):
 
 _PIPE = ["$", "el", "attrs", "safeHref", "link", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError",
          "parts", "pct", "pts", "intOrNull", "labRowNamed", "mismatched", "mismatchTag", "rowPct", "envName", "runAnchor",
-         "kpi", "pipeKpis", "OFFLINE", "withPts", "offlineStage", "pipeOffline", "pipeSeq", "showPipeline"]
+         "ROW_NAMES", "kpi", "pipeKpis", "OFFLINE", "withPts", "offlineStage", "pipeOffline", "pipeSeq", "showPipeline"]
 _PIPE_BODY = """
 mk("pipe-msg"); var res = mk("pipe-results", "section"), kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
 res.hidden = true; kp.hidden = true; lane.hidden = true;
@@ -2174,12 +2175,22 @@ def _env_name(row: str) -> str:
     return k.replace("_", " ")
 
 
+def _grpo_proposed(t: dict) -> dict:
+    """The proposed-grpo shape (arm not run). HAC-75 made the committed grpo arm run; these tests pin the
+    proposed path, and the test_hac79_* tests pin the ran ("policy") path (HAC-79)."""
+    for r in t["rows"]:
+        if r["row"] == "grpo":
+            r.update(kind="proposed", status="proposed, not built", reason="needs a trained reward model (4.2)",
+                     run_id=None, split=None, seed=None, failures=None, metrics={})
+    return t
+
+
 def test_rev3_pipeline_maps_every_lab_field_1_to_1():
     """Every overview number is one /api/lab field, as a percentage (HAC-76: was 3 decimals), under a
     plain-language label with a one-line explanation."""
     from daypart.demo import lab
 
-    t = lab.lab_rows().model_dump(mode="json")
+    t = _grpo_proposed(lab.lab_rows().model_dump(mode="json"))
     rows = {r["row"]: r for r in t["rows"]}
     base, sft, dpo, grpo = rows["base"], rows["sft"], rows["dpo"], rows["grpo"]
     envs = [r for r in t["rows"] if r["kind"] == "env_baseline"]
@@ -2222,7 +2233,7 @@ def test_rev3_pipeline_nulls_and_provenance_mismatch():
     """A null field is "— not recorded" (nr); a mismatch row shows its tag and no number anywhere."""
     from daypart.demo import lab
 
-    t = lab.lab_rows().model_dump(mode="json")
+    t = _grpo_proposed(lab.lab_rows().model_dump(mode="json"))
     for r in t["rows"]:
         if r["row"] == "dpo":
             r.update(status="provenance mismatch", metrics={"boundary_pass_rate": None, "rubric_pass_rate": None}, gate=None,
@@ -2406,3 +2417,119 @@ def test_rev3_console_reduced_motion_and_tap_targets(admin):
     assert ".a-nav a{display:flex;align-items:center;gap:var(--s2);min-height:var(--tap)" in css
     assert ".a-side-foot a{display:inline-flex;align-items:center;min-height:var(--tap)}" in css
     assert "--tap:44px" in css
+
+
+# ---------- HAC-79: the ran grpo arm (kind "policy") and the passport Inclinations block ----------
+
+
+def test_hac79_pipeline_grpo_policy_stage_shows_env_metrics_not_boundary():
+    """A ran grpo row is scored with simulated members: the 4th training step shows adherence, breaches and
+    sessions from the API row 1:1, as percentages under plain labels (HAC-76), with a one-sentence
+    description in the past tense; never "Planned", never the safety/quality pair it has no field for."""
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    grpo = next(r for r in t["rows"] if r["row"] == "grpo")
+    assert grpo["kind"] == "policy"  # the committed arm runs (HAC-75)
+    got = _pipeline([200, t])
+    g = got["stages"][3]
+    assert g[:4] == ["", "Practice with simulated members", [], ["Adherence", "Safety-rule breaches", "Tested on"]]
+    m = grpo["metrics"]
+    assert g[4] == [_pc(m["mean_adherence"]), _pc(m["episode_violation_rate"]), f"{grpo['split']['n']} sessions"]
+    assert g[5] == [["Run record", "#lab/" + grpo["run_id"], grpo["run_id"]]]
+    assert g[6] == ["Learned which kind of message to send each day from how simulated members responded."]
+    text = " ".join(g[1:2] + g[2] + g[3] + g[4] + g[6])
+    for word in ("not recorded", "Planned", "proposed", "GRPO", "episode", "violation", "env"):
+        assert word not in text, word
+    # the best-adherence tile counts the ran policy with the approaches, named in words
+    scored = [r for r in t["rows"] if r["kind"] in ("env_baseline", "policy")]
+    best = max(scored, key=lambda r: r["metrics"]["mean_adherence"])
+    k4 = got["kpis"][3]
+    assert k4[1] == _pc(best["metrics"]["mean_adherence"])
+    assert k4[3] == "Approach: " + ("Step 3 · Practice with simulated members" if best["kind"] == "policy" else _env_name(best["row"]))
+
+
+def test_hac79_pipeline_grpo_policy_nulls_are_not_recorded():
+    from daypart.demo import lab
+
+    t = lab.lab_rows().model_dump(mode="json")
+    for r in t["rows"]:
+        if r["row"] == "grpo":
+            r.update(metrics={"mean_adherence": None, "episode_violation_rate": None}, split={**r["split"], "n": None})
+    g = _pipeline([200, t])["stages"][3]
+    assert g[4] == ["not recorded", "not recorded", "not recorded"]
+
+
+def test_hac79_lab_policy_row_renders_like_an_env_row():
+    """In #lab a ran grpo policy is a coaching approach row (adherence, breaches, sessions), in words and
+    percentages; its run record keeps the ids in the collapsed reviewers' table."""
+    got = _run_page(
+        _BASE + _LAB + ["plural"],
+        """
+        var r = { row: "grpo", kind: "policy", status: "ok", run_id: "eval-v1@abc/grpo",
+          split: { n: 150, n_scenarios: 50, horizon: 14 }, seed: [0, 1, 2], failures: 0,
+          metrics: { mean_adherence: 0.84, episode_violation_rate: 0.0 } };
+        function cells(tr) { return tr.children.map(function (c) { return [c.getAttribute("data-label"), c.textContent]; }); }
+        var gp = envRow(r);
+        return { cls: gp.className || "", run: gp.dataset.runId, cells: cells(gp), rec: cells(recordRow(r)) };
+        """,
+    )
+    c = dict(got["cells"])
+    assert got["cls"] == "" and got["run"] == "eval-v1@abc/grpo"
+    assert c == {"Coaching approach": "Step 3 · Practice with simulated membersLearned in training, not a fixed rule",
+                 "Average adherence": "84.0%", "Sessions with a safety-rule breach": "0.0%",
+                 "Tested on": "150 sessions50 members, 14 days each"}
+    rec = dict(got["rec"])
+    assert rec["Step or approach"] == "Step 3" and rec["Run ID"] == "eval-v1@abc/grpo"
+    assert rec["Test set"] == "scenarios 50 · sessions 150 · days 14"
+    assert rec["Seed"] == "0, 1, 2" and rec["Failures"] == "0 sessions"
+    assert "episode" not in str(got) and "proposed" not in str(got)
+
+
+_INCL = {
+    "drivers": [
+        {"driver_id": "a", "label": "Mornings are busy", "direction": "makes_harder", "weight": "strong"},
+        {"driver_id": "b", "label": "A clear plan", "direction": "helps", "weight": "moderate"},
+    ],
+    "insights": [{"insight_id": "i1", "title": "Plan around it", "action": "Do one thing.", "reason": "Why: A clear plan.", "driver": "b"}],
+    "note": "Estimated from simulated members, not from patient data.",
+}
+
+
+def _incl(inc: object) -> dict:
+    import json
+
+    got = _run_page(
+        _BASE + ["renderInclinations"],
+        """
+        var box = mk("pp-incl");
+        renderInclinations(INC);
+        function txt(e) { return e.textContent; }
+        return { kids: box.children.map(function (e) { return [e.tagName.toLowerCase(), e.id || "", e.getAttribute("aria-labelledby") || ""]; }),
+          tags: box.querySelectorAll("span.tag").map(function (e) { return [e.className, e.textContent]; }),
+          h4: box.querySelectorAll("h4").map(txt), h3: box.querySelectorAll("h3").map(txt),
+          art: box.querySelectorAll("article").map(function (a) { return [a.getAttribute("aria-labelledby"), a.getAttribute("aria-describedby")]; }),
+          text: box.textContent };
+        """.replace("INC", json.dumps(inc)),
+    )
+    assert isinstance(got, dict)
+    return got
+
+
+def test_hac79_inclinations_order_headings_and_tags():
+    got = _incl(_INCL)
+    kinds = [k[0] for k in got["kids"]]
+    assert kinds == ["p", "h3", "ul", "h3", "div"]  # the simulated caveat first, before the numbers it qualifies
+    assert got["kids"][2][2] == "h-incl-drv" and got["kids"][4][2] == "h-incl-ins"  # lists named by their visible headings
+    assert got["h3"] == ["What weighs most", "Next steps"] and got["h4"] == ["Plan around it"]  # h2 > h3 > h4
+    # QG U1: no Helps / Makes-it-harder tag (it read as "forgetting helps me"); the tag is the weight only
+    assert got["tags"] == [["tag", "◆ Weighs strongly"], ["tag", "◆ Weighs moderately"]]
+    assert "Helps" not in str(got["tags"]) and "harder" not in str(got["tags"])
+    assert "tag--withheld" not in str(got["tags"])  # withheld means "no data", not a direction
+    assert got["art"] == [["pp-ins0", "pp-drv-1"]] and "Linked to: A clear plan" in got["text"]
+
+
+@pytest.mark.parametrize("inc", [None, {"drivers": [], "insights": []}])
+def test_hac79_inclinations_absent_is_not_enough_data(inc):
+    got = _incl(inc)
+    assert got["text"] == "Not available for this journal." and got["h3"] == []  # QG D10: failure-neutral

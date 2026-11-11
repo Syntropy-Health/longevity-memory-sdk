@@ -66,3 +66,22 @@ Contract: AIR-319 document `track-b-spec` (contract v1). Written double-blind; `
 | `test_escalation.py` | Interface; Decision rule; Ground truth; Evaluation; Done when | `functional/esc-interface`, `functional/esc-features`, `functional/esc-decision`, `functional/esc-crisis-gate`, `functional/esc-determinism`, `functional/esc-i1`, `functional/esc-membrane`, `functional/esc-offline`, `integration/esc-eval-arm` |
 
 **Edit (AIR-332):** `test_eval.py` `DEFAULT_ARMS` gains `("escalation", "escalation")` as the 12th arm, and `TestDefaultConfig::test_arms_and_summary` expects it `ok` (summary `ok` = 6 + boundary_eval ok, `not_run` = 12 − ok). Source: `track-b-spec` contract v1.1 item 4 (one packaged arm, `kind: escalation`) and "Done when" (runs offline in CI). Name and append position as directed by the CTO on AIR-332.
+
+## Slice E addendum H1-H3 — `daypart.rm`, jev/rm/grpo arms, passport inclinations (HAC-75, sealed by HAC-78)
+
+Spec: `docs/daypart/contracts/CONTRACT-slice-E-addendum-HAC-75-rm.md` (amends E1.1, supersedes G3).
+
+| Category | File | Spec section |
+|---|---|---|
+| functional/eval-config (amended) | test_eval.py | H1: default arms grpo/rm/jev kinds, EXTENSION_ARM_KINDS, grpo_policy validation, summary 12 ok |
+| integration/rm-arms-default | test_rm_eval_arms.py | H1: committed metrics.json jev/rm/grpo metric shapes, acceptance numbers, scenario manifests |
+| integration/rm-arms-run | test_rm_eval_arms.py | H1: run() over the three arms, determinism, no curated ids |
+| integration/rm-arms-i1 | test_rm_eval_arms.py | H1: I1 builder rm.train_members + CLI line |
+| functional/rm-jev | test_rm.py | H2: daypart.rm.jev |
+| functional/rm-model | test_rm.py | H2: daypart.rm.model (split, rollouts, trained, attribution invariants) |
+| functional/rm-grpo | test_rm.py | H2: daypart.rm.grpo |
+| functional/rm-inclinations | test_rm.py | H2: Inclinations invariants (ValidationError cases) |
+| integration/rm-inclinations | test_rm.py | H2: inclinations over every synthetic member of generate(0) |
+| functional/passport-incl-model | test_passport_inclinations.py | H3: HealthClonePassport.inclinations; research Passport unchanged |
+| integration/passport-incl-api | test_passport_inclinations.py | H3: GET passport for syn- and persona-v1 journals |
+| integration/passport-incl-fail | test_passport_inclinations.py | H3: fail closed (null, rest unchanged) |

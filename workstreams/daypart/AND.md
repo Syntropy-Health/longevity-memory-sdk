@@ -33,7 +33,7 @@ flowchart LR
     C[Check in<br/>text / demo file / demo image] --> R[Review<br/>confirm · correct · discard · save unmapped]
     R --> P[Health Clone Passport<br/>cards + evidence thread]
     P --> N[Suggested next step<br/>choose · defer · ask a professional]
-    N --> L[Learning lab<br/>base · SFT · DPO · baselines · GRPO proposed]
+    N --> L[Learning lab<br/>base · SFT · DPO · baselines · GRPO]
   end
   subgraph API["FastAPI app (engine/daypart/demo)"]
     G{{Real-input gate<br/>hard off}}
@@ -120,7 +120,8 @@ new eval environment (HAC-16), ontology beyond the A4 slice, voice and video, an
   memory with provenance, honest synthetic results, real input gated, and reuse of HAC-2/4/16/20.
 - 2026-11-06 (CTO, HAC-33 description): the baseline check table. Extend the hosted surfaces with
   no new host. Reuse `SimMemberEnv`. Source R8 provenance from committed artefacts and never invent
-  it. GRPO is "proposed, not built". The rename recommendation is UI and docs only.
+  it. GRPO is "proposed, not built" (superseded by HAC-75, 2026-11-10: built on synthetic members,
+  see `docs/daypart/contracts/CONTRACT-slice-E-addendum-HAC-75-rm.md`). The rename recommendation is UI and docs only.
   UIUX owns the visual design. Do not open a board question; the CTO briefs the blueprint review.
 - 2026-11-06 (CTO, HAC-33 description): the repo is now public. Synthetic data only.
 - 2026-11-07 (board, HAC-30 interaction 10605fe7; applied by the CTO as AM-1 on HAC-38): A1 as the
@@ -494,7 +495,7 @@ field exists.
 | sft | `pipeline.tag` + `/` + basename(`meta.adapters.sft`) (`…/daypart-sft-7cdcffc336f1`), adapter cross-checked with `training.json sft.adapter` | same + training rows `training.sft.rows`, data sha `pipeline.data.sft_sha256` | `meta.seed`, `meta.cohort_seed` | as base | as base + r3 |
 | dpo | `pipeline.tag` + `/` + basename(`meta.adapters.dpo`), cross-checked | same + `training.dpo.rows`, `pipeline.data.dpo_sha256` | as sft | as base | as base + r4 |
 | env baselines (3) | `eval-v1@` + `runs_digest[:12]` + `/` + arm name | `n_scenarios × seeds`, horizon | `seeds` | `round(episode_violation_rate · n_scenarios · len(seeds))` episodes with a DSL violation | mean adherence, violation rate |
-| grpo | — | — | — | — | "proposed, not built" + `reason` from metrics.json; no number |
+| grpo | — | — | — | — | "proposed, not built" + `reason` from metrics.json; no number. *Amended by HAC-75:* when the grpo arm ran, a `kind: "policy"` row with the env-baseline formulas (run id, split, seeds, failures, mean adherence, violation rate) |
 
 When the cross-check fails (adapter mismatch), the row shows "provenance mismatch" and no number.
 Data-generation failures are shown once in the lab header: `pipeline.data.member_failure_count`.
@@ -706,7 +707,8 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
 **R8: learning lab**
 - T8.1 [sealed] `lab_rows()` over the committed results → rows base, sft and dpo plus 3 env
   baselines, each with non-null run_id, split, seed and failures that equal the §4.8 formulas.
-- T8.2 [sealed] the grpo row has `status="proposed, not built"` and no numeric fields.
+- T8.2 [sealed] the grpo row has `status="proposed, not built"` and no numeric fields. *Amended by
+  HAC-75:* that holds only when the grpo arm did not run; a ran arm gives the `policy` row of §4.8.
 - T8.3 [sealed] an artefact copy with `meta.seed` deleted → seed `null`, and the UI shows "not
   recorded"; an adapter mismatch → "provenance mismatch", no number.
 - T8.4 [ui] `#lab` contains "Simulated outcomes are not patient outcomes".

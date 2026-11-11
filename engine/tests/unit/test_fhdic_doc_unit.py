@@ -20,7 +20,7 @@ REQUIRED_BULLETS = [
     "no medical, diagnostic, dosing or treatment advice",
     "no malaffi/sahatna integration",
     "no consumer ui",
-    "grpo, the reward model and the jev question library are designed, not built",
+    "grpo, the reward model and the jev question library are built and run on synthetic members only",
     "meta eligibility is unconfirmed and out of scope here",
     "python 3.12",
     "uv,",

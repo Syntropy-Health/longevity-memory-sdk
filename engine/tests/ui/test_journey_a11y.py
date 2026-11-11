@@ -1189,8 +1189,14 @@ def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe
     expect(stages.nth(0)).to_contain_text(_pc(base["metrics"]["boundary_pass_rate"]))
     expect(stages.nth(1)).to_contain_text(f"(+{sft['gate']['delta'] * 100:.1f} points)")
     expect(stages.nth(1)).to_contain_text("✓ Passed its check")
-    expect(stages.nth(3)).to_contain_text(rows["grpo"]["reason"])
-    expect(stages.nth(3)).to_contain_text("○ Planned, not built")
+    grpo = rows["grpo"]  # HAC-79: the ran grpo arm is a "policy" row, scored with simulated members
+    assert grpo["kind"] == "policy"
+    expect(stages.nth(3)).to_contain_text(f"Adherence{_pc(grpo['metrics']['mean_adherence'])}")
+    expect(stages.nth(3)).to_contain_text(f"Safety-rule breaches{_pc(grpo['metrics']['episode_violation_rate'])}")
+    expect(stages.nth(3).locator(".stage-desc")).to_have_text(
+        "Learned which kind of message to send each day from how simulated members responded.")
+    for word in ("Planned", "proposed", "not recorded", "GRPO", "episode"):
+        expect(stages.nth(3)).not_to_contain_text(word)
     expect(page.locator("#screen-pipeline")).to_contain_text("Simulated outcomes are not patient outcomes.")
     # a step links its results row, which the deep link marks (and opens the run records)
     stages.nth(1).locator("a").click()
@@ -1198,6 +1204,14 @@ def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe
     expect(page.locator(f"#lab-rows tr[data-run-id='{sft['run_id']}']")).to_have_attribute("aria-current", "true")
     expect(page.locator("#lab-rows tr[aria-current=true]")).to_have_count(1)
     expect(page.locator("#lab-records")).to_have_attribute("open", "")
+    # HAC-79 + HAC-76: the ran grpo policy is listed first with the coaching approaches, in plain words
+    gr = page.locator(f"#env-rows tr[data-run-id='{grpo['run_id']}']")
+    expect(page.locator("#env-rows tr").first).to_have_attribute("data-run-id", grpo["run_id"])
+    expect(gr.locator("td[data-label='Coaching approach'] strong")).to_have_text("Step 3 · Practice with simulated members")
+    expect(gr.locator("td[data-label='Average adherence']")).to_have_text(_pc(grpo["metrics"]["mean_adherence"]))
+    expect(gr.locator("td[data-label='Sessions with a safety-rule breach']")).to_have_text(
+        _pc(grpo["metrics"]["episode_violation_rate"]))
+    expect(page.locator(f"#lab-rows tr[data-run-id='{grpo['run_id']}']")).to_have_count(0)  # not a prompt-scored step
     assert_axe_clean(page, axe_source, "lab deep link")
 
 
@@ -1239,7 +1253,7 @@ def test_hac76_g5_results_tables_never_break_a_word(browser: Browser, page_error
     page.context.close()
 
 
-@pytest.mark.parametrize("width", [375, 390, 1280])
+@pytest.mark.parametrize("width", [375, 390, 1280, 1920])
 def test_hac76_headline_tiles_never_break_a_word(browser: Browser, page_errors, base_url: str, width: int):
     """G5 on the overview: a headline tile's number and label never split mid-word ("100.0 / %",
     "Passe / d" at 375 before the 1-up phone layout)."""
@@ -1250,6 +1264,10 @@ def test_hac76_headline_tiles_never_break_a_word(browser: Browser, page_errors, 
     (tiles,) = page.evaluate(_G5_SPLIT_WORDS, ["#pipe-kpis", ":scope > li"])
     assert tiles["cells"] == 4
     assert tiles["split"] == [], f"@{width}px: words broken across lines: {tiles['split']}"
+    # the training steps (narrow cards in the horizontal lane at 1280): "150 sessio / ns" before HAC-82's merge fix
+    (steps,) = page.evaluate(_G5_SPLIT_WORDS, ["#pipe-offline", ":scope > li .stage"])
+    assert steps["cells"] == 4
+    assert steps["split"] == [], f"training steps @{width}px: words broken across lines: {steps['split']}"
     assert_no_hscroll(page, f"pipeline @ {width}px")
     page.context.close()
 

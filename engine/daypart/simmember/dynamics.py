@@ -114,6 +114,14 @@ def _clip(p: float) -> float:
     return min(1.0, max(0.0, p))
 
 
+def p_adhered(latents: Latents, state: str, intent: str) -> float:
+    """P(adhered today | latents, current state, intent): the probability :func:`transition` draws against."""
+    r = risk(latents)
+    _, _, adh_bonus = _intent_effect(latents, state, intent)
+    p_adh = _clip(_BASE_ADHERENCE[state] - (0.10 * r if state == "engaged" else 0.05 * r) + adh_bonus)
+    return min(p_adh, 0.98)
+
+
 def transition(
     latents: Latents, state: str, intent: str, rng: np.random.Generator
 ) -> tuple[str, bool]:
@@ -128,11 +136,10 @@ def transition(
         raise ValueError(f"unknown state {state!r}; expected one of {STATES}")
 
     r = risk(latents)
-    improve, slip, adh_bonus = _intent_effect(latents, state, intent)
+    improve, slip, _ = _intent_effect(latents, state, intent)
     u_adh, u_next = rng.random(2)
 
-    p_adh = _clip(_BASE_ADHERENCE[state] - (0.10 * r if state == "engaged" else 0.05 * r) + adh_bonus)
-    adhered = bool(u_adh < min(p_adh, 0.98))
+    adhered = bool(u_adh < p_adhered(latents, state, intent))
 
     # Outcomes laid out best → worst on [0, 1): [improve | stay | slip].
     if state == "engaged":
@@ -171,4 +178,4 @@ def transition(
     return nxt, adhered
 
 
-__all__ = ["INTENTS", "STATES", "member_key", "member_rng", "risk", "seed_words", "transition"]
+__all__ = ["INTENTS", "STATES", "member_key", "member_rng", "p_adhered", "risk", "seed_words", "transition"]

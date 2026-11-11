@@ -44,9 +44,9 @@ committed result files from that run reach the hosted app [L25, L57].
 | Check-in and review | Text goes through deterministic rules (`rules-v1`); the 4 bundled synthetic files carry pre-recorded extractions, allow-listed by sha256 with a 1 MiB cap. Each proposal carries its snippet, source offsets, method, confidence and flags. The review is all-or-nothing: confirm, correct, discard or save as unmapped. | L5, L6, L7, L9, L45, L46, L55 | No live model or vision call. Voice and video are shown as unavailable. A phrase the rules do not read yields no proposal (the probe's "mood 3 out of 5") [L45]. Only the 4 bundled files are accepted; no device, sensor or account is connected. |
 | Observation foundation (the brief's "clinical observation foundation") | A versioned registry of 20 concepts in 3 verticals: 18 LOINC 2.83 codes, each verified against the terminology server, and 2 local codes; ontology `core-v1+u1` through an append-only update. A value without a concept is saved as unmapped. | L13, L14, L15, L54 | Not a clinical ontology and not validated. Labs, conditions, medications, care history, and screenings and check-ups are listed gaps. One code (69725-0) failed verification and was dropped, not guessed. |
 | Longitudinal context | Confirmed values become append-only events in a per-journal event log, each with its source check-in, time, unit and mapping status. The timeline shows, per saved check-in, what it appended and how the passport changed. | L5, L12, L52 | A saved value is what the person typed and confirmed; nothing checks it against a device or a record. The timeline reports changes to the record, not changes to health. No outcome or causality is inferred. |
-| Passport and explanation | One card per concept, marked observed or simulated, with data age, source, method and limits. A 5-step evidence thread links source → observation → memory version → explanation and its public source → membrane check. A card is ready only if its value is at most 14 days old. | L21, L22, L23, L49, L50, L51 | A withheld card shows no number (15 of 24 on the prepared member) [L49]. A reference range is shown only where a public source states it and is never interpreted [L20, L50]. An explanation says why a measure is tracked; it is not a cause, and nothing is approved by a clinician. |
+| Passport and explanation | One card per concept, marked observed or simulated, with data age, source, method and limits. A 5-step evidence thread links source → observation → memory version → explanation and its public source → membrane check. A card is ready only if its value is at most 14 days old. An Inclinations section lists the answers that weigh most on keeping the routine and up to three next steps, each linked to one of them, with its reason (§4a). | L21, L22, L23, L49, L50, L51, L80 | A withheld card shows no number (15 of 24 on the prepared member) [L49]. A reference range is shown only where a public source states it and is never interpreted [L20, L50]. An explanation says why a measure is tracked; it is not a cause, and nothing is approved by a clinician. |
 | Support and safety | The next step is chosen by fixed rules (`next-step-v1`), passed through the `boundary-v1` membrane, and replaced by a clinician hand-off if it fails. The person can choose, defer or ask a professional. Crisis language is checked before extraction; personal-data-like text is refused whole. | L10, L11, L24, L47, L48, L53 | No diagnosis, treatment or dosing. The crisis check is lexical and misses wording outside its lists. The personal-data tripwire is defence in depth, not a privacy control. No clinical deployment. |
-| Learning and evaluation | A frozen base model and two fine-tuned adapters evaluated on 141 held-out synthetic prompts; scripted policies evaluated in a seeded behaviour simulator, 50 scenarios × 3 seeds. Every number on screen is computed from committed result files, with its run ID. | L25, L57, L59, L60, L63, L66 | Simulated adherence, rewards and boundary pass rates are not patient benefit. GRPO is not built [L58]. One seed for the model arms [L59]. |
+| Learning and evaluation | A frozen base model and two fine-tuned adapters evaluated on 141 held-out synthetic prompts; scripted policies and a GRPO policy trained against an interpretable reward model, evaluated in a seeded behaviour simulator, 50 scenarios × 3 seeds. Every number on screen is computed from committed result files, with its run ID. | L25, L57, L59, L60, L63, L66, L74–L79 | Simulated adherence, rewards and boundary pass rates are not patient benefit. The GRPO policy picks among 7 fixed message types; it is not a language model [L79]. One seed for the model arms [L59]. |
 
 ## 3. Observation semantics and governance
 
@@ -86,15 +86,16 @@ One training run, `hac28-20261105T081951Z`, on 2026-11-05 [L57]:
 |---|---|---|---|---|
 | Supervised fine-tuning (TRL SFT, LoRA adapter) | yes | 4,040 rows (808 of them refusal rows), sha256 `abeef6dcfe9e…` | 1,010 steps, 852 s, peak 20.4 GB | a LoRA adapter on the language layers |
 | Preference tuning (TRL DPO, LoRA adapter, initialised from the SFT adapter) | yes | 84 chosen and rejected pairs, sha256 `dbce23990155…` | 22 steps, 60 s, peak 22.8 GB | the same adapter, further tuned |
-| Reward model | **not built** | none | none | none |
-| GRPO (reinforcement learning) | **not built** | none | none | none |
-| Question library ("Jev") | **not built** | none | none | none |
+| Question library ("Jev", HAC-75) | yes | 7 questions; answers simulated for 175 synthetic members | none (fixed library) | nothing trained: the elicitation step |
+| Reward model (HAC-75) | yes | 39,312 simulated member-days, 117 training-fold members | Newton fit, 196 named terms, about 2 s on CPU | a logistic reward model, version `rm-v1` |
+| GRPO (reinforcement learning, HAC-75) | yes | the reward model above, same 117 members | 300 steps, groups of 8, under 1 s on CPU | a linear policy over 7 message types, version `grpo-v1` |
 
 - **Fixed:** the base model (`meta-models/Muse-Glimmer-30B`) is frozen; only the adapters change.
   The boundary rules (`boundary-v1`), the rubric (`lapse-recovery-v1`) and the held-out prompt set
   (`boundary-heldout-v1`) are fixed before training.
-- **Did RL run?** No. GRPO needs a trained reward model and policy, and neither was built. The
-  results record it as not run, and the learning lab labels it "proposed, not built" [L58].
+- **Did RL run?** Yes, in its smallest honest form, on CPU with no new spend (§4a). GRPO trained a
+  small message-type policy against the reward model; it did not train a language model [L58, L79].
+  Not built: reinforcement learning on the language model itself, and any reward signal from people.
 - **Promotion.** Gate r3: SFT must beat the base boundary pass rate by at least 0.05 with rubric
   parity. Gate r4: DPO must keep every SFT boundary pass (0 regressions). Both passed [L63].
 - **Versioning and rollback.** Each adapter is named by a hash of its data
@@ -102,7 +103,52 @@ One training run, `hac28-20261105T081951Z`, on 2026-11-05 [L57]:
   The hosted app serves no model at all: it reads committed result files. Rolling back is a revert
   of those files, checked by the lab's provenance match (a row whose run id and data hash disagree
   shows "provenance mismatch" and no number).
-- **Hardware.** One H100 on Modal for training and evaluation (`engine/daypart/train/modal_jobs.py`).
+- **Hardware.** One H100 on Modal for SFT, DPO and the boundary evaluation
+  (`engine/daypart/train/modal_jobs.py`). The question library, the reward model and GRPO run on CPU
+  in the eval harness (`python -m daypart.eval`), with no GPU and no paid API.
+
+## 4a. Inclinations: question library, reward model and GRPO
+
+Synthetic only. Members are split by id into a training fold (117) and a held-out fold (58); the
+curated-25 never enter (the I1 check covers the training fold, builder `rm.train_members`).
+
+- **Question library (Jev, `engine/daypart/rm/jev.py`).** Seven short check-in questions, each
+  probing one trait the simulator hides: the main barrier (asked twice, as "what gets in the way"
+  and "what would help"), how much the routine matters, weekly rhythm, confidence with health
+  information, what prompts reaching out to the care team, and mood. A simulated member answers
+  truthfully with probability 0.70–0.88 (higher with more confidence in health information) and
+  otherwise picks another option. On held-out members the answers recover each trait 76–91% of the
+  time, against 17–33% by chance [L75].
+- **Reward model (`engine/daypart/rm/model.py`).** The reward is the chance the member keeps the
+  routine today, given their answers, their status (engaged, strained, lapsed, recovering) and the
+  type of message sent. It is a logistic model whose score is a plain sum of named terms: who the
+  member is (each answer, compared with a typical simulated member), plus what the message adds
+  for someone who answered that way. The terms add up exactly to the score, so every score can be
+  read term by term [L76]. Trained by a regularised Newton fit on rollouts of the simulator's own
+  dynamics under random messages. Held out: AUC 0.833 and log loss 0.408 (base rate 0.597); a
+  status-only comparator does as well on prediction, so the answers add attribution rather than
+  accuracy [L77]. The answer-by-message terms recover the simulator's true effects: rank
+  correlation 0.75, and the top message type matches for 83% of held-out members (chance 17%) [L78].
+  For example, the model learns on its own that a reminder helps most when forgetting is the main
+  barrier.
+- **GRPO (`engine/daypart/rm/grpo.py`).** A linear softmax policy over the 7 message types, given a
+  member's answers and status. Each step samples groups of 8 message types per member and status,
+  scores them with the reward model, and uses the group-normalised reward as the advantage, with a
+  small pull towards a uniform choice. The message text is the fixed, boundary-checked text of
+  each type. Run greedily in the simulator on the baselines' 150 episodes: mean simulated adherence
+  0.840 (0.856 on held-out members), against 0.833 for the best scripted baseline, 0 rule
+  violations [L79]. The policy is myopic (same-day reward only), and the gain is small.
+- **Inclinations on the passport (`engine/daypart/rm/inclinations.py`).** For the journal's member,
+  the answers whose reward-model terms weigh most are shown in plain language, with whether each
+  helps or makes the routine harder and how strongly it weighs (in words, not numbers). Up to three
+  next steps follow: each is a message type with a positive estimated lift, written as an action,
+  with the reason ("Why: …", and whether the gain in days kept was small, moderate or clear)
+  and the answer it is linked to. The link is the answer with the strongest personal term for that
+  message type; when no personal term is strong enough, the step is shown as a general effect and
+  linked to the member's own answer to the question that message type speaks to. Every string
+  passes the narration guard and the boundary rules; if anything fails, the section shows only "Not
+  available for this journal.", never a partial list [L80]. The answers are simulated from the demo
+  member's hidden traits, and the section does not change with check-ins.
 
 ## 5. Rigour
 
@@ -244,5 +290,5 @@ None of these steps has started. Each is *concept*.
 5. **A consented, supervised usability pilot** with a pre-registered primary measure (for example,
    continued check-ins and the person's own rating of the suggestions), clinician oversight, and
    stopping rules. Only then report any effect, and only on that measure.
-6. **Decide on the reinforcement-learning stage** (reward model, then GRPO) only after the pilot
-   shows which signal is worth optimising; it is not built today [L58].
+6. **Re-fit the reward model and GRPO policy on consented pilot data** only after the pilot shows
+   which signal is worth optimising; today both are fitted to simulated members only [L58, L77].

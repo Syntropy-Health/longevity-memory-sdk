@@ -117,6 +117,7 @@ main.wrap{padding-top:var(--s5);padding-bottom:var(--s7)}
 .tag--simulated,.tag--withheld,.tag--proposed{border-style:dashed;color:var(--c-muted)}
 .tag--flag{color:var(--warn);border-color:var(--warn)}
 .tag--live{color:var(--c-action);border-color:var(--c-action)}
+.tag--harder{color:var(--c-text);border-color:var(--c-text)}
 .tag--offline{color:var(--c-muted);border-style:dashed}
 .tag--console{background:var(--a-action);border-color:var(--a-action);color:var(--a-bg);font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em}
 .nr{color:var(--c-muted);font-style:italic} .nr::before{content:"— "}
@@ -225,6 +226,7 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 .delta .k{font:700 var(--fs-xs)/1.6 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--c-muted);min-width:6.5rem}
 
 /* passport cards */
+.card h4{font-size:var(--fs-md);font-weight:650;line-height:1.2;letter-spacing:-.02em;margin:0 0 var(--s3)}
 .cards{display:grid;gap:var(--s4)} @media (min-width:48rem){.cards{grid-template-columns:1fr 1fr}}
 .card{min-width:0;background:var(--c-surface);border:var(--bw) solid var(--c-line);border-radius:var(--r3);padding:var(--s5)}
 .card--simulated,.card--withheld{border-style:dashed}
@@ -297,7 +299,9 @@ details.thread li.none::before{border-style:dashed;color:var(--c-muted);border-c
 @media (min-width:48rem){.a-main{padding:var(--s5) var(--s6) var(--s7)}}
 .a-top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s5);padding-bottom:var(--s4);border-bottom:var(--bw) solid var(--a-hair)}
 .a-top h1{margin:0;font-size:var(--fs-xl)}
-.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2);list-style:none;margin:0 0 var(--s5);padding:0}
+/* headline tiles: 1-up on phones so a number never splits, 2-up, then 4-up; words wrap at spaces only (G5) */
+.kpis{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s2);list-style:none;margin:0 0 var(--s5);padding:0}
+@media (min-width:30rem){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:56rem){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .kpis li{background:var(--a-surface);border:var(--bw) solid var(--a-hair);border-radius:var(--r1);padding:var(--s3)}
 .kpi-k{display:block;font:600 var(--fs-xs)/1.3 var(--mono);color:var(--a-muted);text-transform:uppercase;letter-spacing:.06em}
@@ -398,11 +402,8 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
 .kpi-v .tag{font-size:var(--fs-sm)}
 .kpi-d{font-size:var(--fs-sm);line-height:1.4;color:var(--a-muted)}
 .kpi-s{font:var(--fs-sm)/1.3 var(--font);margin-top:auto;padding-top:var(--s2)}
-/* headline tiles: 1-up on phones so a number never splits; words wrap at spaces only (G5) */
-.kpis{grid-template-columns:minmax(0,1fr)}
-@media (min-width:30rem){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (min-width:56rem){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.kpis li{overflow-wrap:normal;word-break:normal}
+.kpis li,.pipe .stage{overflow-wrap:normal;word-break:normal} /* headline tiles and training steps: words wrap at spaces only (G5) */
+.pipe .stage .stage-meta{grid-template-columns:auto minmax(0,1fr)} /* a long label wraps at its space or hyphen, not mid-word */
 #pipe-live-tech .stage-meta{grid-template-columns:6rem minmax(0,1fr);margin-top:var(--s2)}
 .stage-name{font-size:var(--fs-md)}
 .stage-desc{margin:0;font-size:var(--fs-sm);line-height:1.45;color:var(--a-muted);overflow-wrap:normal}
@@ -565,6 +566,10 @@ table.data td.num .nr,table.data td.num .muted{font-weight:400;font-size:var(--f
     <h2 style="margin-top:var(--s5)">Cards</h2>
     <p class="small muted measure">Where a public source states a reference range, the card shows it with the group it applies to and the source. It is reference text only, not a judgement of your value.</p>
     <div class="cards" id="pp-cards"></div>
+    <!-- HAC-75: inclinations = what the reward model says drives this member (pp.inclinations), each next step linked to its driver -->
+    <h2 id="h-inclinations" tabindex="-1" style="margin-top:var(--s6)">Inclinations</h2>
+    <p class="small muted measure">What seems to matter most for keeping the routine, from simulated answers to seven short questions (this demo member is simulated), and up to three next steps, each linked to what it responds to.</p>
+    <div id="pp-incl"></div>
     <h2 id="h-inventory" tabindex="-1" style="margin-top:var(--s6)">What your clone knows</h2>
     <p class="muted small">Each area and whether it has data. A gap means nothing has been confirmed yet.</p>
     <ul class="inv measure" id="inventory" aria-labelledby="h-inventory"></ul>
@@ -1695,6 +1700,7 @@ function renderPassport(pp, inv) {
   row("Review", reviewLabel(inv && inv.reviewer_status));
   var cards = clear($("pp-cards"));
   pp.cards.forEach(function (c, i) { cards.append(card(c, i)); });
+  renderInclinations(pp.inclinations);
   var list = clear($("inventory"));
   var byConcept = {};
   pp.cards.forEach(function (c) { (byConcept[c.concept_id] = byConcept[c.concept_id] || []).push(c); });
@@ -1712,6 +1718,43 @@ function renderPassport(pp, inv) {
     li.append(el("span", null, g), el("span", "tag tag--withheld", "○ Gap: no data yet"));
     list.append(li);
   });
+}
+/* HAC-75 inclinations: drivers (label, helps / makes it harder, weight tier) and 1-3 next steps, each linked to a driver.
+   Absent (null) → "Not enough data yet." Every string is the API's own (already narration-guarded). */
+function renderInclinations(inc) {
+  var box = clear($("pp-incl"));
+  if (!inc || !Array.isArray(inc.drivers) || !Array.isArray(inc.insights) || !inc.drivers.length) {
+    box.append(el("p", "withheld-msg", "Not available for this journal.")); /* failure-neutral: null means it could not be built */
+    return;
+  }
+  var byId = {};
+  if (inc.note) box.append(el("p", "small muted measure", inc.note)); /* the simulated-data caveat before the numbers it qualifies */
+  var hw = el("h3", "label small", "What weighs most"); hw.id = "h-incl-drv"; box.append(hw);
+  var dl = attrs(el("ul", "inv measure"), { "aria-labelledby": "h-incl-drv" });
+  inc.drivers.forEach(function (d, i) {
+    var li = el("li"); li.id = "pp-drv-" + i; byId[d.driver_id] = { id: li.id, label: d.label };
+    var share = { strong: "Weighs strongly", moderate: "Weighs moderately", slight: "Weighs slightly" }[d.weight] || null;
+    li.append(el("span", null, d.label));
+    /* glyph + word + border, as every tag. QG U1: the tag is the weight only. A Helps / Makes-it-harder tag
+       (the sign of the term vs a typical member) read as "forgetting helps me" on a barrier answer. */
+    if (share) li.append(el("span", "tag", "◆ " + share));
+    dl.append(li);
+  });
+  box.append(dl);
+  var hn = el("h3", "label small", "Next steps"); hn.id = "h-incl-ins"; box.append(hn);
+  var cards = attrs(el("div", "cards"), { role: "group", "aria-labelledby": "h-incl-ins" });
+  inc.insights.forEach(function (s, i) {
+    var art = el("article", "card"), hid = "pp-ins" + i;
+    art.setAttribute("aria-labelledby", hid);
+    var h = el("h4", null, s.title); /* under the h3 "Next steps" */ h.id = hid; art.append(h);
+    art.append(el("p", null, s.action));
+    art.append(el("p", "small", s.reason));
+    var drv = byId[s.driver];
+    /* the link to its driver is shown as text (a #hash link would change the route) and tied by aria-describedby */
+    if (drv) { var lk = el("p", "small muted", "Linked to: "); lk.append(el("strong", null, drv.label)); art.append(lk); art.setAttribute("aria-describedby", drv.id); art.setAttribute("data-driver", s.driver); }
+    cards.append(art);
+  });
+  box.append(cards);
 }
 /* §3.3 inventory: a vertical with a ready card is covered, "✓ N card(s)" (N = its cards); else "○ Gap: no data yet". */
 function invTag(cards) {
@@ -2147,7 +2190,8 @@ async function showLab(runId) {
   meta.append(el("dt", null, "Simulated members that failed to generate"));
   var dd = el("dd"); dd.append(typeof t.member_failure_count === "number" ? plural(t.member_failure_count, "member", "members") : nr()); meta.append(dd);
   var models = t.rows.filter(function (r) { return r && (r.kind === "model" || r.kind === "proposed"); });
-  var envs = t.rows.filter(function (r) { return r && r.kind === "env_baseline"; });
+  var envs = t.rows.filter(function (r) { return r && (r.kind === "policy" || r.kind === "env_baseline"); }); /* HAC-79: a ran grpo first */
+  envs.sort(function (a, b) { return (b.kind === "policy") - (a.kind === "policy"); });
   var base = labRowNamed(t.rows, "base"), bs = base && !mismatched(base) && base.split ? base.split : null;
   var sub = clear($("lab-cap-sub"));
   sub.append(bs && typeof bs.n === "number" ? "Every step was tested on the same " + bs.n + " held-out practice prompts, none used in training." :
@@ -2209,7 +2253,8 @@ function envRow(r) {
   var tr = el("tr");
   if (typeof r.run_id === "string") tr.dataset.runId = r.run_id;
   var name = cell("Coaching approach"), adh = cell("Average adherence", "num"), vio = cell("Sessions with a safety-rule breach", "num"), on = cell("Tested on");
-  name.append(el("strong", null, envName(r)));
+  name.append(el("strong", null, r.kind === "policy" ? ROW_NAMES[r.row] || String(r.row) : envName(r)));
+  if (r.kind === "policy") name.append(el("span", "small muted cell-sub", "Learned in training, not a fixed rule"));
   var m = r.metrics || {}, s = r.split || {}, mismatch = mismatched(r);
   adh.append(mismatch ? mismatchTag(r) : pct(m.mean_adherence) || nr());
   vio.append(mismatch ? nr() : pct(m.episode_violation_rate) || nr());
@@ -2239,8 +2284,8 @@ function recordRow(r) {
     /* A&D §4.8: sha256(boundary_eval.json)[:12], shown only as a file digest (text, not a link) */
     var fd = el("div", "small"); fd.append("file digest ", el("code", "mono run-id", r.file_digest)); id.append(fd);
   }
-  var s = r.split || {};
-  if (r.kind === "env_baseline") {
+  var s = r.split || {}, envLike = r.kind === "env_baseline" || r.kind === "policy"; /* HAC-79: a ran grpo row is an env-scored policy */
+  if (envLike) {
     parts(split, [["scenarios", s.n_scenarios], ["sessions", s.n], ["days", s.horizon]]);
   } else {
     var list = [["prompt set", s.prompt_set_version]];
@@ -2253,7 +2298,7 @@ function recordRow(r) {
   var sp = [["", seeds]];
   if (r.kind === "model" && r.row !== "base") sp.push(["cohort", r.cohort_seed]);
   parts(seed, sp);
-  if (r.kind === "env_baseline") parts(fail, [["", r.failures === null || r.failures === undefined ? null : plural(r.failures, "session", "sessions")]]);
+  if (envLike) parts(fail, [["", r.failures === null || r.failures === undefined ? null : plural(r.failures, "session", "sessions")]]);
   else parts(fail, [["", r.failures === null || r.failures === undefined ? null : r.failures + " outside the rules"], ["unusable replies", r.degenerate]]);
   tr.append(name, id, split, seed, fail);
   return tr;
@@ -2283,19 +2328,20 @@ function pipeKpis(t) {
     "Checks that no held-out test member appears in any training data.", null));
   var best = null;
   rows.forEach(function (r) {
-    var m = r && r.kind === "env_baseline" && r.metrics ? pct(r.metrics.mean_adherence) : null;
+    var m = r && (r.kind === "env_baseline" || r.kind === "policy") && !mismatched(r) && r.metrics ? pct(r.metrics.mean_adherence) : null;
     if (m !== null && (best === null || r.metrics.mean_adherence > best.metrics.mean_adherence)) best = r;
   });
   box.append(kpi("Best simulated adherence", best ? pct(best.metrics.mean_adherence) : null,
     "Share of days simulated members logged, under the best coaching approach.",
-    [["Approach:", best ? envName(best) : null]]));
+    [["Approach:", best ? (best.kind === "policy" ? ROW_NAMES[best.row] || String(best.row) : envName(best)) : null]]));
 }
 var OFFLINE = [["base", "0", "Starting model", "A general language model before any coaching training."],
   ["sft", "1", "Learning from example replies", "Trained on example coaching replies that follow the safety rules."],
   ["dpo", "2", "Learning from preferred replies", "Shown pairs of a better and a worse reply, and trained to prefer the better one."],
-  ["grpo", "3", "Practice with simulated members", "Would learn from simulated members' responses over many days."]];
+  ["grpo", "3", "Practice with simulated members", "Would learn from simulated members' responses over many days.",
+    "Learned which kind of message to send each day from how simulated members responded."]];
 function offlineStage(spec, r) {
-  var proposed = r.kind === "proposed", mismatch = mismatched(r);
+  var proposed = r.kind === "proposed", policy = r.kind === "policy", mismatch = mismatched(r);
   var li = el("li", proposed ? "is-proposed" : null), node = el("div", "node");
   node.append(attrs(el("span", "dot", spec[1]), { "aria-hidden": "true" }), attrs(el("span", "wire"), { "aria-hidden": "true" }));
   var st = el("div", "stage"), top = el("div", "stage-top");
@@ -2307,12 +2353,18 @@ function offlineStage(spec, r) {
     if (g.passed === true) top.append(el("span", "tag tag--ready", "✓ Passed its check"));
     else if (g.passed === false) top.append(el("span", "tag tag--flag", "⚠ Did not pass its check"));
   }
-  st.append(top, el("p", "stage-desc", spec[3]));
+  st.append(top, el("p", "stage-desc", policy ? spec[4] : spec[3]));
   if (!proposed && !mismatch) {
-    var dl = el("dl", "stage-meta");
-    var meta = [["Safety rules", rowPct(r, "boundary_pass_rate")], ["Quality", rowPct(r, "rubric_pass_rate")]];
-    if (r.row === "sft" && g) meta[0][1] = withPts(meta[0][1], g.delta);
-    if (r.row === "dpo" && g) meta[1][1] = withPts(meta[1][1], g.rubric_delta);
+    var dl = el("dl", "stage-meta"), meta;
+    if (policy) {
+      /* HAC-79: a ran grpo arm is scored with simulated members, like a coaching approach: adherence, breaches, sessions */
+      var sn = r.split && typeof r.split.n === "number" ? plural(r.split.n, "session", "sessions") : null;
+      meta = [["Adherence", rowPct(r, "mean_adherence")], ["Safety-rule breaches", rowPct(r, "episode_violation_rate")], ["Tested on", sn]];
+    } else {
+      meta = [["Safety rules", rowPct(r, "boundary_pass_rate")], ["Quality", rowPct(r, "rubric_pass_rate")]];
+      if (r.row === "sft" && g) meta[0][1] = withPts(meta[0][1], g.delta);
+      if (r.row === "dpo" && g) meta[1][1] = withPts(meta[1][1], g.rubric_delta);
+    }
     meta.forEach(function (m) {
       var dd = el("dd");
       dd.append(m[1] === null || m[1] === undefined ? nr() : m[1]);

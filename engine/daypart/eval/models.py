@@ -14,8 +14,9 @@ from pydantic import ConfigDict, model_validator
 
 SCHEMA = "daypart-metrics/v1"
 ARM_KINDS: frozenset[str] = frozenset({"r2_dsl", "env_baseline", "i1_gate", "boundary_eval", "not_run"})
-#: Kinds added after the slice-E contract (whose sealed suite pins ``ARM_KINDS``): Track B (AIR-319).
-EXTENSION_ARM_KINDS: frozenset[str] = frozenset({"escalation"})
+#: Kinds added after the slice-E contract (whose sealed suite pins ``ARM_KINDS``): Track B (AIR-319),
+#: and the Jev library / reward model / GRPO policy arms (HAC-75, plan 4.1-4.3).
+EXTENSION_ARM_KINDS: frozenset[str] = frozenset({"escalation", "jev_library", "reward_model", "grpo_policy"})
 EVAL_MODELS: tuple[str, ...] = ("base", "sft", "dpo")  # same as daypart.eval.boundary.EVAL_MODELS
 POLICIES: tuple[str, ...] = ("always_none", "always_barrier_problem_solving", "random_intent")
 TRAINING_ARMS: tuple[str, ...] = ("sft", "dpo", "grpo", "rm", "jev")
@@ -64,6 +65,13 @@ class ArmConfig(pydantic.BaseModel):
                 raise ValueError(f"arm {self.name!r}: kind escalation requires non-empty seeds")
             if len(set(self.seeds)) != len(self.seeds):
                 raise ValueError(f"arm {self.name!r}: seeds must be unique")
+            if self.horizon < 1:
+                raise ValueError(f"arm {self.name!r}: horizon must be >= 1")
+        if self.kind == "grpo_policy":
+            if self.n_scenarios is None or self.n_scenarios < 1:
+                raise ValueError(f"arm {self.name!r}: kind grpo_policy requires n_scenarios >= 1")
+            if not self.seeds or len(set(self.seeds)) != len(self.seeds):
+                raise ValueError(f"arm {self.name!r}: kind grpo_policy requires non-empty, unique seeds")
             if self.horizon < 1:
                 raise ValueError(f"arm {self.name!r}: horizon must be >= 1")
         if self.kind == "env_baseline":
