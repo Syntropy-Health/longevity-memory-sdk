@@ -5,7 +5,9 @@ Plan tasks 4.1 (Jev question library), 4.2 (reward model), 4.3 (GRPO). Board dir
 passport on inclinations." This file is the only surface shared between the test-author and the
 implementer for this change. It **amends** slice E: E1.1's default `runs.yaml` table rows `grpo`,
 `rm` and `jev` are no longer `not_run`, and G3 of slice G ("`grpo`, `rm`, `jev` stay `not_run`")
-is superseded.
+is superseded. It also amends A&D §4.8 and T8.2 (`workstreams/daypart/AND.md`): when the grpo arm ran,
+the lab's grpo row is `kind: "policy"`, `status: "ok"`, with the env-baseline formulas for run id,
+split, seeds, failures and metrics; "proposed, not built" applies only to a grpo arm that did not run.
 
 Python ≥3.12, numpy only (no new dependency), no network, no wall clock, every rng seeded.
 Synthetic only (I1): nothing here may read a curated (`cur-`) profile.
@@ -95,6 +97,7 @@ only in the numeric fields `share` and `estimated_lift_points`.
 `HealthClonePassport` gains `inclinations: Inclinations | None = None`. `GET
 /api/journals/{id}/passport` returns it for a `syn-` member journal and for the `persona-v1` journal
 (drivers and 1–3 insights, each insight linked to a shown driver). If building it raises, the field
-is `null` and the rest of the passport is unchanged (fail closed, never partial). The research
+is `null` and the rest of the passport is unchanged (fail closed, never partial); the view then shows
+"Not available for this journal." under the Inclinations heading. The research
 `Passport` model of E2 (`/api/members/{id}/passport`) is unchanged. No member-facing inclinations
 string contains the words logit, reward, GRPO, feature, intent, model, weight, policy or latent.

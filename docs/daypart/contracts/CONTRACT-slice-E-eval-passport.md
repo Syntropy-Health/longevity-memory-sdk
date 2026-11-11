@@ -59,6 +59,8 @@ def load_runs(path: str | os.PathLike | None = None) -> RunsConfig   # None → 
 | `rm` | `not_run` | `reason`: reward model 4.2 not built |
 | `jev` | `not_run` | `reason`: Jev question library 4.1 not built |
 
+(*Amended by HAC-75:* `grpo`, `rm` and `jev` now run; see `CONTRACT-slice-E-addendum-HAC-75-rm.md`.)
+
 (The exact `reason` wording is the implementer's; each must be non-empty and name what blocks the arm.)
 
 ### E1.2 R2 corpus format (eval input)
