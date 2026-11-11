@@ -1,4 +1,4 @@
-"""Edit the FHDIC demo video (HAC-65) from real hosted footage and deck slides.
+"""Edit the FHDIC demo video (HAC-65; re-cut for HAC-77) from real hosted footage and deck slides.
 
     python make_video.py --footage <capture_dir> --slides <slide_png_dir> --out <mp4> [--ffmpeg BIN] [--font TTF]
 
@@ -34,42 +34,47 @@ SEGMENTS = [
     ("clip", "s2-checkin-review", 2.0, "Real recording · hosted build · check-in and review", [
         (0.3, 5, "A synthetic check-in starts as one plain sentence."),
         (5, 10, "It proposes 3 values, each with the words it came from. Mood gave none."),
-        (10, 14.5, "Sleep is corrected to 6.5 hours; the other two are confirmed."),
-        (14.5, 17.6, "Nothing is saved until the review is submitted.")]),
+        (10, 14, "Sleep is corrected to 6.5 hours; the other two are confirmed."),
+        (14, 16.8, "Nothing is saved until the review is submitted.")]),
     ("clip", "s3-passport", 2.0, "Real recording · hosted build · Health Clone Passport", [
         (0.3, 5, "Saved values update the Health Clone Passport."),
         (5, 10, "The evidence thread traces one value from the check-in to the card."),
         (10, 14.2, "A card with no value in 14 days is withheld, not guessed.")]),
+    ("clip", "s3b-inclinations", 2.5, "Real recording · hosted build · passport, Inclinations", [
+        (0.3, 6, "Inclinations: what weighs most for this member, from 7 short questions (simulated answers)."),
+        (6, 12.4, "Each next step is linked to one of them, with its reason. A prompt for the care team, not a care plan.")]),
     ("clip", "s4a-next-step", 2.0, "Real recording · hosted build · suggested next step", [
         (0.3, 4, "After a pain report, the next step routes to a person."),
         (4, 7.4, "The person can choose, defer or ask a professional.")]),
     ("clip", "s4b-safety", 2.0, "Real recording · hosted build · crisis hand-off", [
         (0.3, 4.5, "Crisis language is not processed."),
-        (4.5, 8.7, "A fixed hand-off points to a person. Nothing is saved.")]),
-    ("clip", "s5c-real-input", 2.0, "Real recording · hosted build · research console, real input", [
-        (0.3, 5, "Real health data is switched off in this build."),
-        (5, 9.5, "The server refuses the request: 12 of 12 governance gates are open.")]),
+        (4.5, 8.8, "A fixed hand-off points to a person. Nothing is saved.")]),
     ("clip", "s4d-timeline", 1.0, "Real recording · hosted build · timeline", [
         (0.3, 6.1, "The timeline shows what each saved check-in changed.")]),
-    ("clip", "s5b-lab", 3.0, "Real recording · hosted build · learning lab", [
-        (0.3, 5, "The learning lab reads committed training and evaluation runs."),
-        (5, 10, "Each number carries its run ID, split, seed and failure count.")]),
+    ("clip", "s5a-overview", 2.0, "Real recording · hosted build · research console, overview", [
+        (0.3, 5.5, "The research console leads with its results, in plain language."),
+        (5.5, 10.4, "Training runs offline. No AI model is used in the check-in loop.")]),
+    ("clip", "s5b-results", 3.0, "Real recording · hosted build · research console, results", [
+        (0.3, 5.5, "Each training step was tested on the same 141 held-out practice prompts."),
+        (5.5, 11.9, "With simulated members, the learned approach logged 84.0% of days, against 83.3% for the best fixed one.")]),
     ("slide", 5, 16, "Slide 5 · Learning and evidence (synthetic / simulated results)", [
         (0.3, 6, "On 141 held-out synthetic prompts, the base model passed 45."),
         (6, 11, "Both fine-tuned stages passed all 141. 90 base replies were empty."),
         (11, 15.8, "These are simulated results, not patient outcomes.")]),
-    ("clip", "s5a-pipeline", 1.0, "Real recording · hosted build · research console, pipeline", [
-        (0.3, 6.3, "The research console shows the live loop, then the offline training stages.")]),
-    ("slide", 3, 14, "Slide 3 · How it works", [
-        (0.3, 7, "Live: check-in, safety checks, proposals, review, memory, passport."),
-        (7, 13.8, "Offline: synthetic members, evaluation, fine-tuning, frozen comparison.")]),
-    ("slide", 6, 14, "Slide 6 · Responsible AI and limits", [
+    ("slide", 6, 17, "Slide 6 · What helps this member (simulated)", [
+        (0.3, 6, "7 questions recover simulated members' hidden traits 76–91% of the time."),
+        (6, 11.5, "The reward model reads term by term. Its top message type matches the simulator's for 83%."),
+        (11.5, 16.8, "The learned policy gains a little: 0.840 against 0.833. Synthetic only, no new spend.")]),
+    ("slide", 3, 13, "Slide 3 · How it works", [
+        (0.3, 6.5, "Live: check-in, safety checks, proposals, review, memory, passport."),
+        (6.5, 12.8, "Offline: synthetic members, evaluation, training, frozen comparison.")]),
+    ("slide", 7, 14, "Slide 7 · Responsible AI and limits", [
         (0.3, 7, "Synthetic data only. No diagnosis, treatment or dosing. No clinical review."),
         (7, 13.8, "The rules caught 74 of 74 test violations: a measurement, not a proof.")]),
-    ("slide", 7, 12, "Slide 7 · Feasibility and path to deployment", [
+    ("slide", 8, 12, "Slide 8 · Feasibility and path to deployment", [
         (0.3, 6, "It runs today as a hosted prototype."),
         (6, 11.8, "Reaching people needs consent, privacy, clinical oversight and a study first.")]),
-    ("slide", 8, 12, "Slide 8 · Impact and next steps", [
+    ("slide", 9, 12, "Slide 9 · Impact and next steps", [
         (0.3, 6, "Next: a clinical reviewer, a consented pilot and a pre-registered measure."),
         (6, 12, "The prototype link is in the submission.")]),
 ]
@@ -90,7 +95,7 @@ def build(footage: Path, slides: Path, out: Path, ffmpeg: str, font: str, bold: 
     meta = json.loads((footage / "clips-1280.json").read_text())
     webm = footage / meta["video"]
     clips = {c["id"]: c for c in meta["clips"]}
-    tmp = Path(tempfile.mkdtemp(prefix="hac65-edit-"))
+    tmp = Path(tempfile.mkdtemp(prefix="hac77-edit-"))
     parts, durs, plan = [], [], []
     for i, (kind, src, hold, label, caps) in enumerate(SEGMENTS):
         lf = tmp / f"label{i}.txt"; lf.write_text(label)
@@ -146,7 +151,7 @@ def build(footage: Path, slides: Path, out: Path, ffmpeg: str, font: str, bold: 
            "-c:a", "aac", "-b:a", "64k", "-shortest", "-movflags", "+faststart", str(out)]
     subprocess.run(cmd, check=True)
     # transcript
-    lines = ["# FHDIC demo video: transcript (HAC-65)", "",
+    lines = ["# FHDIC demo video: transcript (HAC-77)", "",
              f"Length {int(total // 60)}:{int(total % 60):02} · 1920×1080 · 30 fps · captions burned in and in "
              "[`captions.srt`](captions.srt) · **no voice-over and no presenter** (HeyGen not used; see "
              "[shot-list.md](shot-list.md)).", "",

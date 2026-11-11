@@ -184,9 +184,9 @@ def test_every_ledger_id_cited_exists(name: str) -> None:
     assert cited <= _ledger_ids(), f"{name}: unknown ledger rows {sorted(cited - _ledger_ids())}"
 
 
-def test_deck_outline_has_eight_slides_each_with_message_rows_and_illustration() -> None:
+def test_deck_outline_has_nine_slides_each_with_message_rows_and_illustration() -> None:
     slides = {h: b for h, b in _sections(_text("deck-outline.md")).items() if h.startswith("Slide ")}
-    assert [h.split(":")[0] for h in slides] == [f"Slide {i}" for i in range(1, 9)]
+    assert [h.split(":")[0] for h in slides] == [f"Slide {i}" for i in range(1, 10)]
     for head, body in slides.items():
         for label in ("**Message:**", "**Ledger rows:**", "**Illustration:**"):
             assert label in body, f"{head}: no {label}"

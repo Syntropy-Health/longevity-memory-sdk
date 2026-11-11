@@ -1,4 +1,4 @@
-"""Build the FHDIC deck (HAC-65) from one slide spec into two outputs.
+"""Build the FHDIC deck (HAC-65; rebuilt for HAC-77) from one slide spec into two outputs.
 
     python build_deck.py <screens_src_dir>   # crops real hosted screenshots into screens/
     python build_deck.py                     # reuses screens/ as committed
@@ -36,7 +36,8 @@ CONCEPT = "7A4B00"
 DEMO_URL = "https://supermomo668--daypart-demo-playground.us-east.modal.run"
 REPO_URL = "https://github.com/Syntropy-Health/longevity-memory-sdk"
 FOOTER = "Synthetic / simulated results · Synthetic data only · Not medical advice · Not tested with people"
-BUILD = "Screens: real captures of the hosted build (daypart/build e50ebb7), 2026-11-10"
+BUILD = "Screens: real captures of the hosted build (daypart/build 4ba3adb), 2026-11-11"
+NSLIDES = 9
 
 # name: (source png, crop box in 1280x720 px)
 CROPS = {
@@ -47,9 +48,9 @@ CROPS = {
     "evidence": ("s3-evidence-1280.png", (88, 200, 632, 560)),
     "range": ("s3-passport-1280.png", (88, 405, 632, 720)),
     "withheld": ("s3-withheld-1280.png", (88, 160, 632, 560)),
-    "handoff": ("s4b-handoff-1280.png", (84, 172, 1200, 392)),
+    "handoff": ("s4b-handoff-1280.png", (84, 172, 1188, 392)),
     "pii": ("s4c-pii-1280.png", (88, 238, 692, 390)),
-    "realinput": ("s5c-real-input-1280.png", (272, 236, 1250, 514)),
+    "inclinations": ("s3b-inclinations-1280.png", (88, 0, 1192, 634)),
     "timeline": ("s4d-timeline-1280.png", (80, 95, 830, 570)),
 }
 
@@ -100,7 +101,7 @@ def chrome(n, title, message, msg_h=0.9):
         text(MX, 1.5, W - 2 * MX, msg_h, message, size=20, color=BODY),
         rect(MX, 6.86, W - 2 * MX, 0.0, line=LINE),
         text(MX, 6.98, 10.5, 0.3, FOOTER, size=12, color=MUTED),
-        text(W - MX - 1.0, 6.98, 1.0, 0.3, f"{n} / 8", size=12, color=MUTED, align="r"),
+        text(W - MX - 1.0, 6.98, 1.0, 0.3, f"{n} / {NSLIDES}", size=12, color=MUTED, align="r"),
     ]
     return els
 
@@ -181,8 +182,8 @@ def slides():
             s.append(text(x + bw - 0.02, by + 0.55, bg + 0.04, 0.4, "→", size=20, color=ACCENT, bold=True, align="c"))
     lane = [("Synthetic members and scenarios", "175 members, fixed seeds"),
             ("Evaluation", "141 held-out synthetic prompts"),
-            ("Fine-tuning", "2 stages, adapters on one base model"),
-            ("Frozen comparison", "shown in the learning lab")]
+            ("Training", "2 fine-tuning stages; a reward model and a small policy"),
+            ("Frozen comparison", "shown in the research console")]
     ly, lw_ = 5.0, 2.86
     s.append(text(MX, ly - 0.42, 8, 0.35, "Offline, separate from the live path", size=15, color=MUTED, bold=True))
     for i, (h_, d_) in enumerate(lane):
@@ -192,7 +193,7 @@ def slides():
               text(x + 0.12, ly + 0.78, lw_ - 0.24, 0.5, d_, size=12.5, color=BODY)]
         if i < len(lane) - 1:
             s.append(text(x + lw_ - 0.02, ly + 0.38, 0.27, 0.4, "→", size=18, color=MUTED, bold=True, align="c"))
-    S.append(dict(els=s, notes="Ledger rows: L6 (deterministic rules, no model call at runtime), L9 (proposal schema revalidated), L10 (crisis check before extraction), L11 (personal-data refusal), L24 (next step passes boundary rules), L43 (hosted build), L57 (two training stages), L59 (141 held-out prompts), L67 (175 synthetic members). No box for anything not built."))
+    S.append(dict(els=s, notes="Ledger rows: L6 (deterministic rules, no model call at runtime), L9 (proposal schema revalidated), L10 (crisis check before extraction), L11 (personal-data refusal), L24 (next step passes boundary rules), L43 (hosted build), L57 (two training stages), L59 (141 held-out prompts), L67 (175 synthetic members), L76 and L79 (reward model and policy, synthetic only). No box for anything not built."))
 
     # 4. Interpretability
     s = chrome(4, "Interpretability",
@@ -213,7 +214,7 @@ def slides():
 
     # 5. Learning and evidence (results)
     s = chrome(5, "Learning and evidence",
-               "Two fine-tuning stages ran and were compared with the base model on 141 held-out synthetic prompts. None of it is a patient outcome.")
+               "Two fine-tuning stages beat the base model on 141 held-out synthetic prompts, and a small learned policy was tested with simulated members. None of it is a patient outcome.")
     s.append(text(MX, 2.5, 7.4, 0.4, "Boundary pass rate: prompts passed, of 141 held-out synthetic prompts, seed 0", size=14, color=INK, bold=True))
     s += hbar(MX, 3.05, 7.4, "Base model", 45, 141, "90 of its 141 replies were empty: most of the gap is empty output, not unsafe text.", color=MUTED)
     s += hbar(MX, 3.95, 7.4, "Fine-tuned (stage 1)", 141, 141, None)
@@ -224,36 +225,61 @@ def slides():
     rx = 8.45
     s += [rect(rx, 2.5, W - MX - rx, 2.55, fill=PANEL, line=LINE, round_=True),
           text(rx + 0.2, 2.62, W - MX - rx - 0.4, 2.4, [
-              P(b("Simulator: scripted policies", color=INK)),
+              P(b("Simulator: coaching approaches", color=INK)),
               P("150 simulated episodes (50 scenarios × 3 seeds), 14 days each. Mean simulated adherence, 0 to 1:"),
-              P(b("0.637", color=INK), "  no support"),
+              P(b("0.840", color=INK), "  learned policy (slide 6)"),
               P(b("0.833", color=INK), "  always problem-solving"),
               P(b("0.719", color=INK), "  random"),
-          ], size=14)]
-    s += pill(rx, 5.3, W - MX - rx, "CONCEPT · reinforcement-learning stage: not built", size=10.5)
+              P(b("0.637", color=INK), "  no support"),
+          ], size=13.5)]
+    s += pill(rx, 5.3, W - MX - rx, "SIMULATED · a message-type policy, not a language model", size=10)
     s.append(text(rx, 5.72, W - MX - rx, 0.9, "One seed only, so no spread across seeds is reported. Held-out prompts are synthetic, not written by people.", size=13, color=MUTED))
-    S.append(dict(els=s, notes="Ledger rows: L57 (two stages ran), L58 (GRPO, reward model, question library not run), L59 (141 prompts, 51 check-in + 90 probe, seed 0, one seed), L60 (base 45/141, SFT and DPO 141/141), L61 (90 of 141 base replies empty), L62 (lapse-recovery 7/51 SFT, 6/51 DPO), L63 (promotion gates passed), L66 (scripted baselines 0.637 / 0.833 / 0.719, 150 episodes). Illustration source: /admin#lab on the hosted build. 'Fine-tuned' = SFT, 'Preference-tuned' = DPO."))
+    S.append(dict(els=s, notes="Ledger rows: L57 (two stages ran), L58 (question library, reward model and GRPO ran, synthetic), L79 (GRPO 0.840 vs 0.833 best scripted, 0 violations), L59 (141 prompts, 51 check-in + 90 probe, seed 0, one seed), L60 (base 45/141, SFT and DPO 141/141), L61 (90 of 141 base replies empty), L62 (lapse-recovery 7/51 SFT, 6/51 DPO), L63 (promotion gates passed), L66 (scripted baselines 0.637 / 0.833 / 0.719, 150 episodes). Illustration source: /admin#lab (Results) on the hosted build. 'Fine-tuned' = SFT, 'Preference-tuned' = DPO."))
 
-    # 6. Responsible AI and limits
-    s = chrome(6, "Responsible AI and limits", "The prototype refuses what it should not do, and shows you when it does.")
+    # 6. Inclinations: question library, reward model, policy (HAC-75)
+    s = chrome(6, "What helps this member",
+               "Seven short questions, a reward model you can read term by term, and a small learned policy turn simulated answers into next steps, each with its reason.")
+    iw6 = 6.1
+    s += [img("inclinations", MX, 2.55, iw6, iw6 * 634 / 1104),
+          text(MX, 2.55 + iw6 * 634 / 1104 + 0.08, iw6, 0.3, "Passport, Inclinations: what weighs most and linked next steps (simulated member)", size=11, color=MUTED)]
+    rx = MX + iw6 + 0.35
+    rw = W - MX - rx
+    facts = [
+        ("1  Question library (Jev)", [P("7 check-in questions. On 58 held-out simulated members the answers recover each hidden trait ",
+                                         b("76–91%", color=INK), " of the time (chance 17–33%).")]),
+        ("2  Reward model", [P("Every score is a sum of named terms that add up exactly. Its top message type matches the simulator's for ",
+                               b("83%", color=INK), " of held-out members (chance 17%). It predicts no better than status alone (AUC 0.833 vs 0.834): its value is the explanation.")]),
+        ("3  Learned policy (GRPO)", [P("Mean simulated adherence ", b("0.840", color=INK), " against 0.833 for the best scripted approach and 0.637 with no support, 0 rule violations. Small gain, same-day reward only.")]),
+    ]
+    for y, (head, paras) in zip((2.5, 3.62, 5.12), facts):
+        s += [text(rx, y, rw, 0.35, head, size=15.5, color=INK, bold=True),
+              text(rx, y + 0.38, rw, 1.1, paras, size=13)]
+    s += pill(rx, 6.42, rw, "SIMULATED · answers and members are synthetic · CPU only, no new spend", size=10)
+    S.append(dict(els=s, notes="Ledger rows: L74 (7 questions), L75 (76–91% recovery on 58 held-out simulated members, chance 17–33%), L76 (score is a sum of named terms that add up exactly), L77 (AUC 0.833, log loss 0.408 vs 0.597 base rate; status-only comparator AUC 0.834, so the gain is attribution), L78 (rank correlation 0.75; top message type matches for 83%, chance 17%), L79 (GRPO 0.840, 0.856 on held-out members, vs 0.833 best scripted and 0.637 no support; 0 violations; CPU only), L80 (Inclinations section: drivers and up to 3 linked next steps with reasons; fails closed), L81 (hosted re-probe). Screen: /#passport Inclinations on the hosted build 4ba3adb. Technical appendix section 4a."))
+
+    # 7. Responsible AI and limits
+    s = chrome(7, "Responsible AI and limits", "The prototype refuses what it should not do, and shows you when it does.")
     lw6, rx6 = 6.9, 7.75
     rw6 = W - MX - rx6
     s += [img("handoff", MX, 2.3, lw6, lw6 * 220 / 1116),
           text(MX, 2.3 + lw6 * 220 / 1116 + 0.1, lw6, 0.35, [P(b("Crisis language: ", color=INK), "a fixed hand-off to a person. Nothing is extracted or saved.")], size=13.5),
           img("pii", rx6, 2.3, rw6, rw6 * 152 / 604),
           text(rx6, 2.3 + rw6 * 152 / 604 + 0.1, rw6, 0.35, [P(b("Personal data: ", color=INK), "refused whole. Nothing is saved.")], size=13.5),
-          img("realinput", MX, 4.2, lw6, lw6 * 278 / 978),
-          text(MX, 4.2 + lw6 * 278 / 978 + 0.1, lw6, 0.35, [P(b("Real health data: ", color=INK), "the server refuses (403). 12 of 12 gates are open.")], size=13.5)]
+          rect(MX, 4.2, lw6, 2.5, fill=PANEL, line=LINE, round_=True),
+          text(MX + 0.22, 4.32, lw6 - 0.44, 2.3, [
+              P(b("Real health data: switched off", color=INK)),
+              P("There is no screen to turn it on. If asked directly, the server refuses (403): 12 of 12 governance gates are open and unassigned, and enabling real input also needs a code change."),
+          ], size=14)]
     s += [rect(rx6, 4.2, rw6, 2.5, fill=PANEL, line=LINE, round_=True),
           text(rx6 + 0.22, 4.32, rw6 - 0.44, 2.3, [
               P(b("Limits", color=INK)),
               P("Synthetic data only. No diagnosis, treatment or dosing. No clinical review: content carries a board sign-off, not a clinician's."),
               P("The boundary rules caught 74 of 74 labelled violations, with 0 false alarms on 128 compliant rows of a 202-row test set. That is a measurement on that set, not a proof."),
           ], size=14)]
-    S.append(dict(els=s, notes="Ledger rows: L47 (crisis hand-off, not extracted), L48 (e-mail and self-name refused whole, 422), L56 (403 build_disallowed, 12 of 12 gates open), L65 (74/74, 0 false positives on 128 compliant rows, 202-row corpus; a measurement, not a proof), L73 (no clinical evidence). Screens: /#today and /admin#input on the hosted build, 2026-11-10."))
+    S.append(dict(els=s, notes="Ledger rows: L47 (crisis hand-off, not extracted), L48 (e-mail and self-name refused whole, 422), L56 (403 build_disallowed, 12 of 12 gates open; re-checked on 4ba3adb, 2026-11-11), L33 (real input cannot be enabled), L65 (74/74, 0 false positives on 128 compliant rows, 202-row corpus; a measurement, not a proof), L73 (no clinical evidence). Screens: /#today on the hosted build 4ba3adb, 2026-11-11. The real-input screen was removed in HAC-76; the refusal is the API's."))
 
-    # 7. Feasibility
-    s = chrome(7, "Feasibility and path to deployment",
+    # 8. Feasibility
+    s = chrome(8, "Feasibility and path to deployment",
                "It runs today as a hosted prototype. Reaching people needs consent, privacy, security, clinical oversight and a validation study first.")
     s += [rect(MX, 2.5, 5.7, 0.85, fill=PANEL, line=ACCENT, lw=1.5, round_=True),
           text(MX + 0.2, 2.6, 5.3, 0.7, [P(b("Runs today. ", color=INK), "Redeployed only when every check passes; the hosted journey passed 9 of 9 steps.")], size=14),
@@ -272,7 +298,7 @@ def slides():
              "Clinical review of content, rules and boundary rules",
              "Stronger evaluation: more seeds, a larger set written by people",
              "Consented, supervised pilot with a pre-registered measure",
-             "Then decide on the reinforcement-learning stage"]
+             "Then decide whether the learned policy is used with people"]
     for i, st in enumerate(steps):
         y = 2.98 + i * 0.6
         s += [rect(vx, y, 0.42, 0.42, fill="FFFFFF", line=CONCEPT, lw=1.25, dash=True, round_=True),
@@ -282,14 +308,14 @@ def slides():
     s.append(text(vx, 6.55, W - MX - vx, 0.3, "No cost, latency or scale figure: none is measured.", size=12.5, color=MUTED))
     S.append(dict(els=s, notes="Ledger rows: L43 (hosted build, deployed by CI after every gate), L44 (hosted smoke 9 of 9), L12 (journals in memory only, single container), L33 (real input cannot be enabled), L56 (12 of 12 gates open), L73 (no clinical evidence), P9 (no cost or scale figure). Validation path: technical-appendix.md section 9; every step is concept, not started."))
 
-    # 8. Impact and next steps
-    s = chrome(8, "Impact and next steps",
+    # 9. Impact and next steps
+    s = chrome(9, "Impact and next steps",
                "What it would take to show this helps people: a named clinical reviewer, a consented pilot and a pre-registered measure.")
     s += shot("timeline", MX, 2.5, 5.4, 5.4 * 475 / 750, None)
     s.append(text(MX, 2.5 + 5.4 * 475 / 750 + 0.08, 5.4, 0.3, "Timeline: what each saved check-in changed (fictional member)", size=11, color=MUTED))
     nx = 6.4
     s.append(text(nx, 2.5, W - MX - nx, 0.35, "Next steps", size=17, color=INK, bold=True))
-    nexts = ["Name a clinical reviewer", "Close the 12 governance gates", "Build the reinforcement-learning stage", "Run a consented pilot with a pre-registered measure"]
+    nexts = ["Name a clinical reviewer", "Close the 12 governance gates", "Grow the learned policy beyond message type", "Run a consented pilot with a pre-registered measure"]
     for i, t in enumerate(nexts):
         y = 3.0 + i * 0.55
         s += [text(nx, y, 0.4, 0.4, f"{i + 1}.", size=16, color=ACCENT, bold=True),
@@ -298,7 +324,7 @@ def slides():
     s += [text(nx, 5.3, W - MX - nx, 0.6, [P(b("Aim, not a result: ", color=INK), "people keep healthy routines with a record they can see, correct and act on.")], size=14),
           text(nx, 5.95, W - MX - nx, 0.85, [P(b("Prototype  ", color=INK), (DEMO_URL, {"link": DEMO_URL, "color": ACCENT})),
                                               P(b("Source  ", color=INK), (REPO_URL, {"link": REPO_URL, "color": ACCENT}))], size=11.5)]
-    S.append(dict(els=s, notes="Ledger rows: L52 (timeline lists every saved check-in), L58 (RL stage not built), L71 (aim as the owner supplied it), L73 (no clinical evidence). Any impact statement is an aim, never a result. Screen: /#timeline on the hosted build."))
+    S.append(dict(els=s, notes="Ledger rows: L52 (timeline lists every saved check-in), L58 and L79 (a small message-type policy ran on simulated members; growing it is concept), L71 (aim as the owner supplied it), L73 (no clinical evidence). Any impact statement is an aim, never a result. Screen: /#timeline on the hosted build."))
     return S
 
 

@@ -1,44 +1,46 @@
-# FHDIC demo video: shot list and edit (HAC-65)
+# FHDIC demo video: shot list and edit (HAC-65, re-filmed for HAC-77)
 
-**Status: made.** `clinical-human-clone-demo.mp4` is 2:37 long, 1920×1080, 30 fps, H.264 (CRF 24)
-and 9.3 MB, under the 10 MB attachment limit (md5 `d11077c899317ec37f56b108d51ab5aa`). It is
-attached to HAC-65 (attachment `ff59472d-b4e1-41f9-95d1-9fdd75307bae`) and is not in git. Captions are burned in and also provided as
+**Status: made.** `clinical-human-clone-demo.mp4` is 3:00 long, 1920×1080, 30 fps, H.264 (CRF 27)
+and 9.9 MB, under the 10 MB attachment limit (md5 `d4d2fb13c4402dbe3fbd6231ceec6ba4`). It is attached to HAC-77 and is not in
+git. The HAC-65 cut (2:37, build e50ebb7) is superseded. Captions are burned in and are also in
 [`captions.srt`](captions.srt). The full text and timing are in [`transcript.md`](transcript.md).
 
-**No presenter and no voice-over.** HeyGen was not used. A read-only check on 2026-11-10 found no
-subscription: the account is a pay-as-you-go wallet with USD 0.97 left and auto-reload turned on
-(it tops up USD 10 when the balance falls below USD 5). Any render would have triggered new spend,
-which the brief rules out. Nothing was sent to HeyGen and nothing was rendered there. If a person
-later adds a voice track, the narration is the caption text in `captions.srt`, and its timing
-already fits.
+**No presenter and no voice-over.** HeyGen was not used, and nothing new was spent. A read-only
+check on 2026-11-10 found no subscription: the account is a pay-as-you-go wallet with USD 0.97 left,
+and auto-reload is on (it tops up USD 10 when the balance falls below USD 5). Any render would
+have triggered new spend. If a person later adds a voice track, the narration is the caption text,
+and its timing already fits.
 
-**Timeline.** 8 of the 14 segments are real footage (about 82 s with holds) and 6 are deck slides. The footage is cut
-from one real Playwright recording of the hosted build, made by
+**Timeline.** 8 of the 15 segments are real footage (about 90 s with holds) and 7 are deck slides.
+The footage is cut from one real Playwright recording of the hosted build, made by
 [`capture/capture.js`](capture/capture.js) at 1280×720:
 https://supermomo668--daypart-demo-playground.us-east.modal.run, deployed commit
-`e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98`, recorded 2026-11-10 21:10 UTC.
-[`capture/clips-1280.json`](capture/clips-1280.json) records each clip's offsets, URL and every
-API status. Nothing is mocked, intercepted, re-staged or sped up.
+`4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f` (HAC-75 and HAC-76), recorded 2026-11-11 02:37 UTC.
+[`capture/clips-1280.json`](capture/clips-1280.json) records each clip's offsets and URL, and the
+status of every API call. Nothing is mocked, intercepted, re-staged or sped up. Following HAC-76,
+the video shows the production flow and has no "Real input" screen.
 
 | # | time | source | shot |
 |---|---|---|---|
 | 1 | 0:00–0:12 | slide 1 | Problem and user |
-| 2 | 0:11–0:29 | **real footage** `/` → `/#review` | Type a four-part sentence → 3 proposals with their words → correct sleep to 6.5 h, confirm 2 → save |
-| 3 | 0:29–0:43 | **real footage** `/#passport` | Passport cards → evidence thread opened → a withheld card |
-| 4 | 0:43–0:50 | **real footage** `/#next` | Next step after a pain report routes to a person → Choose |
-| 5 | 0:50–0:59 | **real footage** `/#today` | Crisis check-in → fixed hand-off, nothing saved |
-| 6 | 0:59–1:08 | **real footage** `/admin#input` | Request real input → server refuses (403), 12 gates open |
-| 7 | 1:08–1:14 | **real footage** `/#timeline` | What each saved check-in changed |
-| 8 | 1:14–1:24 | **real footage** `/admin#lab` | Learning lab rows with run ID, split, seed and failures |
-| 9 | 1:24–1:40 | slide 5 | Learning and evidence (synthetic / simulated results) |
-| 10 | 1:40–1:46 | **real footage** `/admin#pipeline` | Live loop, then the offline training stages (RL stage marked "proposed, not built") |
-| 11 | 1:46–2:00 | slide 3 | How it works |
-| 12 | 1:59–2:13 | slide 6 | Responsible AI and limits |
-| 13 | 2:13–2:25 | slide 7 | Feasibility and path to deployment |
-| 14 | 2:25–2:37 | slide 8 | Impact and next steps, with the prototype and source links |
+| 2 | 0:12–0:29 | **real footage** `/` → `/#review` | Type a four-part sentence → 3 proposals with their words → correct sleep to 6.5 h, confirm 2 → save |
+| 3 | 0:28–0:43 | **real footage** `/#passport` | Passport cards → evidence thread opened → a withheld card |
+| 4 | 0:42–0:55 | **real footage** `/#passport` | **Inclinations:** what weighs most → next steps, each linked to a driver with "Why:" |
+| 5 | 0:54–1:02 | **real footage** `/#next` | Next step after a pain report routes to a person → Choose |
+| 6 | 1:02–1:11 | **real footage** `/#today` | Crisis check-in → fixed hand-off, nothing saved |
+| 7 | 1:10–1:17 | **real footage** `/#timeline` | What each saved check-in changed |
+| 8 | 1:16–1:27 | **real footage** `/admin#pipeline` | Research console Overview: headline results, check-in loop, offline training steps |
+| 9 | 1:26–1:39 | **real footage** `/admin#lab` | Results: training steps on 141 prompts; coaching approaches incl. the learned policy (84.0%) |
+| 10 | 1:38–1:54 | slide 5 | Learning and evidence (synthetic / simulated results) |
+| 11 | 1:54–2:11 | slide 6 | What helps this member: question library, reward model, learned policy (GRPO) |
+| 12 | 2:10–2:23 | slide 3 | How it works |
+| 13 | 2:23–2:37 | slide 7 | Responsible AI and limits |
+| 14 | 2:37–2:49 | slide 8 | Feasibility and path to deployment |
+| 15 | 2:48–3:00 | slide 9 | Impact and next steps, with the prototype and source links |
 
-The order follows the brief: problem → check-in and correction → passport provenance → bounded
-step and real refusals → learning lab → system and validation → limits.
+Exact segment times are in [`edit-plan.json`](edit-plan.json). The order follows the brief:
+problem → check-in and correction → passport provenance and inclinations → bounded step and a real
+refusal → results → system and validation → limits.
 
 ## Edit
 
@@ -59,10 +61,10 @@ Rebuild:
 BUILD_SHA=<deployed sha> node capture/capture.js <cap_dir> 1280
 DSF=1.25 node ../deck/deck_pdf.js ../deck <slides_dir>
 python make_video.py --footage <cap_dir> --slides <slides_dir> --out clinical-human-clone-demo.mp4 \
-  --ffmpeg <full ffmpeg> --font LiberationSans-Regular.ttf --bold LiberationSans-Bold.ttf
+  --ffmpeg <full ffmpeg> --font LiberationSans-Regular.ttf --bold LiberationSans-Bold.ttf --crf 27
 ```
 
 A new capture is a new take, so its offsets differ, and the plan's captions were timed to this
-take. Re-check `clips-1280.json` before re-cutting.
+take (each caption must end before its clip plus hold). Re-check `clips-1280.json` before re-cutting.
 
 The judge-path check is in [judge-path.md](judge-path.md).

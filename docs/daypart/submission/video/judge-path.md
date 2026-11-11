@@ -1,48 +1,51 @@
-# Judge-path check (HAC-65), 2026-11-10
+# Judge-path check (HAC-77), 2026-11-11
 
-I opened the deck PDF's links and the demo link as a logged-out judge would: a fresh browser
-context with no cookies and no login, at 1280×720 and 375×812. Hosted build: `daypart/build`
-`e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98`, deployed by CI run 42901423198 (all gate jobs and
-deploy-demo green). Its app code under `engine/daypart` is the same as 68236f1, the build the pack
-probed.
+I opened the deck PDF's links and the demo link the way a logged-out judge would: a fresh browser
+context with no cookies and no login, at 1280×720 and at 375×812. Hosted build: `daypart/build`
+`4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f` (HAC-75 and HAC-76 merged). CI run 42942366810
+deployed it after every gate job and deploy-demo passed. The served OpenAPI description is the
+HAC-76 text ("training results, health areas, coaching sessions … Real input is off in this
+build").
 
 ## Deck PDF links
 
-| link (slide 8) | result |
+| link (slide 9) | result |
 |---|---|
-| https://supermomo668--daypart-demo-playground.us-east.modal.run/ | 200, member app, no login |
+| https://supermomo668--daypart-demo-playground.us-east.modal.run/ | 200, the member app, no login |
 | https://github.com/Syntropy-Health/longevity-memory-sdk | 200, public repository |
 
-The PDF has exactly these 2 URI links. `/admin` (research console) also returns 200 logged out.
+The PDF has 9 pages and exactly these 2 URI links. `/admin` (the research console) also returns
+200 when logged out.
 
 ## Demo, full journey
 
-`capture/capture.js` ran the whole journey at each width as one real take. Its API log is in
+`capture/capture.js` ran the whole journey at each width as one real take. Its API logs are in
 [`capture/clips-1280.json`](capture/clips-1280.json) and [`capture/clips-375.json`](capture/clips-375.json).
 
 | step | 1280 | 375 |
 |---|---|---|
 | Check-in "slept 6 hours, pain 4/10, mood 3 out of 5, walked 8000 steps" | 201, 3 proposals | 201, review shown |
-| Review: sleep corrected to 6.5 h, two confirmed, saved | 200 | 200 |
-| Passport, evidence thread opened | 200 | 200 |
-| Next step, Choose | 200 ("Goal set") | 200 |
-| Crisis check-in "Can you give me a crisis line to call?" | 200 hand-off, nothing saved | 200 hand-off |
+| Review: sleep corrected to 6.5 h, the other two confirmed, saved | 200 | 200 |
+| Passport, evidence thread opened, withheld card | 200 | 200 |
+| Passport Inclinations: 3 drivers, 3 next steps, each linked with "Why:" | shown | shown |
+| Next step, Choose | 200 | 200 |
+| Personal-data check-in (fictional name and e-mail) | **422**, the expected refusal; nothing saved | **422** |
+| Crisis check-in "Can you give me a crisis line to call?" | 200, hand-off; nothing saved | 200, hand-off |
 | Timeline | 200 | 200 |
-| Research console: pipeline, learning lab | 200 | 200 |
-| Real input requested | **403** (expected refusal, 12 of 12 gates open) | **403** |
+| Research console: Overview, then Results (incl. the learned-policy row, 84.0%) | 200 | 200 |
 
-The only status of 400 or above on either take is the expected 403 refusal. No page errors.
-Separately, the personal-data refusal (fictional e-mail and name) returned 422, and nothing was saved.
+The only status of 400 or above in either take is the expected 422 refusal. No page errors.
 
-On every screen (`/#today`, `/#passport`, `/#next`, `/#timeline`, `/admin/pipeline`, `/admin/lab`,
-`/admin/inventory`, `/admin/playground`, `/admin/input`), `scrollWidth` equals the viewport at
-both widths: no horizontal scroll at 375.
+**No "Real input" screen** (HAC-76): there is no nav item for it. `GET /admin/input` returns 404,
+and `/admin#input` falls back to the Overview. The server still refuses real input when asked
+directly: `POST /api/mode` returns 403 `build_disallowed`, with 12 of 12 gates open.
 
-## UI issues seen (not fixed here; for the `daypart/build` owner)
+A separate fresh-context pass checked every screen at both widths: `/#today`, `/#passport`,
+`/#next`, `/#timeline`, `/admin/pipeline`, `/admin/lab`, `/admin/inventory`, `/admin/sessions`
+and `/admin#input`. On each one `scrollWidth` equals the viewport, so there is no horizontal scroll
+at 375. That pass saw 0 page errors and 0 responses of 400 or above.
 
-- **Learning lab table at 1280:** the narrow Seed and Failures columns still break words
-  mid-word ("cohor/t", "degenerat/e"). It is legible on camera. The deck redraws these numbers as
-  a chart instead of showing the table.
-- **Real-input gate list at 1280:** in the two-column list, a long item in column 1 runs into
-  column 2 ("… · open8. Terms …", "… · open9. Review …"). It is visible in the video's real-input
-  segment and on slide 6. It is cosmetic, and the text stays readable.
+## UI issues seen
+
+None that block. The two HAC-65 items (mid-word breaks in the lab table, and the overrun in the
+real-input gate list) are gone: HAC-76 fixed the table wrapping and removed the gate-list screen.
