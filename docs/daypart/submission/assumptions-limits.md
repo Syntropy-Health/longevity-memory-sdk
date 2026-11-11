@@ -140,6 +140,10 @@ dashboard, where they most likely sit.
   (0.840 against 0.833 mean simulated adherence).
 - The Inclinations next steps are prompts for a conversation with a care team, estimated from
   simulated members. They are not a care plan and are not validated in people.
+- No one answers the seven questions in this build: the passport's Inclinations come from answers
+  simulated from the demo member's hidden traits, and they do not change with check-ins or the
+  passport day. Most next steps (about 8 in 10) are general effects linked to the member's own
+  answer, not effects specific to people who answered alike; the reason says which.
 - The SFT and DPO adapters reach a 100% boundary pass rate on 141 held-out prompts. That set is
   small and synthetic; it measures the boundary rules, not clinical safety.
 

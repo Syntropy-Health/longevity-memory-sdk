@@ -146,8 +146,9 @@ curated-25 never enter (the I1 check covers the training fold, builder `rm.train
   and the answer it is linked to. The link is the answer with the strongest personal term for that
   message type; when no personal term is strong enough, the step is shown as a general effect and
   linked to the member's own answer to the question that message type speaks to. Every string
-  passes the narration guard and the boundary rules; if anything fails, the section is left out,
-  never shown in part [L80].
+  passes the narration guard and the boundary rules; if anything fails, the section shows only "Not
+  available for this journal.", never a partial list [L80]. The answers are simulated from the demo
+  member's hidden traits, and the section does not change with check-ins.
 
 ## 5. Rigour
 
