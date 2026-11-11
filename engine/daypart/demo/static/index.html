@@ -524,7 +524,7 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
     <div class="cards" id="pp-cards"></div>
     <!-- HAC-75: inclinations = what the reward model says drives this member (pp.inclinations), each next step linked to its driver -->
     <h2 id="h-inclinations" tabindex="-1" style="margin-top:var(--s6)">Inclinations</h2>
-    <p class="small muted measure">What seems to matter most for keeping your routine, from your answers to a few short questions, and up to three next steps, each linked to what it responds to.</p>
+    <p class="small muted measure">What seems to matter most for keeping the routine, from simulated answers to seven short questions (this demo member is simulated), and up to three next steps, each linked to what it responds to.</p>
     <div id="pp-incl"></div>
     <h2 id="h-inventory" tabindex="-1" style="margin-top:var(--s6)">What your clone knows</h2>
     <p class="muted small">Each area and whether it has data. A gap means nothing has been confirmed yet.</p>
@@ -1657,7 +1657,7 @@ function renderPassport(pp, inv) {
 function renderInclinations(inc) {
   var box = clear($("pp-incl"));
   if (!inc || !Array.isArray(inc.drivers) || !Array.isArray(inc.insights) || !inc.drivers.length) {
-    box.append(el("p", "withheld-msg", "Not enough data yet."));
+    box.append(el("p", "withheld-msg", "Not available for this journal.")); /* failure-neutral: null means it could not be built */
     return;
   }
   var byId = {};
@@ -1666,11 +1666,11 @@ function renderInclinations(inc) {
   var dl = attrs(el("ul", "inv measure"), { "aria-labelledby": "h-incl-drv" });
   inc.drivers.forEach(function (d, i) {
     var li = el("li"); li.id = "pp-drv-" + i; byId[d.driver_id] = { id: li.id, label: d.label };
-    var share = { strong: "weighs strongly", moderate: "weighs moderately", slight: "weighs slightly" }[d.weight] || null;
+    var share = { strong: "Weighs strongly", moderate: "Weighs moderately", slight: "Weighs slightly" }[d.weight] || null;
     li.append(el("span", null, d.label));
-    /* glyph + word + border, as every tag; not tag--withheld (that means "no data") nor tag--flag (a warning) */
-    li.append(el("span", "tag " + (d.direction === "helps" ? "tag--ready" : "tag--harder"),
-      (d.direction === "helps" ? "▲ Helps" : "▼ Makes it harder") + (share ? " · " + share : "")));
+    /* glyph + word + border, as every tag. QG U1: the tag is the weight only. A Helps / Makes-it-harder tag
+       (the sign of the term vs a typical member) read as "forgetting helps me" on a barrier answer. */
+    if (share) li.append(el("span", "tag", "◆ " + share));
     dl.append(li);
   });
   box.append(dl);

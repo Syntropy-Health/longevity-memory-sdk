@@ -93,3 +93,9 @@ def test_app_startup_warms_the_reward_model():
     model.trained.cache_clear()
     create_app(cohort_seed=0)
     assert model.trained.cache_info().currsize == 1
+
+
+def test_view_says_the_answers_are_simulated():  # QG D3
+    html = HTML.read_text(encoding="utf-8")
+    section = html[html.index('id="h-inclinations"'):html.index('id="pp-incl"')]
+    assert "simulated answers" in section and "your answers" not in section

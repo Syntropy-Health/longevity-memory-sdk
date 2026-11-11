@@ -2430,8 +2430,9 @@ def test_hac79_inclinations_order_headings_and_tags():
     assert kinds == ["p", "h3", "ul", "h3", "div"]  # the simulated caveat first, before the numbers it qualifies
     assert got["kids"][2][2] == "h-incl-drv" and got["kids"][4][2] == "h-incl-ins"  # lists named by their visible headings
     assert got["h3"] == ["What weighs most", "Next steps"] and got["h4"] == ["Plan around it"]  # h2 > h3 > h4
-    assert got["tags"] == [["tag tag--harder", "▼ Makes it harder · weighs strongly"],
-                           ["tag tag--ready", "▲ Helps · weighs moderately"]]
+    # QG U1: no Helps / Makes-it-harder tag (it read as "forgetting helps me"); the tag is the weight only
+    assert got["tags"] == [["tag", "◆ Weighs strongly"], ["tag", "◆ Weighs moderately"]]
+    assert "Helps" not in str(got["tags"]) and "harder" not in str(got["tags"])
     assert "tag--withheld" not in str(got["tags"])  # withheld means "no data", not a direction
     assert got["art"] == [["pp-ins0", "pp-drv-1"]] and "Linked to: A clear plan" in got["text"]
 
@@ -2439,4 +2440,4 @@ def test_hac79_inclinations_order_headings_and_tags():
 @pytest.mark.parametrize("inc", [None, {"drivers": [], "insights": []}])
 def test_hac79_inclinations_absent_is_not_enough_data(inc):
     got = _incl(inc)
-    assert got["text"] == "Not enough data yet." and got["h3"] == []
+    assert got["text"] == "Not available for this journal." and got["h3"] == []  # QG D10: failure-neutral
