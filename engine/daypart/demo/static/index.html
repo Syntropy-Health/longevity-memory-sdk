@@ -398,6 +398,12 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
 .kpi-v .tag{font-size:var(--fs-sm)}
 .kpi-d{font-size:var(--fs-sm);line-height:1.4;color:var(--a-muted)}
 .kpi-s{font:var(--fs-sm)/1.3 var(--font);margin-top:auto;padding-top:var(--s2)}
+/* headline tiles: 1-up on phones so a number never splits; words wrap at spaces only (G5) */
+.kpis{grid-template-columns:minmax(0,1fr)}
+@media (min-width:30rem){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:56rem){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kpis li{overflow-wrap:normal;word-break:normal}
+#pipe-live-tech .stage-meta{grid-template-columns:6rem minmax(0,1fr);margin-top:var(--s2)}
 .stage-name{font-size:var(--fs-md)}
 .stage-desc{margin:0;font-size:var(--fs-sm);line-height:1.45;color:var(--a-muted);overflow-wrap:normal}
 .stage .stage-meta{margin-top:var(--s3);font:var(--fs-sm)/1.5 var(--font)}

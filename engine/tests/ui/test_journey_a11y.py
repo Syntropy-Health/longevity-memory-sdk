@@ -1201,9 +1201,9 @@ def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe
     assert_axe_clean(page, axe_source, "lab deep link")
 
 
-_G5_SPLIT_WORDS = """(sel) => Array.from(document.querySelectorAll(sel)).map(t => {
+_G5_SPLIT_WORDS = """([sel, cellSel]) => Array.from(document.querySelectorAll(sel)).map(t => {
   const out = []; let cells = 0;
-  t.querySelectorAll('th, td').forEach(c => {
+  t.querySelectorAll(cellSel).forEach(c => {
     cells++;
     const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) {
@@ -1230,12 +1230,27 @@ def test_hac76_g5_results_tables_never_break_a_word(browser: Browser, page_error
     wait_route_ready(page, route)
     if route == "lab":
         page.locator("#lab-records > summary").click()
-    got = page.evaluate(_G5_SPLIT_WORDS, f"#screen-{route} table")
+    got = page.evaluate(_G5_SPLIT_WORDS, [f"#screen-{route} table", "th, td"])
     assert len(got) == tables, f"#{route}: {len(got)} tables"
     for i, t in enumerate(got):
         assert t["cells"] > 0, f"#{route} table {i}: no cells checked"
         assert t["split"] == [], f"#{route} table {i} @{width}px: words broken across lines: {t['split']}"
     assert_no_hscroll(page, f"{route} @ {width}px")
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", [375, 390, 1280])
+def test_hac76_headline_tiles_never_break_a_word(browser: Browser, page_errors, base_url: str, width: int):
+    """G5 on the overview: a headline tile's number and label never split mid-word ("100.0 / %",
+    "Passe / d" at 375 before the 1-up phone layout)."""
+    page = _new_page(browser, page_errors, viewport={"width": width, "height": 900})
+    goto(page, base_url, "pipeline")
+    wait_route_ready(page, "pipeline")
+    expect(page.locator("#pipe-kpis > li")).to_have_count(4)
+    (tiles,) = page.evaluate(_G5_SPLIT_WORDS, ["#pipe-kpis", ":scope > li"])
+    assert tiles["cells"] == 4
+    assert tiles["split"] == [], f"@{width}px: words broken across lines: {tiles['split']}"
+    assert_no_hscroll(page, f"pipeline @ {width}px")
     page.context.close()
 
 
