@@ -15,105 +15,121 @@ A synthetic check-in starts as one plain sentence.
 It proposes 3 values, each with the words it came from. Mood gave none.
 
 5
-00:00:21,600 --> 00:00:26,100
+00:00:21,600 --> 00:00:25,600
 Sleep is corrected to 6.5 hours; the other two are confirmed.
 
 6
-00:00:26,100 --> 00:00:29,200
+00:00:25,600 --> 00:00:28,400
 Nothing is saved until the review is submitted.
 
 7
-00:00:29,410 --> 00:00:34,110
+00:00:28,480 --> 00:00:33,180
 Saved values update the Health Clone Passport.
 
 8
-00:00:34,110 --> 00:00:39,110
+00:00:33,180 --> 00:00:38,180
 The evidence thread traces one value from the check-in to the card.
 
 9
-00:00:39,110 --> 00:00:43,310
+00:00:38,180 --> 00:00:42,380
 A card with no value in 14 days is withheld, not guessed.
 
 10
-00:00:43,530 --> 00:00:47,230
-After a pain report, the next step routes to a person.
+00:00:42,550 --> 00:00:48,250
+Inclinations: what weighs most for this member, from 7 short questions (simulated answers).
 
 11
-00:00:47,230 --> 00:00:50,630
-The person can choose, defer or ask a professional.
+00:00:48,250 --> 00:00:54,650
+Each next step is linked to one of them, with its reason. A prompt for the care team, not a care plan.
 
 12
-00:00:50,790 --> 00:00:54,990
-Crisis language is not processed.
+00:00:54,790 --> 00:00:58,490
+After a pain report, the next step routes to a person.
 
 13
-00:00:54,990 --> 00:00:59,190
-A fixed hand-off points to a person. Nothing is saved.
+00:00:58,490 --> 00:01:01,890
+The person can choose, defer or ask a professional.
 
 14
-00:00:59,370 --> 00:01:04,070
-Real health data is switched off in this build.
+00:01:02,000 --> 00:01:06,200
+Crisis language is not processed.
 
 15
-00:01:04,070 --> 00:01:08,570
-The server refuses the request: 12 of 12 governance gates are open.
+00:01:06,200 --> 00:01:10,500
+A fixed hand-off points to a person. Nothing is saved.
 
 16
-00:01:08,800 --> 00:01:14,600
+00:01:10,680 --> 00:01:16,480
 The timeline shows what each saved check-in changed.
 
 17
-00:01:14,790 --> 00:01:19,490
-The learning lab reads committed training and evaluation runs.
+00:01:16,560 --> 00:01:21,760
+The research console leads with its results, in plain language.
 
 18
-00:01:19,490 --> 00:01:24,490
-Each number carries its run ID, split, seed and failure count.
+00:01:21,760 --> 00:01:26,660
+Training runs offline. No AI model is used in the check-in loop.
 
 19
-00:01:24,720 --> 00:01:30,420
-On 141 held-out synthetic prompts, the base model passed 45.
+00:01:26,790 --> 00:01:31,990
+Each training step was tested on the same 141 held-out practice prompts.
 
 20
-00:01:30,420 --> 00:01:35,420
-Both fine-tuned stages passed all 141. 90 base replies were empty.
+00:01:31,990 --> 00:01:38,390
+With simulated members, the learned approach logged 84.0% of days, against 83.3% for the best fixed one.
 
 21
-00:01:35,420 --> 00:01:40,220
-These are simulated results, not patient outcomes.
+00:01:38,530 --> 00:01:44,230
+On 141 held-out synthetic prompts, the base model passed 45.
 
 22
-00:01:40,320 --> 00:01:46,320
-The research console shows the live loop, then the offline training stages.
+00:01:44,230 --> 00:01:49,230
+Both fine-tuned stages passed all 141. 90 base replies were empty.
 
 23
-00:01:46,500 --> 00:01:53,200
-Live: check-in, safety checks, proposals, review, memory, passport.
+00:01:49,230 --> 00:01:54,030
+These are simulated results, not patient outcomes.
 
 24
-00:01:53,200 --> 00:02:00,000
-Offline: synthetic members, evaluation, fine-tuning, frozen comparison.
+00:01:54,130 --> 00:01:59,830
+7 questions recover simulated members' hidden traits 76–91% of the time.
 
 25
-00:02:00,100 --> 00:02:06,800
-Synthetic data only. No diagnosis, treatment or dosing. No clinical review.
+00:01:59,830 --> 00:02:05,330
+The reward model reads term by term. Its top message type matches the simulator's for 83%.
 
 26
-00:02:06,800 --> 00:02:13,600
-The rules caught 74 of 74 test violations: a measurement, not a proof.
+00:02:05,330 --> 00:02:10,630
+The learned policy gains a little: 0.840 against 0.833. Synthetic only, no new spend.
 
 27
-00:02:13,700 --> 00:02:19,400
-It runs today as a hosted prototype.
+00:02:10,730 --> 00:02:16,930
+Live: check-in, safety checks, proposals, review, memory, passport.
 
 28
-00:02:19,400 --> 00:02:25,200
-Reaching people needs consent, privacy, clinical oversight and a study first.
+00:02:16,930 --> 00:02:23,230
+Offline: synthetic members, evaluation, training, frozen comparison.
 
 29
-00:02:25,300 --> 00:02:31,000
-Next: a clinical reviewer, a consented pilot and a pre-registered measure.
+00:02:23,330 --> 00:02:30,030
+Synthetic data only. No diagnosis, treatment or dosing. No clinical review.
 
 30
-00:02:31,000 --> 00:02:37,000
+00:02:30,030 --> 00:02:36,830
+The rules caught 74 of 74 test violations: a measurement, not a proof.
+
+31
+00:02:36,930 --> 00:02:42,630
+It runs today as a hosted prototype.
+
+32
+00:02:42,630 --> 00:02:48,430
+Reaching people needs consent, privacy, clinical oversight and a study first.
+
+33
+00:02:48,530 --> 00:02:54,230
+Next: a clinical reviewer, a consented pilot and a pre-registered measure.
+
+34
+00:02:54,230 --> 00:03:00,230
 The prototype link is in the submission.

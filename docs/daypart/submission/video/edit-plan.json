@@ -1,5 +1,5 @@
 {
-  "total_seconds": 157.0,
+  "total_seconds": 180.23,
   "crossfade": 0.4,
   "segments": [
     {
@@ -14,83 +14,94 @@
     {
       "n": 2,
       "start": 11.6,
-      "duration": 17.91,
+      "duration": 16.98,
       "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 3.34\u201319.25 s",
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 3.36\u201318.34 s",
       "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
       "label": "Real recording \u00b7 hosted build \u00b7 check-in and review"
     },
     {
       "n": 3,
-      "start": 29.11,
-      "duration": 14.52,
+      "start": 28.18,
+      "duration": 14.47,
       "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 19.65\u201332.17 s",
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 18.64\u201331.11 s",
       "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
       "label": "Real recording \u00b7 hosted build \u00b7 Health Clone Passport"
     },
     {
       "n": 4,
-      "start": 43.23,
-      "duration": 7.66,
+      "start": 42.25,
+      "duration": 12.64,
       "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 32.41\u201338.07 s",
-      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
-      "label": "Real recording \u00b7 hosted build \u00b7 suggested next step"
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 31.12\u201341.26 s",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
+      "label": "Real recording \u00b7 hosted build \u00b7 passport, Inclinations"
     },
     {
       "n": 5,
-      "start": 50.49,
-      "duration": 8.98,
+      "start": 54.49,
+      "duration": 7.61,
       "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 38.15\u201345.13 s",
-      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#today",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
-      "label": "Real recording \u00b7 hosted build \u00b7 crisis hand-off"
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 41.48\u201347.09 s",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
+      "label": "Real recording \u00b7 hosted build \u00b7 suggested next step"
     },
     {
       "n": 6,
-      "start": 59.07,
-      "duration": 9.83,
+      "start": 61.7,
+      "duration": 9.08,
       "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 64.59\u201372.42 s",
-      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#input",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
-      "label": "Real recording \u00b7 hosted build \u00b7 research console, real input"
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 51.01\u201358.09 s",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#today",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
+      "label": "Real recording \u00b7 hosted build \u00b7 crisis hand-off"
     },
     {
       "n": 7,
-      "start": 68.5,
-      "duration": 6.39,
+      "start": 70.38,
+      "duration": 6.28,
       "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 45.36\u201350.75 s",
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 58.31\u201363.59 s",
       "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#timeline",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
       "label": "Real recording \u00b7 hosted build \u00b7 timeline"
     },
     {
       "n": 8,
-      "start": 74.49,
-      "duration": 10.33,
+      "start": 76.26,
+      "duration": 10.63,
       "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 57.19\u201364.52 s",
-      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
-      "label": "Real recording \u00b7 hosted build \u00b7 learning lab"
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 64.41\u201373.04 s",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#pipeline",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
+      "label": "Real recording \u00b7 hosted build \u00b7 research console, overview"
     },
     {
       "n": 9,
-      "start": 84.42,
+      "start": 86.49,
+      "duration": 12.14,
+      "kind": "real footage",
+      "source": "page@3564e709ec76795b9b4367c619b0857a.webm 73.08\u201382.22 s",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
+      "build_sha": "4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f",
+      "recorded_at": "2026-11-11T02:36:56.914Z",
+      "label": "Real recording \u00b7 hosted build \u00b7 research console, results"
+    },
+    {
+      "n": 10,
+      "start": 98.23,
       "duration": 16,
       "kind": "deck slide",
       "source": "deck slide 5",
@@ -98,51 +109,49 @@
       "label": "Slide 5 \u00b7 Learning and evidence (synthetic / simulated results)"
     },
     {
-      "n": 10,
-      "start": 100.02,
-      "duration": 6.58,
-      "kind": "real footage",
-      "source": "page@8de5e364ba831ec7166dad9b175c244a.webm 51.56\u201357.14 s",
-      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#pipeline",
-      "build_sha": "e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98",
-      "recorded_at": "2026-11-10T21:10:41.014Z",
-      "label": "Real recording \u00b7 hosted build \u00b7 research console, pipeline"
+      "n": 11,
+      "start": 113.83,
+      "duration": 17,
+      "kind": "deck slide",
+      "source": "deck slide 6",
+      "url": null,
+      "label": "Slide 6 \u00b7 What helps this member (simulated)"
     },
     {
-      "n": 11,
-      "start": 106.2,
-      "duration": 14,
+      "n": 12,
+      "start": 130.43,
+      "duration": 13,
       "kind": "deck slide",
       "source": "deck slide 3",
       "url": null,
       "label": "Slide 3 \u00b7 How it works"
     },
     {
-      "n": 12,
-      "start": 119.8,
-      "duration": 14,
-      "kind": "deck slide",
-      "source": "deck slide 6",
-      "url": null,
-      "label": "Slide 6 \u00b7 Responsible AI and limits"
-    },
-    {
       "n": 13,
-      "start": 133.4,
-      "duration": 12,
+      "start": 143.03,
+      "duration": 14,
       "kind": "deck slide",
       "source": "deck slide 7",
       "url": null,
-      "label": "Slide 7 \u00b7 Feasibility and path to deployment"
+      "label": "Slide 7 \u00b7 Responsible AI and limits"
     },
     {
       "n": 14,
-      "start": 145.0,
+      "start": 156.63,
       "duration": 12,
       "kind": "deck slide",
       "source": "deck slide 8",
       "url": null,
-      "label": "Slide 8 \u00b7 Impact and next steps"
+      "label": "Slide 8 \u00b7 Feasibility and path to deployment"
+    },
+    {
+      "n": 15,
+      "start": 168.23,
+      "duration": 12,
+      "kind": "deck slide",
+      "source": "deck slide 9",
+      "url": null,
+      "label": "Slide 9 \u00b7 Impact and next steps"
     }
   ]
 }

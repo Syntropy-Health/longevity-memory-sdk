@@ -1,4 +1,4 @@
-// Records the FHDIC demo-video footage from the HOSTED build (HAC-65).
+// Records the FHDIC demo-video footage from the HOSTED build (HAC-65; re-filmed for HAC-77).
 //
 // One browser page records the whole judge journey as a single real take, across both surfaces
 // (member app at `/`, research console at `/admin`). Every segment's start and end offset, and the
@@ -21,6 +21,8 @@ const CHECKIN_TEXT = 'slept 6 hours, pain 4/10, mood 3 out of 5, walked 8000 ste
 const CORRECTED_SLEEP = '6.5';
 // "crisis line" is a boundary-v1 crisis marker: it triggers the real hand-off without graphic wording.
 const SAFETY_TEXT = 'Can you give me a crisis line to call?';
+// Fictional personal data: the server refuses it whole (422) and saves nothing (ledger L48).
+const PII_TEXT = 'My name is Sam Lee, email sam.lee@example.com, slept 7 hours';
 
 const t0 = Date.now();
 const clips = [];
@@ -116,6 +118,17 @@ const nav = (hash) => page.locator(`a[href="#${hash}"]`).first();
   }
   end();
 
+  // S3b: passport Inclinations: what weighs most, and next steps each linked to a driver (HAC-75)
+  const incl = page.locator('#h-inclinations');
+  await incl.evaluate((e) => e.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  begin('s3b-inclinations', 'Passport Inclinations: what weighs most and linked next steps');
+  await pause(4000);
+  await shot('s3b-inclinations');
+  await smoothScroll(420, 10, 150);
+  await pause(4500);
+  await shot('s3b-inclinations-steps');
+  end();
+
   // S4a: bounded next step
   await nav('next').click();
   await page.locator('#ns-panel').waitFor({ state: 'visible', timeout: 60000 });
@@ -126,6 +139,15 @@ const nav = (hash) => page.locator(`a[href="#${hash}"]`).first();
   await pause(2500);
   await shot('s4a-chosen');
   end();
+
+  // Deck still (not cut into the video): the personal-data refusal (422, nothing saved), fictional text.
+  await nav('today').click();
+  await page.locator('#ci-text').waitFor({ state: 'visible' });
+  await page.locator('#ci-text').fill('');
+  await page.locator('#ci-text').pressSequentially(PII_TEXT, { delay: 10 });
+  await page.locator('#ci-submit').click();
+  await pause(3000);
+  await shot('s4c-pii');
 
   // S4b: a real safety refusal (crisis hand-off): nothing extracted or saved
   await nav('today').click();
@@ -141,6 +163,7 @@ const nav = (hash) => page.locator(`a[href="#${hash}"]`).first();
   await shot('s4b-handoff');
   end();
 
+
   // S4d: timeline, the longitudinal record (deck slide 8)
   await nav('timeline').click();
   await page.locator('#tl-body').waitFor({ state: 'visible', timeout: 60000 });
@@ -151,35 +174,24 @@ const nav = (hash) => page.locator(`a[href="#${hash}"]`).first();
   await pause(1500);
   end();
 
-  // S5: research console: pipeline, learning lab, real input refusal
+  // S5: research console (clinician-readable since HAC-76): overview, then results
   await page.goto(`${URL}/admin/pipeline`, { waitUntil: 'networkidle' });
-  begin('s5a-pipeline', 'Research console: the adaptation pipeline');
-  await pause(2500);
-  await shot('s5a-pipeline');
-  await smoothScroll(600, 12);
-  await pause(1500);
-  end();
-
-  await page.locator('a[href="#lab"], a[href$="/lab"]').first().click();
-  await page.waitForLoadState('networkidle');
-  begin('s5b-lab', 'Learning lab: base vs fine-tuned on 141 held-out synthetic prompts');
-  await pause(3000);
-  await shot('s5b-lab');
-  await smoothScroll(350, 8, 150);
-  await pause(3000);
-  await shot('s5b-lab-scrolled');
-  end();
-
-  await page.locator('a[href="#input"], a[href$="/input"]').first().click();
-  await page.waitForLoadState('networkidle');
-  await page.locator('#ri-btn').waitFor({ state: 'visible' });
-  begin('s5c-real-input', 'Real-input request refused by the server (403, 12 open gates)');
-  await pause(1500);
-  await page.locator('#ri-btn').click();
+  begin('s5a-overview', 'Research console overview: headline results and how the clone learns');
   await pause(3500);
-  await shot('s5c-real-input');
-  await smoothScroll(400);
-  await pause(1500);
+  await shot('s5a-overview');
+  await smoothScroll(760, 14, 140);
+  await pause(3000);
+  await shot('s5a-overview-training');
+  end();
+
+  await page.locator('a[href="#lab"]').first().click();
+  await page.waitForLoadState('networkidle');
+  begin('s5b-results', 'Results: training steps on 141 held-out prompts, coaching approaches with simulated members');
+  await pause(3500);
+  await shot('s5b-results');
+  await smoothScroll(420, 10, 150);
+  await pause(4000);
+  await shot('s5b-results-approaches');
   end();
 
   const video = await page.video().path();
@@ -189,7 +201,7 @@ const nav = (hash) => page.locator(`a[href="#${hash}"]`).first();
     url: URL, build_sha: process.env.BUILD_SHA || 'unknown', viewport: `${WIDTH}x${HEIGHT}`,
     recorded_at: new Date(t0).toISOString(), video: path.basename(video),
     source: 'real recording of the hosted build (Playwright recordVideo); nothing mocked or intercepted',
-    checkin_text: CHECKIN_TEXT, corrected_sleep_hours: Number(CORRECTED_SLEEP), safety_text: SAFETY_TEXT,
+    checkin_text: CHECKIN_TEXT, corrected_sleep_hours: Number(CORRECTED_SLEEP), safety_text: SAFETY_TEXT, pii_text: PII_TEXT,
     clips: clips.map((c) => ({ ...c, start: +c.start.toFixed(2), end: +c.end.toFixed(2) })), screenshots: shots, api: log,
   };
   fs.writeFileSync(path.join(OUT, `clips-${WIDTH}.json`), JSON.stringify(meta, null, 2));

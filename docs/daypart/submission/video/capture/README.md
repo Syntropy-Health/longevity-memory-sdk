@@ -1,4 +1,4 @@
-# Capture harness (HAC-65)
+# Capture harness (HAC-65, re-run for HAC-77)
 
 `capture.js` records the judge journey from the **hosted** build as one real Playwright take and
 writes `clips-<width>.json`: URL, deployed commit (`BUILD_SHA`), viewport, each segment's offsets
@@ -19,8 +19,10 @@ libasound2, libatspi2.0, libatomic1, fonts-liberation) into a user directory and
 The demo-video edit needs a full ffmpeg with libx264, xfade, drawtext and subtitles. Playwright's
 own ffmpeg is too minimal; `imageio-ffmpeg`'s static binary works.
 
-Takes used (2026-11-10, hosted build `e50ebb71aaeb7b61a42cd81c7481e1a17e49fe98`):
-[`clips-1280.json`](clips-1280.json) (the video's footage) and [`clips-375.json`](clips-375.json)
-(the judge-path check at phone width). The only status of 400 or above in either take is the
-expected 403 refusal of real input. The `.webm` recordings are not committed; the MP4 cut from the
-1280 take is attached to HAC-65.
+Takes used (2026-11-11, hosted build `4ba3adb28a44940b66cb6e3c9d62e7fa76e1df2f`, HAC-77):
+[`clips-1280.json`](clips-1280.json) is the video's footage, and [`clips-375.json`](clips-375.json)
+is the judge-path check at phone width. Since HAC-76 the journey has no real-input screen. It now
+films the passport Inclinations section and the console's Overview and Results. Outside the
+clips, it takes one deck still of the personal-data refusal. The only status of 400 or above in
+either take is that expected 422. The `.webm` recordings are not committed. The MP4 cut from the
+1280 take is attached to HAC-77.
