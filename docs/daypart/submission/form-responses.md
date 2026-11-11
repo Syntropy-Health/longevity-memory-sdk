@@ -6,12 +6,11 @@ in the fields marked *owner input required*, and submits.
 
 - **What the answers describe:** only behaviour the hosted build showed when agents tested it:
   `daypart/build` @ **68236f1**, deployed by CI run **42873055419** on 2026-11-10 and probed the
-  same day ([hosted probe](sources/hosted-probe-2026-11-10.md)). Anything that is not in that
-  build is left out, or named as not built. **Exception, pending a re-probe:** the Inclinations
+  same day ([hosted probe](sources/hosted-probe-2026-11-10.md)), and, for the Inclinations
   sentence in Field 2 and the question library, reward model and GRPO lines in Fields 2 and 4
-  describe HAC-75 on `daypart/build`, which that probe predates. Before submitting, re-probe the
-  hosted build after it redeploys and update the build ID above; until then ledger rows L74–L80
-  are evidenced by the repository, not by the hosted build.
+  (HAC-75), `daypart/build` @ **92d57c8**, deployed by CI run **42929492491** on 2026-11-11 and
+  re-probed the same day ([re-probe](sources/hosted-probe-2026-11-11.md); ledger L81). Anything
+  that is not in those builds is left out, or named as not built.
 - **Limits:** the brief's (solution summary 2,000, built during challenge 1,500, prototype link
   1,024 characters). The organiser does not publish the form, so these are unverified until a
   person with the dashboard login checks them (assumption O6 in
@@ -63,13 +62,12 @@ The demo opens on a fictional member with 28 days of saved check-ins. Everything
 ```
 
 **Characters:** 1976 / 2,000
-**Ledger rows:** L5, L6, L7, L21, L22, L20, L24, L10, L45, L47, L49, L50, L51, L52, L53, L55, L25, L59, L66, L74, L79, L80, L33, L56, L73
+**Ledger rows:** L5, L6, L7, L21, L22, L20, L24, L10, L45, L47, L49, L50, L51, L52, L53, L55, L25, L59, L66, L74, L79, L80, L81, L33, L56, L73
 **Notes:** "four bundled demo files" are two photos and two device files, all synthetic; no device or
 sensor is connected (L55). "Two fine-tuned versions" are the supervised and preference-tuned
 adapters (L57). The GRPO policy chooses among seven fixed message types and is trained against the
 reward model on synthetic members only; it is not a language model (L58, L79). The Inclinations
-section and the GRPO lab row are on `daypart/build` from HAC-75; re-probe the hosted build before
-submitting (L80).
+section and the GRPO lab row were re-probed on the hosted build at 92d57c8 (L80, L81).
 
 ## Field 3: Solution stage
 
