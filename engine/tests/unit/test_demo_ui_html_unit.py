@@ -2129,7 +2129,7 @@ def test_rev3_console_has_no_hard_coded_lab_numbers(admin):
 
 
 _PIPE = ["$", "el", "attrs", "safeHref", "link", "nr", "clear", "notice", "plural", "TIMEOUT_MS", "api", "serverError",
-         "parts", "pct", "pts", "intOrNull", "labRowNamed", "mismatched", "mismatchTag", "rowPct", "envName", "runAnchor",
+         "parts", "pct", "pts", "count", "intOrNull", "labRowNamed", "mismatched", "mismatchTag", "rowPct", "envName", "runAnchor",
          "ROW_NAMES", "kpi", "pipeKpis", "OFFLINE", "withPts", "offlineStage", "pipeOffline", "pipeSeq", "showPipeline"]
 _PIPE_BODY = """
 mk("pipe-msg"); var res = mk("pipe-results", "section"), kp = mk("pipe-kpis", "ul"), lane = mk("lane-offline", "section"), ol = mk("pipe-offline", "ol"); mk("pipe-note", "p");
@@ -2433,9 +2433,9 @@ def test_hac79_pipeline_grpo_policy_stage_shows_env_metrics_not_boundary():
     assert grpo["kind"] == "policy"  # the committed arm runs (HAC-75)
     got = _pipeline([200, t])
     g = got["stages"][3]
-    assert g[:4] == ["", "Practice with simulated members", [], ["Adherence", "Safety-rule breaches", "Tested on"]]
+    assert g[:4] == ["", "Practice with simulated members", [], ["Adherence", "Safety-rule breaches", "Sessions tested"]]
     m = grpo["metrics"]
-    assert g[4] == [_pc(m["mean_adherence"]), _pc(m["episode_violation_rate"]), f"{grpo['split']['n']} sessions"]
+    assert g[4] == [_pc(m["mean_adherence"]), _pc(m["episode_violation_rate"]), str(grpo["split"]["n"])]
     assert g[5] == [["Run record", "#lab/" + grpo["run_id"], grpo["run_id"]]]
     assert g[6] == ["Learned which kind of message to send each day from how simulated members responded."]
     text = " ".join(g[1:2] + g[2] + g[3] + g[4] + g[6])

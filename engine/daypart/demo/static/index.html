@@ -2358,8 +2358,8 @@ function offlineStage(spec, r) {
     var dl = el("dl", "stage-meta"), meta;
     if (policy) {
       /* HAC-79: a ran grpo arm is scored with simulated members, like a coaching approach: adherence, breaches, sessions */
-      var sn = r.split && typeof r.split.n === "number" ? plural(r.split.n, "session", "sessions") : null;
-      meta = [["Adherence", rowPct(r, "mean_adherence")], ["Safety-rule breaches", rowPct(r, "episode_violation_rate")], ["Tested on", sn]];
+      meta = [["Adherence", rowPct(r, "mean_adherence")], ["Safety-rule breaches", rowPct(r, "episode_violation_rate")],
+        ["Sessions tested", count(r.split && r.split.n)]];
     } else {
       meta = [["Safety rules", rowPct(r, "boundary_pass_rate")], ["Quality", rowPct(r, "rubric_pass_rate")]];
       if (r.row === "sft" && g) meta[0][1] = withPts(meta[0][1], g.delta);
