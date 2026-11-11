@@ -7,7 +7,11 @@ in the fields marked *owner input required*, and submits.
 - **What the answers describe:** only behaviour the hosted build showed when agents tested it:
   `daypart/build` @ **68236f1**, deployed by CI run **42873055419** on 2026-11-10 and probed the
   same day ([hosted probe](sources/hosted-probe-2026-11-10.md)). Anything that is not in that
-  build is left out, or named as not built.
+  build is left out, or named as not built. **Exception, pending a re-probe:** the Inclinations
+  sentence in Field 2 and the question library, reward model and GRPO lines in Fields 2 and 4
+  describe HAC-75 on `daypart/build`, which that probe predates. Before submitting, re-probe the
+  hosted build after it redeploys and update the build ID above; until then ledger rows L74–L80
+  are evidenced by the repository, not by the hosted build.
 - **Limits:** the brief's (solution summary 2,000, built during challenge 1,500, prototype link
   1,024 characters). The organiser does not publish the form, so these are unverified until a
   person with the dashboard login checks them (assumption O6 in
@@ -49,20 +53,23 @@ does, not what the aim would achieve.
 ```text
 Clinical Human Clone (a product name, not a clinical tool) is a synthetic-first prototype for sustaining healthy behaviours. A person checks in about their day in plain words, or with one of four bundled demo files. The system proposes the values it found, each with the words it came from, its unit, date, method and confidence, and saves nothing until the person confirms, corrects or discards each one.
 
-Confirmed values build a Health Clone Passport: one card per tracked measure, marked as the person's own value or as simulated, with its age, source and limits. Every ready card opens an evidence thread from the check-in to the saved record, its explanation and the safety check it passed. A value older than 14 days, or a measure without enough data, is withheld and shows no number. Where a public health source states a reference range, it is shown beside the value and never interpreted.
+Confirmed values build a Health Clone Passport: one card per tracked measure, marked as the person's own value or as simulated, with its age, source and limits. Every ready card opens an evidence thread from the check-in to the saved record, its explanation and the safety check it passed. A value older than 14 days, or a measure without enough data, is withheld and shows no number. Where a public health source states a reference range, it is shown beside the value and never interpreted. An Inclinations section shows what weighs most on keeping the routine, from seven short questions, and up to three next steps, each with its reason.
 
 A suggested next step, with its reason, can be chosen, deferred or handed to a professional. It passes fixed safety rules first, and crisis language gets a fixed hand-off instead of being processed. A timeline shows how each saved check-in changed the passport.
 
-A separate research console reports a learning lab: a base language model and two fine-tuned versions evaluated on 141 held-out synthetic prompts, and scripted policies in a behaviour simulator, each with its run ID, seed and failure counts.
+A separate research console reports a learning lab: a base language model and two fine-tuned versions evaluated on 141 held-out synthetic prompts, and scripted policies and a small reinforcement-learning (GRPO) policy, trained against an interpretable reward model, in a behaviour simulator, each with its run ID, seed and failure counts.
 
 The demo opens on a fictional member with 28 days of saved check-ins. Everything is synthetic. It is not medical advice, diagnosis or treatment, and it shows no evidence of improved health. Real health-data input is switched off in the build; turning it on would first need consent, privacy, security and clinical oversight.
 ```
 
-**Characters:** 1730 / 2,000
-**Ledger rows:** L5, L6, L7, L21, L22, L20, L24, L10, L45, L47, L49, L50, L51, L52, L53, L55, L25, L59, L66, L33, L56, L73
+**Characters:** 1976 / 2,000
+**Ledger rows:** L5, L6, L7, L21, L22, L20, L24, L10, L45, L47, L49, L50, L51, L52, L53, L55, L25, L59, L66, L74, L79, L80, L33, L56, L73
 **Notes:** "four bundled demo files" are two photos and two device files, all synthetic; no device or
 sensor is connected (L55). "Two fine-tuned versions" are the supervised and preference-tuned
-adapters (L57); the reinforcement-learning stage is not built and is not mentioned (L58).
+adapters (L57). The GRPO policy chooses among seven fixed message types and is trained against the
+reward model on synthetic members only; it is not a language model (L58, L79). The Inclinations
+section and the GRPO lab row are on `daypart/build` from HAC-75; re-probe the hosted build before
+submitting (L80).
 
 ## Field 3: Solution stage
 
@@ -88,13 +95,13 @@ Pre-existing, not challenge work: Syntropy Health's open-source health-metrics S
 Built during the challenge, 2026-11-03 to 2026-11-10 (dates from git history):
 - 2026-11-03 to 2026-11-05: a seeded synthetic member simulator, fixed safety rules checked on a labelled corpus, a synthetic training-data pipeline, and one training run: supervised and preference fine-tuning of a base language model, evaluated on 141 held-out synthetic prompts.
 - 2026-11-07: the check-in and review flow, a versioned registry of 20 measures (18 standard LOINC codes), the Health Clone Passport with evidence threads and sourced reference ranges, the suggested next step, and a real-input gate that always refuses.
-- 2026-11-10: the prepared fictional member, the timeline, and the separate member app and research console.
+- 2026-11-10: the prepared fictional member, the timeline, the separate member app and research console, and a seven-question library, an interpretable reward model and a small GRPO policy, all on synthetic members, behind the passport's Inclinations section.
 
-Not built: a reinforcement-learning stage, a reward model, accounts, stored data, real health-data input.
+Not built: accounts, stored data, real health-data input.
 ```
 
-**Characters:** 1022 / 1,500
-**Ledger rows:** L68, L69, L70, L57, L58, L59, L65, L13, L14, L21, L18, L24, L33, L52, L1, L12
+**Characters:** 1125 / 1,500
+**Ledger rows:** L68, L69, L70, L57, L58, L59, L65, L13, L14, L21, L18, L24, L33, L52, L1, L12, L74, L76, L79, L80
 **Notes:** the SDK's history after the challenge opened (2026-10-15 to 2026-10-22) is still
 pre-existing work and is not claimed (L69, *reported*). The upstream dates were read from the
 SDK's own repository on 2026-11-10.

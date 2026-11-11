@@ -30,7 +30,7 @@ SimMember cohort (seeded, synthetic)        daypart.simmember
 SimMemberEnv  (FutureHouse aviary)          daypart.simmember.env
   send_message(text, intent) → next state, adherence reward; DSL violation = episode fail
         │
-        ├── policy: choose intent ───────── baselines today; GRPO / reward model planned
+        ├── policy: choose intent ───────── baselines + GRPO policy against an interpretable reward model
         │
         ├── language: Muse Glimmer 30B      daypart.train (SFT → DPO, 4-bit QLoRA on Modal H100)
         │
@@ -71,7 +71,7 @@ Suggested next step                            GET/POST /api/journals/{id}/next-
         │
         ▼
 Learning lab                                   GET /api/lab                 daypart.demo.lab
-  base · SFT · DPO · 3 env baselines · GRPO "proposed, not built", read from docs/daypart/results/
+  base · SFT · DPO · 3 env baselines · GRPO (simulated), read from docs/daypart/results/
 ```
 
 The five screens for this journey are HAC-38 P3 work; today the journey is reachable through the API.
@@ -239,7 +239,7 @@ simulator's held-out histories carry no check-in text, so the arm never exercise
 - No medical, diagnostic, dosing or treatment advice: the engine is not designed to give it. Every draft is checked by the deterministic `boundary-v1` DSL, and a failing draft is replaced by a safe one or a clinician handoff. That check is measured (R2, on the sealed 202-row corpus), not proven: it does not guarantee that no unsafe text gets through.
 - No Malaffi/Sahatna integration.
 - No consumer UI: the playground and dashboard are demonstration surfaces for judges, not a product.
-- GRPO, the reward model and the Jev question library are designed, not built; the eval harness reports them as `not_run`.
+- GRPO, the reward model and the Jev question library are built and run on synthetic members only (CPU, no paid compute); the GRPO policy picks among 7 fixed message types and is not a language model; the eval harness reports all three with simulated numbers (HAC-75).
 - Meta eligibility is unconfirmed and out of scope here.
 
 **Dependencies**

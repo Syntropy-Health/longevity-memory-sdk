@@ -2,7 +2,10 @@
 
 Written double-blind from docs/daypart/contracts/CONTRACT-slice-E-eval-passport.md
 (sections E1.1-E1.3, E3), updated for docs/daypart/contracts/CONTRACT-slice-G-bench.md G3
-(``boundary_eval`` arm kind; default ``base``/``sft``/``dpo`` arms; HAC-27). Only upstream public modules (slices A-D, syntropy.lhm,
+(``boundary_eval`` arm kind; default ``base``/``sft``/``dpo`` arms; HAC-27), and for
+docs/daypart/contracts/CONTRACT-slice-E-addendum-HAC-75-rm.md H1 (HAC-75: ``grpo``/``rm``/``jev``
+arms of kind ``grpo_policy``/``reward_model``/``jev_library``; supersedes G3's "stay not_run";
+HAC-78). Only upstream public modules (slices A-D, syntropy.lhm,
 aviary) are used to build reference values.
 
 Categories:
@@ -60,9 +63,10 @@ DEFAULT_ARMS = (
     ("base", "boundary_eval"),
     ("sft", "boundary_eval"),
     ("dpo", "boundary_eval"),
-    ("grpo", "not_run"),
-    ("rm", "not_run"),
-    ("jev", "not_run"),
+    # H1 (HAC-75 addendum): the three training arms now run.
+    ("grpo", "grpo_policy"),
+    ("rm", "reward_model"),
+    ("jev", "jev_library"),
     # Track B contract v1.1 item 4 (AIR-319 track-b-spec): one packaged arm, kind escalation.
     ("escalation", "escalation"),
 )
@@ -276,6 +280,12 @@ class TestConstants:
         assert tuple(ev.TRAINING_ARMS) == ("sft", "dpo", "grpo", "rm", "jev")
         assert tuple(ev.ARM_STATUSES) == ("ok", "not_run", "failed")
 
+    def test_extension_arm_kinds(self):
+        # H1: ARM_KINDS unchanged; the extension kinds are listed separately.
+        ev = _ev()
+        assert set(ev.EXTENSION_ARM_KINDS) == {"escalation", "jev_library", "reward_model", "grpo_policy"}
+        assert not set(ev.EXTENSION_ARM_KINDS) & set(ev.ARM_KINDS)
+
 
 @pytest.mark.category("functional/eval-config")
 class TestArmConfig:
@@ -287,6 +297,10 @@ class TestArmConfig:
             {"name": "env_a", "kind": "env_baseline", "policy": "always_none", "n_scenarios": 1, "seeds": [0]},
             {"name": "gate", "kind": "i1_gate"},
             {"name": "mystery9", "kind": "not_a_kind"},  # kind not validated here
+            # H1: jev_library / reward_model need no extra fields.
+            {"name": "jev", "kind": "jev_library"},
+            {"name": "rm", "kind": "reward_model"},
+            {"name": "grpo", "kind": "grpo_policy", "n_scenarios": 1, "seeds": [0], "horizon": 1},
         ],
     )
     def test_valid(self, kw):
@@ -336,6 +350,13 @@ class TestArmConfig:
             {"kind": "env_baseline", "policy": "always_none", "n_scenarios": 2, "seeds": [0, 0]},
             {"kind": "env_baseline", "policy": "always_none", "n_scenarios": 2, "seeds": [0], "horizon": 0},
             {"kind": "i1_gate", "surprise": 1},
+            # H1: grpo_policy needs n_scenarios >= 1, non-empty unique seeds, horizon >= 1.
+            {"kind": "grpo_policy", "seeds": [0]},
+            {"kind": "grpo_policy", "n_scenarios": 0, "seeds": [0]},
+            {"kind": "grpo_policy", "n_scenarios": 2},
+            {"kind": "grpo_policy", "n_scenarios": 2, "seeds": []},
+            {"kind": "grpo_policy", "n_scenarios": 2, "seeds": [1, 1]},
+            {"kind": "grpo_policy", "n_scenarios": 2, "seeds": [0], "horizon": 0},
         ],
     )
     def test_invalid(self, kw):
@@ -456,17 +477,25 @@ class TestDefaultRunsYaml:
             assert a.seeds == (0, 1, 2)
             assert a.horizon == 14
 
-    def test_not_run_arms(self):
-        # G3: grpo, rm, jev stay not_run; no arm reason mentions Fireworks.
+    def test_no_not_run_arms(self):
+        # H1 supersedes G3: grpo, rm, jev are no longer not_run; no arm reason mentions Fireworks.
         ev = _ev()
         cfg = ev.load_runs()
-        nr = [a for a in cfg.arms if a.kind == "not_run"]
-        assert tuple(a.name for a in nr) == ("grpo", "rm", "jev")
-        assert set(a.name for a in nr) <= set(ev.TRAINING_ARMS)
-        for a in nr:
-            assert isinstance(a.reason, str) and a.reason.strip()
+        assert [a.name for a in cfg.arms if a.kind == "not_run"] == []
         for a in cfg.arms:
             assert "fireworks" not in (a.reason or "").lower()
+
+    def test_training_extension_arms(self):
+        # H1: grpo -> grpo_policy 50 scenarios, seeds [0,1,2], horizon 14; rm / jev plain.
+        cfg = _ev().load_runs()
+        by = {a.name: a for a in cfg.arms}
+        g = by["grpo"]
+        assert g.kind == "grpo_policy"
+        assert g.n_scenarios == 50
+        assert tuple(g.seeds) == (0, 1, 2)
+        assert g.horizon == 14
+        assert by["rm"].kind == "reward_model"
+        assert by["jev"].kind == "jev_library"
 
     def test_boundary_eval_arms(self):
         # G3: base, sft, dpo of kind boundary_eval with results ../docs/daypart/results.
@@ -1252,9 +1281,15 @@ class TestDefaultConfig:
             for a in be:
                 assert "boundary_eval.json" in a["reason"]
         # Track B v1.1 item 4 + "Done when": the escalation arm runs offline in CI, so it is ok.
-        assert [a["status"] for a in data["arms"]] == ["ok"] * 5 + be_status + ["not_run"] * 3 + ["ok"]
-        n_ok = 6 + be_status.count("ok")
-        assert data["summary"] == {"ok": n_ok, "not_run": len(DEFAULT_ARMS) - n_ok, "failed": 0}
+        # H1: grpo / rm / jev run (synthetic, CPU) and are ok.
+        assert [a["status"] for a in data["arms"]] == ["ok"] * 5 + be_status + ["ok"] * 3 + ["ok"]
+
+    def test_summary_all_ok(self, default_run):
+        # H1: "with the committed results, run(load_runs(), root=engine) reports every arm ok".
+        _, text = default_run
+        data = json.loads(text)
+        assert data["summary"] == {"ok": 12, "not_run": 0, "failed": 0}
+        assert all(a["status"] == "ok" for a in data["arms"])
 
     def test_r2_arm_meets_acceptance(self, default_run):
         _, text = default_run

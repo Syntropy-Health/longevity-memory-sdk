@@ -117,6 +117,7 @@ main.wrap{padding-top:var(--s5);padding-bottom:var(--s7)}
 .tag--simulated,.tag--withheld,.tag--proposed{border-style:dashed;color:var(--c-muted)}
 .tag--flag{color:var(--warn);border-color:var(--warn)}
 .tag--live{color:var(--c-action);border-color:var(--c-action)}
+.tag--harder{color:var(--c-text);border-color:var(--c-text)}
 .tag--offline{color:var(--c-muted);border-style:dashed}
 .tag--console{background:var(--a-action);border-color:var(--a-action);color:var(--a-bg);font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em}
 .nr{color:var(--c-muted);font-style:italic} .nr::before{content:"— "}
@@ -225,6 +226,7 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 .delta .k{font:700 var(--fs-xs)/1.6 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--c-muted);min-width:6.5rem}
 
 /* passport cards */
+.card h4{font-size:var(--fs-md);font-weight:650;line-height:1.2;letter-spacing:-.02em;margin:0 0 var(--s3)}
 .cards{display:grid;gap:var(--s4)} @media (min-width:48rem){.cards{grid-template-columns:1fr 1fr}}
 .card{min-width:0;background:var(--c-surface);border:var(--bw) solid var(--c-line);border-radius:var(--r3);padding:var(--s5)}
 .card--simulated,.card--withheld{border-style:dashed}
@@ -520,6 +522,10 @@ main[tabindex="-1"]:focus{outline:none;box-shadow:none} /* the skip-link target;
     <h2 style="margin-top:var(--s5)">Cards</h2>
     <p class="small muted measure">Where a public source states a reference range, the card shows it with the group it applies to and the source. It is reference text only, not a judgement of your value.</p>
     <div class="cards" id="pp-cards"></div>
+    <!-- HAC-75: inclinations = what the reward model says drives this member (pp.inclinations), each next step linked to its driver -->
+    <h2 id="h-inclinations" tabindex="-1" style="margin-top:var(--s6)">Inclinations</h2>
+    <p class="small muted measure">What seems to matter most for keeping the routine, from simulated answers to seven short questions (this demo member is simulated), and up to three next steps, each linked to what it responds to.</p>
+    <div id="pp-incl"></div>
     <h2 id="h-inventory" tabindex="-1" style="margin-top:var(--s6)">What your clone knows</h2>
     <p class="muted small">Each area and whether it has data. A gap means nothing has been confirmed yet.</p>
     <ul class="inv measure" id="inventory" aria-labelledby="h-inventory"></ul>
@@ -1627,6 +1633,7 @@ function renderPassport(pp, inv) {
   row("Review", reviewLabel(inv && inv.reviewer_status));
   var cards = clear($("pp-cards"));
   pp.cards.forEach(function (c, i) { cards.append(card(c, i)); });
+  renderInclinations(pp.inclinations);
   var list = clear($("inventory"));
   var byConcept = {};
   pp.cards.forEach(function (c) { (byConcept[c.concept_id] = byConcept[c.concept_id] || []).push(c); });
@@ -1644,6 +1651,43 @@ function renderPassport(pp, inv) {
     li.append(el("span", null, g), el("span", "tag tag--withheld", "○ Gap: no data yet"));
     list.append(li);
   });
+}
+/* HAC-75 inclinations: drivers (label, helps / makes it harder, weight tier) and 1-3 next steps, each linked to a driver.
+   Absent (null) → "Not enough data yet." Every string is the API's own (already narration-guarded). */
+function renderInclinations(inc) {
+  var box = clear($("pp-incl"));
+  if (!inc || !Array.isArray(inc.drivers) || !Array.isArray(inc.insights) || !inc.drivers.length) {
+    box.append(el("p", "withheld-msg", "Not available for this journal.")); /* failure-neutral: null means it could not be built */
+    return;
+  }
+  var byId = {};
+  if (inc.note) box.append(el("p", "small muted measure", inc.note)); /* the simulated-data caveat before the numbers it qualifies */
+  var hw = el("h3", "label small", "What weighs most"); hw.id = "h-incl-drv"; box.append(hw);
+  var dl = attrs(el("ul", "inv measure"), { "aria-labelledby": "h-incl-drv" });
+  inc.drivers.forEach(function (d, i) {
+    var li = el("li"); li.id = "pp-drv-" + i; byId[d.driver_id] = { id: li.id, label: d.label };
+    var share = { strong: "Weighs strongly", moderate: "Weighs moderately", slight: "Weighs slightly" }[d.weight] || null;
+    li.append(el("span", null, d.label));
+    /* glyph + word + border, as every tag. QG U1: the tag is the weight only. A Helps / Makes-it-harder tag
+       (the sign of the term vs a typical member) read as "forgetting helps me" on a barrier answer. */
+    if (share) li.append(el("span", "tag", "◆ " + share));
+    dl.append(li);
+  });
+  box.append(dl);
+  var hn = el("h3", "label small", "Next steps"); hn.id = "h-incl-ins"; box.append(hn);
+  var cards = attrs(el("div", "cards"), { role: "group", "aria-labelledby": "h-incl-ins" });
+  inc.insights.forEach(function (s, i) {
+    var art = el("article", "card"), hid = "pp-ins" + i;
+    art.setAttribute("aria-labelledby", hid);
+    var h = el("h4", null, s.title); /* under the h3 "Next steps" */ h.id = hid; art.append(h);
+    art.append(el("p", null, s.action));
+    art.append(el("p", "small", s.reason));
+    var drv = byId[s.driver];
+    /* the link to its driver is shown as text (a #hash link would change the route) and tied by aria-describedby */
+    if (drv) { var lk = el("p", "small muted", "Linked to: "); lk.append(el("strong", null, drv.label)); art.append(lk); art.setAttribute("aria-describedby", drv.id); art.setAttribute("data-driver", s.driver); }
+    cards.append(art);
+  });
+  box.append(cards);
 }
 /* §3.3 inventory: a vertical with a ready card is covered, "✓ N card(s)" (N = its cards); else "○ Gap: no data yet". */
 function invTag(cards) {
@@ -2073,8 +2117,8 @@ function labRow(r) {
     /* A&D §4.8: sha256(boundary_eval.json)[:12], shown only as a file digest (text, not a link) */
     var fd = el("div", "small"); fd.append("file digest ", el("code", "mono", r.file_digest)); id.append(fd);
   }
-  var s = r.split || {};
-  if (r.kind === "env_baseline") {
+  var s = r.split || {}, envLike = r.kind === "env_baseline" || r.kind === "policy"; /* HAC-79: a ran grpo row is an env-scored policy */
+  if (envLike) {
     parts(split, [["scenarios", s.n_scenarios], ["episodes", s.n], ["horizon (days)", s.horizon]]);
   } else {
     var list = [["prompt set", s.prompt_set_version]];
@@ -2087,10 +2131,10 @@ function labRow(r) {
   var sp = [["", seeds]];
   if (r.kind === "model" && r.row !== "base") sp.push(["cohort", r.cohort_seed]);
   parts(seed, sp);
-  if (r.kind === "env_baseline") parts(fail, [["", r.failures === null || r.failures === undefined ? null : plural(r.failures, "episode", "episodes")]]);
+  if (envLike) parts(fail, [["", r.failures === null || r.failures === undefined ? null : plural(r.failures, "episode", "episodes")]]);
   else parts(fail, [["", r.failures === null || r.failures === undefined ? null : r.failures + " boundary"], ["degenerate", r.degenerate]]);
   var m = r.metrics || {};
-  if (r.kind === "env_baseline") parts(metric, [["mean adherence", rate(m.mean_adherence)], ["violation rate", rate(m.episode_violation_rate)]]);
+  if (envLike) parts(metric, [["mean adherence", rate(m.mean_adherence)], ["violation rate", rate(m.episode_violation_rate)]]);
   else parts(metric, [["boundary pass", rate(m.boundary_pass_rate)], ["rubric pass", rate(m.rubric_pass_rate)]]);
   if (r.gate && typeof r.gate === "object") {
     var g = el("div", "small"), gate = r.row === "sft" ? "r3" : r.row === "dpo" ? "r4" : "gate";
@@ -2176,6 +2220,10 @@ function offlineStage(spec, r) {
       fails = el("span");
       parts(fails, [["", intOrNull(r.failures)], ["", r.degenerate === null || r.degenerate === undefined ? null : r.degenerate + " degenerate"]]);
       meta.push(["boundary", rowRate(r, "boundary_pass_rate")], ["rubric", rowRate(r, "rubric_pass_rate")], ["failures", fails]);
+    } else if (r.kind === "policy") {
+      /* HAC-79: a ran grpo arm is scored in the env, like an env baseline: adherence, violations, episodes */
+      meta.push(["adherence", rowRate(r, "mean_adherence")], ["violations", rowRate(r, "episode_violation_rate")],
+        ["episodes", intOrNull(s.n)]);
     } else if (r.row === "sft") {
       meta.push(["rows", intOrNull(s.training_rows)], ["boundary", withDelta(rowRate(r, "boundary_pass_rate"), g, "delta")],
         ["rubric", rowRate(r, "rubric_pass_rate")]);

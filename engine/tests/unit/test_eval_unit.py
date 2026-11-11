@@ -56,7 +56,9 @@ def test_default_runs():
     for arm, pol in zip(cfg.arms[1:4], POLICIES):
         assert (arm.kind, arm.policy, arm.n_scenarios, arm.seeds, arm.horizon) == ("env_baseline", pol, 50, (0, 1, 2), 14)
     assert all((a.kind, a.model) == ("boundary_eval", a.name) for a in cfg.arms[5:8])
-    assert all(a.kind == "not_run" and a.reason.strip() for a in cfg.arms[8:11])
+    grpo, rm, jev = cfg.arms[8:11]
+    assert (grpo.kind, grpo.n_scenarios, grpo.seeds, grpo.horizon) == ("grpo_policy", 50, (0, 1, 2), 14)
+    assert (rm.kind, jev.kind) == ("reward_model", "jev_library")
     track_b = cfg.arms[11]
     assert (track_b.kind, track_b.seeds, track_b.horizon) == ("escalation", (0, 1, 2), 42)
 
@@ -347,5 +349,39 @@ def test_extension_arm_kinds_are_runnable():
 
     assert not (ARM_KINDS & EXTENSION_ARM_KINDS)
     for kind in EXTENSION_ARM_KINDS:
-        arm = run(_cfg(ArmConfig(name="k", kind=kind, seeds=(0,), horizon=14)))["arms"][0]
+        extra = {"n_scenarios": 2, "horizon": 3} if kind == "grpo_policy" else {}
+        arm = run(_cfg(ArmConfig(name="k", kind=kind, **{"seeds": (0,), "horizon": 14, **extra})))["arms"][0]
         assert arm["status"] == "ok", arm["reason"]
+
+
+@pytest.mark.parametrize(
+    "kw",
+    [
+        {"name": "g", "kind": "grpo_policy", "seeds": (0,)},
+        {"name": "g", "kind": "grpo_policy", "n_scenarios": 0, "seeds": (0,)},
+        {"name": "g", "kind": "grpo_policy", "n_scenarios": 2},
+        {"name": "g", "kind": "grpo_policy", "n_scenarios": 2, "seeds": (0, 0)},
+        {"name": "g", "kind": "grpo_policy", "n_scenarios": 2, "seeds": (0,), "horizon": 0},
+    ],
+)
+def test_grpo_policy_arm_validation(kw):
+    with pytest.raises(pydantic.ValidationError):
+        ArmConfig(**kw)
+
+
+def test_hac75_arms_report_synthetic_numbers():
+    """HAC-75: the jev, rm and grpo arms are built and measured (not_run no longer)."""
+    cfg = RunsConfig(version="t", arms=(
+        ArmConfig(name="jev", kind="jev_library"),
+        ArmConfig(name="rm", kind="reward_model"),
+        ArmConfig(name="grpo", kind="grpo_policy", n_scenarios=3, seeds=(0,), horizon=4),
+    ))
+    out = run(cfg)
+    assert out["summary"] == {"ok": 3, "not_run": 0, "failed": 0}
+    by = {a["name"]: a["metrics"] for a in out["arms"]}
+    for m in by.values():
+        assert m["data"] == "synthetic" and "not clinical evidence" in m["label"]
+    assert by["jev"]["n_questions"] >= 5
+    assert 0.5 < by["rm"]["heldout"]["auc"] <= 1.0
+    assert by["grpo"]["episode_violation_rate"] == 0.0
+    assert dumps(run(cfg)) == dumps(out)

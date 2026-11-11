@@ -49,7 +49,10 @@ Made by the CEO without a human answer unless a status says otherwise.
 - **A8.** The work extends the existing hosted demo (the Modal playground and results dashboard,
   deployed by the same CI). The URLs stay the same. *Status: holds.*
 - **A9.** GRPO stays "proposed, not built". The learning lab shows only the committed SFT and DPO
-  arms and the scripted SimMember baselines. *Status: holds.*
+  arms and the scripted SimMember baselines. *Status: superseded on 2026-11-10 (HAC-75, board
+  direction on HAC-74): the question library, the reward model and a small GRPO policy are built and
+  measured on synthetic members only, on CPU with no new spend. The GRPO policy chooses among the 7
+  fixed message types; it is not a language model trained with reinforcement learning.*
 
 ## Design assumptions (from the A&D)
 
@@ -126,8 +129,21 @@ dashboard, where they most likely sit.
 **Results**
 - The learning lab and the passport's simulated cards come from SimMember, a seeded synthetic
   cohort, and from a held-out prompt set. None of it is a patient outcome.
-- GRPO, the reward model and the Jev question library are designed, not built, and are reported as
-  not run.
+- The question library, the reward model and the GRPO policy are trained and scored on simulated
+  members only. Answers are simulated from each member's hidden traits, so how well they recover
+  those traits says nothing about how real people answer.
+- The reward model predicts the day's outcome no better than a status-only comparator; its use is
+  attribution (which answers drive which message effects), checked against the simulator's own
+  effects, which a real population would not reveal.
+- The GRPO policy is small (a linear choice over 7 message types, not a language model) and myopic:
+  it is trained on the same-day reward only. Its gain over the best scripted baseline is small
+  (0.840 against 0.833 mean simulated adherence).
+- The Inclinations next steps are prompts for a conversation with a care team, estimated from
+  simulated members. They are not a care plan and are not validated in people.
+- No one answers the seven questions in this build: the passport's Inclinations come from answers
+  simulated from the demo member's hidden traits, and they do not change with check-ins or the
+  passport day. Most next steps (about 8 in 10) are general effects linked to the member's own
+  answer, not effects specific to people who answered alike; the reason says which.
 - The SFT and DPO adapters reach a 100% boundary pass rate on 141 held-out prompts. That set is
   small and synthetic; it measures the boundary rules, not clinical safety.
 

@@ -33,7 +33,7 @@ flowchart TD
     end
 
     subgraph DECIDE["Decide: what to say, then how"]
-        POL["Policy: choose 1 of 7 intents<br/>baselines today · GRPO / reward model planned"]
+        POL["Policy: choose 1 of 7 intents<br/>baselines · GRPO against an interpretable reward model"]
         LM["Muse Glimmer 30B<br/>daypart.train (SFT → DPO, 4-bit QLoRA on Modal H100)"]
         POL --> LM
     end
@@ -245,7 +245,7 @@ R3 (SFT beats base on boundary by at least 0.05 at rubric parity) passes. R4 (DP
 - *How to read R3/R4.* Base spends most of its 512 tokens reasoning: 90 of 141 replies never reach the user channel and score as empty. On the 51 prompts where base does answer, it passes boundary 0.88 and rubric 0.29; SFT passes 1.00 and 0.78 and DPO 1.00 and 0.90 on the same prompts. The DPO gain is small and rests on 84 pairs. Replies are short (about 29 words) and repeat: the top refusal accounts for 22–25 of the 90 probes. Check-in rubric stays low (about 0.12–0.14) for every model, mostly on the invitation check. Base greedy output is not bit-reproducible across calls (batched 4-bit kernels).
 - *Earlier run (HAC-26), superseded.* Trained on offline template data, it collapsed SFT to 6 template replies and left DPO emitting only special tokens (empty after decode). HAC-28 fixed the decode (score only the `to=user` message), made the scorer fail empty or markup replies, moved data to Muse Spark and retuned DPO; the tables above are that rerun.
 
-**Not built for this submission, stated plainly:** the GRPO intent policy, the reward model and the Jev question library are designed but not built. The harness reports them as `not_run`.
+**Reward model, Jev and GRPO, stated plainly (HAC-75):** the Jev question library (7 questions), an interpretable reward model (every score is a sum of named terms) and a small GRPO intent policy are built in `engine/daypart/rm/` and run on synthetic members only, on CPU. GRPO reaches 0.840 mean simulated adherence against 0.833 for the best scripted baseline; the reward model's value is attribution, which the passport shows as an Inclinations section with linked next steps. None of it is clinical evidence; the GRPO policy chooses among 7 fixed message types and is not a language model.
 
 ## FHDIC Challenge 09
 

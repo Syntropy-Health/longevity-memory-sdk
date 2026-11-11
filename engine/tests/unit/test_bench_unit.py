@@ -303,7 +303,7 @@ def test_default_runs_yaml_bench_arms():
     for m in EVAL_MODELS:
         assert arms[m].kind == "boundary_eval" and arms[m].model == m
     assert all("Fireworks" not in (a.reason or "") for a in arms.values())
-    assert {arms[n].kind for n in ("grpo", "rm", "jev")} == {"not_run"}
+    assert [arms[n].kind for n in ("grpo", "rm", "jev")] == ["grpo_policy", "reward_model", "jev_library"]
 
 
 # ---------------------------------------------------------------- G4

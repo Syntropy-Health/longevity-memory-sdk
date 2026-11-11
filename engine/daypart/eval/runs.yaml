@@ -37,15 +37,16 @@ arms:
     kind: boundary_eval
     model: dpo
     results: ../docs/daypart/results
+  # HAC-75 (plan 4.1-4.3): synthetic only, CPU, no paid API. grpo is scored on the env_baseline scenarios.
   - name: grpo
-    kind: not_run
-    reason: "needs a trained reward model (4.2) and policy (4.3), neither built"
+    kind: grpo_policy
+    n_scenarios: 50
+    seeds: [0, 1, 2]
+    horizon: 14
   - name: rm
-    kind: not_run
-    reason: "reward model (4.2) is not built"
+    kind: reward_model
   - name: jev
-    kind: not_run
-    reason: "Jev question library (4.1) is not built"
+    kind: jev_library
   # Track B (AIR-319): calibrated escalation, fit on synthetic, scored on the curated-25.
   # horizon = days of history each held-out member is assessed on.
   - name: escalation

@@ -58,7 +58,7 @@ does not exist or any assumption id is not defined.
 |---|---|---|
 | L25 | Every learning-lab number is computed from the committed results, with its run ID, split, seed and failure count; a missing field reads "not recorded". | `engine/daypart/demo/lab.py` · `docs/daypart/results/boundary_eval.json` · `docs/daypart/results/training.json` · `docs/daypart/results/metrics.json` · `docs/daypart/results/pipeline.json` · `engine/tests/unit/test_lab_unit.py` |
 | L26 | `outcomes.md` is generated from the same table and checked byte for byte. | `engine/tools/render_outcomes.py` · `docs/daypart/submission/outcomes.md` · `engine/tests/unit/test_submission_pack_unit.py` |
-| L27 | GRPO is proposed, not built. | `docs/daypart/results/metrics.json` · ASSUMPTION A9 |
+| L27 | GRPO ran: a small message-type policy trained against the reward model, shown in the lab beside the baselines (simulated, CPU only). | `docs/daypart/results/metrics.json` · `engine/daypart/rm/grpo.py` · `engine/daypart/demo/lab.py` · ASSUMPTION A9 |
 | L28 | The curated-25 held-out profiles are in no training artefact (I1), checked in CI. | `engine/daypart/ci/i1_check.py` · `.github/workflows/engine.yml` |
 | L29 | The results come from a synthetic simulator and a held-out prompt set, not from people. | `docs/daypart/results/metrics.json` · ASSUMPTION A2 |
 
@@ -124,13 +124,13 @@ None is a patient outcome.
 | id | claim | evidence |
 |---|---|---|
 | L57 | Two post-training stages ran in run hac28-20261105T081951Z: supervised fine-tuning on 4,040 rows (1,010 steps, 852 s) and preference tuning on 84 pairs (22 steps, 60 s), as adapters on one fixed base model. | `docs/daypart/results/training.json` · `docs/daypart/results/pipeline.json` |
-| L58 | GRPO, the reward model and the question library were not run; the results record each as not run. | `docs/daypart/results/metrics.json` · ASSUMPTION A9 |
+| L58 | The question library, the reward model and GRPO were built and run on synthetic members; the results record each arm as ok, labelled synthetic (L74–L79). | `docs/daypart/results/metrics.json` · `engine/daypart/rm/` · ASSUMPTION A9 |
 | L59 | The held-out boundary evaluation has 141 prompts (51 check-in, 90 probe), seed 0, greedy decoding: one seed only, so no spread across seeds is reported. | `docs/daypart/results/boundary_eval.json` |
 | L60 | Boundary pass rate on the 141 held-out prompts: base 45 of 141 (0.319), SFT and DPO 141 of 141 (1.0). | `docs/daypart/results/boundary_eval.json` · `docs/daypart/submission/outcomes.md` |
 | L61 | 90 of the base model's 141 replies were empty; the boundary rules fired 7 times on it (3 banned lexicon, 4 named prescription substance). Most of the base gap is empty output, not unsafe text. | `docs/daypart/results/metrics.json` · `docs/daypart/results/boundary_eval.json` |
 | L62 | Failure slice: the lapse-recovery rubric passes on 7 of 51 check-in prompts for SFT and 6 of 51 for DPO, against 81 of 90 and 85 of 90 probes; the "invitation" check fails 53 (SFT) and 50 (DPO) of 141. | `docs/daypart/results/boundary_eval.json` · `docs/daypart/results/metrics.json` |
 | L63 | Promotion gates: SFT had to beat the base boundary rate by at least 0.05 with rubric parity, and DPO had to keep every SFT boundary pass (0 regressions); both passed. | `docs/daypart/results/boundary_eval.json` · `engine/daypart/demo/lab.py` |
-| L64 | Leakage control: the held-out prompts were filtered against 3,239 training user turns (the number dropped is not recorded), and the I1 check passed on 7 of 7 data builders. | `docs/daypart/results/boundary_eval.json` · `docs/daypart/results/metrics.json` · `engine/daypart/ci/i1_check.py` |
+| L64 | Leakage control: the held-out prompts were filtered against 3,239 training user turns (the number dropped is not recorded), and the I1 check passed on 8 of 8 data builders. | `docs/daypart/results/boundary_eval.json` · `docs/daypart/results/metrics.json` · `engine/daypart/ci/i1_check.py` |
 | L65 | The boundary rules caught 74 of 74 labelled violations with 0 false positives on 128 compliant rows of a sealed 202-row corpus (8 rules). This is a measurement on that corpus, not a proof. | `docs/daypart/results/metrics.json` · `engine/daypart/membrane/dsl.py` |
 | L66 | Scripted simulator baselines, 50 scenarios × 3 seeds = 150 episodes of 14 days each: mean simulated adherence 0.637 (no support), 0.833 (always problem-solving), 0.719 (random); 0 rule violations. | `docs/daypart/results/metrics.json` · `docs/daypart/submission/outcomes.md` |
 | L67 | The training data came from 175 synthetic members (0 generation failures), 6,516 narrative rows; the pipeline's own cost estimate was USD 1.14 for generation (*reported*: an estimate the run recorded, not an invoice). | `docs/daypart/results/pipeline.json` |
@@ -154,6 +154,21 @@ data was used, and no clinical study or pilot ran. The rows above are synthetic 
 |---|---|---|
 | L73 | The prototype has no clinical evidence: no clinical review, no patient data, no clinical study. Its content carries a board sign-off, not a clinical review. | ASSUMPTION A2 · ASSUMPTION A3 · `engine/daypart/memory/registry_a4.json` |
 
+## Inclinations: question library, reward model and GRPO (HAC-75)
+
+Every row here is measured on simulated members (SimMember), with members split by id into a
+training fold (117) and a held-out fold (58). None is a patient outcome or clinical evidence.
+
+| id | claim | evidence |
+|---|---|---|
+| L74 | A question library of 7 short check-in questions elicits inclination signals (main barrier, what would help, how much the routine matters, weekly rhythm, health-information confidence, what prompts reaching out, mood). | `engine/daypart/rm/jev.py` · `engine/tests/unit/test_rm_unit.py` |
+| L75 | On 58 held-out simulated members, the simulated answers recover each hidden trait 76–91% of the time (chance 17–33%). | `docs/daypart/results/metrics.json` · `engine/daypart/rm/jev.py` |
+| L76 | The reward model is interpretable: every score is a sum of named terms (who the member is, plus what the message adds), and the terms add up exactly to the score. | `engine/daypart/rm/model.py` · `engine/tests/unit/test_rm_unit.py` |
+| L77 | On held-out simulated members it predicts whether the routine is kept that day with AUC 0.833 (log loss 0.408, against 0.597 for a base rate). A comparator that sees only the member's status does as well on this (AUC 0.834), so the gain is in attribution, not prediction (L78). | `docs/daypart/results/metrics.json` |
+| L78 | Its per-member message effects track the simulator's true effects (rank correlation 0.75), and its top message type matches the simulator's for 83% of held-out members (chance 17%). | `docs/daypart/results/metrics.json` · `engine/daypart/rm/model.py` |
+| L79 | GRPO, run greedily on the baselines' 150 episodes, reached mean simulated adherence 0.840 (0.856 on held-out members), against 0.833 for the best scripted baseline and 0.637 with no support; 0 rule violations. CPU only, no paid compute. | `docs/daypart/results/metrics.json` · `docs/daypart/submission/outcomes.md` · `engine/daypart/rm/grpo.py` |
+| L80 | The passport shows an Inclinations section: the answers that weigh most, and up to three next steps, each linked to one of them with its reason; every string passes the narration guard and the boundary rules, and when it cannot be built the section says "Not available for this journal." (never partial). The answers behind it are simulated, not given by a person. | `engine/daypart/passport/view.py` · `engine/daypart/rm/inclinations.py` · `engine/daypart/demo/static/index.html` · `engine/tests/unit/test_passport_inclinations_unit.py` |
+
 ## Pending or omitted claims
 
 Claims the brief or a draft might make that this pack does not, because nothing in the repository
@@ -166,7 +181,7 @@ or the hosted build supports them yet.
 | P3 | A demo video exists. | *pending*: built on its own issue; no link until it is reviewed and the owner authorises it. |
 | P4 | Conflict-of-interest declarations. | *pending*: owner input required for each member. |
 | P5 | A named clinical reviewer. | *omitted*: none is named (A3). |
-| P6 | A reinforcement-learning (GRPO) stage, a reward model or a question library ran. | *omitted*: not built (L58). |
+| P6 | The reward model, question library or GRPO policy was trained or tested on people, or a language model was trained with GRPO. | *omitted*: synthetic only, and the policy chooses among 7 fixed message types (L74–L79, A9). |
 | P7 | Any patient benefit, adherence improvement in people, or clinical importance. | *omitted*: no clinical evidence (L73). |
 | P8 | Real health-data input, accounts, persistence or record-system integration. | *omitted*: off by design (L56). |
 | P9 | Running cost, latency or scale of the hosted demo. | *pending*: not measured. |
