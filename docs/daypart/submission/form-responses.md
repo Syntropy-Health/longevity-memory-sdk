@@ -7,7 +7,11 @@ in the fields marked *owner input required*, and submits.
 - **What the answers describe:** only behaviour the hosted build showed when agents tested it:
   `daypart/build` @ **68236f1**, deployed by CI run **42873055419** on 2026-11-10 and probed the
   same day ([hosted probe](sources/hosted-probe-2026-11-10.md)). Anything that is not in that
-  build is left out, or named as not built.
+  build is left out, or named as not built. **Exception, pending a re-probe:** the Inclinations
+  sentence in Field 2 and the question library, reward model and GRPO lines in Fields 2 and 4
+  describe HAC-75 on `daypart/build`, which that probe predates. Before submitting, re-probe the
+  hosted build after it redeploys and update the build ID above; until then ledger rows L74–L80
+  are evidenced by the repository, not by the hosted build.
 - **Limits:** the brief's (solution summary 2,000, built during challenge 1,500, prototype link
   1,024 characters). The organiser does not publish the form, so these are unverified until a
   person with the dashboard login checks them (assumption O6 in
