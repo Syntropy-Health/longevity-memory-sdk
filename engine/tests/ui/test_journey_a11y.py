@@ -48,10 +48,11 @@ AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
 # AM-2 D1 (G31): the member app is served at "/", the research console at "/admin".
 # Visual spec rev 3 §2 (HAC-68): the member routes; #checkin stays an alias of #today.
 ROUTES = ["today", "review", "passport", "next", "timeline"]
-# Rev 3 §4 (G36): the console routes are hashes under /admin, #pipeline by default; #research (the API's
-# simulated-source evidence link) is the playground's alias.
-ALIASES = {"checkin": "today", "research": "playground"}
-ADMIN_ROUTES = ["pipeline", "lab", "inventory", "playground", "input"]
+# Rev 3 §4 (G36): the console routes are hashes under /admin, #pipeline by default. HAC-76: the real-input
+# screen is gone and the playground is #sessions; #research (the API's simulated-source evidence link) and
+# #playground (older bookmarks) are its aliases.
+ALIASES = {"checkin": "today", "research": "sessions", "playground": "sessions"}
+ADMIN_ROUTES = ["pipeline", "lab", "inventory", "sessions"]
 # AM-2 D2 (G32): the board removed the demo banner and these tags (HAC-66); T1.2 now checks they are absent.
 REMOVED_TAGS = ("Demo mode", "synthetic inputs and simulated results", "Synthetic data only", "Not for clinical use",
                 "Research view (optional)")
@@ -231,15 +232,15 @@ def wait_route_ready(page: Page, route: str) -> None:
         "pipeline": "#pipe-offline li",
         "lab": "#lab-rows tr",
         "inventory": "#ainv-rows tr",
+        "sessions": "#r-start",
         "playground": "#r-start",
         "research": "#r-start",
-        "input": "#ri-btn",
     }[route]
     expect(page.locator(ready).first).to_be_visible()
 
 
 def research_episode(page: Page) -> None:
-    """On ``#playground``: start an episode and take one step, so the episode form, the adherence grid and
+    """On ``#sessions``: start a session and send one message, so the session form, the days-logged grid and
     the log are drawn (the content most likely to overflow at 375 px; QG P3 B3)."""
     expect(page.locator("#r-member option").first).to_be_attached()
     page.click("#r-start")
@@ -306,14 +307,9 @@ def test_every_route_no_tags_axe_and_reflow(browser: Browser, page_errors, base_
     wait_route_ready(page, "inventory")
     check("inventory")
 
-    goto(page, base_url, "playground")  # T10.3 says every route (QG P3 B3)
+    goto(page, base_url, "sessions")  # T10.3 says every route (QG P3 B3)
     research_episode(page)
-    check("playground")
-
-    goto(page, base_url, "input")  # with the refusal and its gate list drawn
-    page.click("#ri-btn")
-    expect(page.locator("#ri-panel ol li").first).to_be_visible()
-    check("input")
+    check("sessions")
 
     assert seen == ["today", "review", "updated", "passport", "next", "timeline"] + ADMIN_ROUTES
     page.context.close()
@@ -368,29 +364,16 @@ def test_t8_4_lab_says_simulated_not_patient_outcomes(page: Page, base_url: str)
     assert "Simulated outcomes are not patient outcomes" in page.inner_text("#screen-lab")
 
 
-def test_t9_4_real_input_refusal_lists_every_gate(page: Page, base_url: str, axe_source: str):
-    # AM-2 D2: the real-input control is on the research console only; rev 3 §4.5: on its own #input screen
-    goto(page, base_url, "input")
-    expect(page.locator("#ri-btn")).to_be_visible()
-    expect(page.locator("#ri-btn")).to_have_text("Request real input")
-    with page.expect_response(lambda r: r.url.endswith("/api/mode") and r.request.method == "POST") as resp:
-        page.click("#ri-btn")
-    assert resp.value.status == 403
-    assert resp.value.json()["error"] == "real_input_refused"
-    panel = page.locator("#ri-panel")
-    expect(panel).to_contain_text("Real input is off and cannot be turned on in this build")
-    expect(page.locator("#ri-btn")).to_have_attribute("aria-expanded", "true")
-    gates = load_checklist()
-    assert len(gates) == 12
-    items = panel.locator("ol li")
-    expect(items).to_have_count(len(gates))
-    text = panel.inner_text()
-    for g in gates:
-        assert g.label in text, g.label
-    assert_axe_clean(page, axe_source, "real-input refusal")
-    page.click("#ri-btn")
-    expect(page.locator("#ri-btn")).to_have_attribute("aria-expanded", "false")
-    expect(panel.locator("ol")).to_have_count(0)
+def test_hac76_console_offers_no_real_input_and_the_server_still_refuses(page: Page, base_url: str):
+    """HAC-76 (board, HAC-74): the console no longer offers a real-input request or a mode toggle; the
+    server still refuses real input (AD7) and an old #input link opens the overview."""
+    page.goto(f"{base_url}admin#input")
+    expect(screen(page, "pipeline")).to_be_visible()
+    expect(page.locator("#ri-btn")).to_have_count(0)
+    expect(page.get_by_text(re.compile("real input", re.I))).to_have_count(0)
+    r = page.request.post(f"{base_url}api/mode", data={"real_input": True})
+    assert r.status == 403 and r.json()["error"] == "real_input_refused"
+    assert len(r.json()["open_gates"]) == len(load_checklist()) == 12
 
 
 # ---------------------------------------------------------------- R10: keyboard-only journey
@@ -584,7 +567,7 @@ def test_t10_4_reduced_motion_zeroes_every_duration(browser: Browser, page_error
     assert bad == [], f"clone updated: {bad[:10]}"  # rev 3 §3.3: the ring pulse and row rise are removed too
     for route in ROUTES + ADMIN_ROUTES:  # every route on both surfaces (QG P3 B3, AM-2 D1)
         goto(page, base_url, route)
-        if route == "playground":
+        if route == "sessions":
             research_episode(page)
         else:
             wait_route_ready(page, route)
@@ -691,7 +674,6 @@ def test_server_or_network_error_shows_notice_and_retries(page: Page, base_url: 
     wait_route_ready(page, "lab")
     expect(msg.locator(".notice")).to_have_count(0)
     assert calls["n"] == 2
-
 
 
 # ---------------------------------------------------------------- AM-1 range row and review label (QG P3.2 K1)
@@ -1083,11 +1065,8 @@ CONSOLE_NAV = "nav[aria-label='Research console']"
 
 def _console_prep(page: Page, route: str) -> None:
     """Draw each console screen's richest state before it is measured."""
-    if route == "playground":
+    if route == "sessions":
         research_episode(page)
-    elif route == "input":
-        page.click("#ri-btn")
-        expect(page.locator("#ri-panel ol li").first).to_be_visible()
     else:
         wait_route_ready(page, route)
 
@@ -1125,7 +1104,8 @@ def test_rev3_console_routes_axe_reflow_focus_and_rings(browser: Browser, page_e
         expect(page.locator(f"#h-{route}")).to_be_focused()
         expect(page.locator(f"{CONSOLE_NAV} a[aria-current=page]")).to_have_count(1)
         expect(page.locator(f"{CONSOLE_NAV} a[href='#{route}']")).to_have_attribute("aria-current", "page")
-        expect(screen(page, route).locator(".a-crumb")).to_have_text(f"/admin/{route}")
+        expect(screen(page, route).locator(".a-crumb")).to_have_count(0)  # HAC-76: no route path on screen
+        expect(screen(page, route).locator(".a-top .a-lede")).to_be_visible()
         _console_prep(page, route)
         where = f"/admin#{route} @ {viewport['width']}px"
         assert_no_tags(page, where)
@@ -1164,11 +1144,11 @@ def test_rev3_console_skip_link_dashboard_and_member_link(page: Page, base_url: 
     page.keyboard.press("Enter")
     expect(page.locator("#main")).to_be_focused()
     assert page.evaluate("location.hash") == "#lab"
-    dash = page.locator(f"{CONSOLE_NAV} a", has_text="Dashboard")
+    dash = page.locator(f"{CONSOLE_NAV} a", has_text="Charts")
     expect(dash).to_have_attribute("href", "/results")
     expect(dash).to_have_attribute("target", "_blank")
     expect(dash).to_have_attribute("rel", "noopener")
-    expect(dash).to_have_accessible_name(re.compile(r"Dashboard\s*\(opens in a new tab\)"))
+    expect(dash).to_have_accessible_name(re.compile(r"Charts\s*\(opens in a new tab\)"))
     expect(page.get_by_role("link", name="← Member app")).to_have_attribute("href", "/")
     expect(page.locator(".a-brand .tag--console")).to_have_css("text-transform", "uppercase")
 
@@ -1177,8 +1157,13 @@ def _lab(page: Page, base_url: str) -> dict[str, Any]:
     return page.request.get(f"{base_url}api/lab").json()
 
 
+def _pc(v: float) -> str:
+    return f"{v * 100:.1f}%"
+
+
 def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe_source: str):
-    """§4.1: the KPIs and offline stages print /api/lab's own fields (3 decimals); the live lane is 5 static stages."""
+    """§4.1 (HAC-76 plain-language pass): the headline tiles and training steps print /api/lab's own fields
+    as percentages under plain labels; the check-in lane is 5 static steps."""
     goto(page, base_url, "pipeline")
     wait_route_ready(page, "pipeline")
     t = _lab(page, base_url)
@@ -1186,38 +1171,105 @@ def test_rev3_pipeline_shows_the_real_lab_numbers(page: Page, base_url: str, axe
     base, sft, dpo = rows["base"], rows["sft"], rows["dpo"]
     kpis = page.locator("#pipe-kpis > li")
     expect(kpis).to_have_count(4)
-    expect(kpis.nth(0).locator(".kpi-v")).to_have_text(f"{dpo['metrics']['boundary_pass_rate']:.3f}")
-    expect(kpis.nth(0).locator(".kpi-s")).to_have_text(f"base {base['metrics']['boundary_pass_rate']:.3f} · n = {dpo['split']['n']}")
-    expect(kpis.nth(1).locator(".kpi-v")).to_have_text(f"{dpo['metrics']['rubric_pass_rate']:.3f}")
-    expect(kpis.nth(2).locator(".kpi-v")).to_have_text("✓ passed" if t["i1_passed"] else "⚠ not passed")
-    live = page.get_by_role("list", name="Live loop, 5 stages")
+    expect(kpis.nth(0).locator(".kpi-k")).to_have_text("Safety rule pass rate")
+    expect(kpis.nth(0).locator(".kpi-v")).to_have_text(_pc(dpo["metrics"]["boundary_pass_rate"]))
+    expect(kpis.nth(0).locator(".kpi-s")).to_have_text(f"Before training: {_pc(base['metrics']['boundary_pass_rate'])}")
+    expect(kpis.nth(1).locator(".kpi-k")).to_have_text("Coaching quality pass rate")
+    expect(kpis.nth(1).locator(".kpi-v")).to_have_text(_pc(dpo["metrics"]["rubric_pass_rate"]))
+    expect(kpis.nth(2).locator(".kpi-v")).to_have_text("✓ Passed" if t["i1_passed"] else "⚠ Not passed")
+    for i in range(4):
+        expect(kpis.nth(i).locator(".kpi-d")).to_be_visible()
+    live = page.get_by_role("list", name="Every check-in, 5 steps")
     expect(live.locator("> li")).to_have_count(5)
-    expect(live.locator(".tag--live")).to_have_count(5)
-    expect(page.locator("#lane-live")).to_contain_text("No model is called in this loop.")
-    off = page.get_by_role("list", name="Offline training, 4 stages")
+    expect(live.locator(".stage-desc")).to_have_count(5)
+    expect(page.locator("#lane-live")).to_contain_text("No AI model is used in this loop.")
+    off = page.get_by_role("list", name="Training, 4 steps")
     stages = off.locator("> li")
     expect(stages).to_have_count(4)
-    expect(stages.nth(0)).to_contain_text(f"{base['failures']} · {base['degenerate']} degenerate")
-    expect(stages.nth(1)).to_contain_text(f"{sft['split']['training_rows']}")
-    expect(stages.nth(1)).to_contain_text(f"(Δ +{sft['gate']['delta']:.3f})")
-    expect(stages.nth(2)).to_contain_text(f"{dpo['gate']['boundary_regressions']} regressions")
-    grpo = rows["grpo"]  # HAC-79: the ran grpo arm is a "policy" row, env-scored like an env baseline
+    expect(stages.nth(0)).to_contain_text(_pc(base["metrics"]["boundary_pass_rate"]))
+    expect(stages.nth(1)).to_contain_text(f"(+{sft['gate']['delta'] * 100:.1f} points)")
+    expect(stages.nth(1)).to_contain_text("✓ Passed its check")
+    grpo = rows["grpo"]  # HAC-79: the ran grpo arm is a "policy" row, scored with simulated members
     assert grpo["kind"] == "policy"
-    expect(stages.nth(3)).to_contain_text(f"{grpo['metrics']['mean_adherence']:.3f}")
-    expect(stages.nth(3)).to_contain_text(f"{grpo['metrics']['episode_violation_rate']:.3f}")
-    expect(stages.nth(3)).not_to_contain_text("proposed")
-    expect(stages.nth(3)).not_to_contain_text("not recorded")
+    expect(stages.nth(3)).to_contain_text(f"Adherence{_pc(grpo['metrics']['mean_adherence'])}")
+    expect(stages.nth(3)).to_contain_text(f"Safety-rule breaches{_pc(grpo['metrics']['episode_violation_rate'])}")
+    expect(stages.nth(3).locator(".stage-desc")).to_have_text(
+        "Learned which kind of message to send each day from how simulated members responded.")
+    for word in ("Planned", "proposed", "not recorded", "GRPO", "episode"):
+        expect(stages.nth(3)).not_to_contain_text(word)
     expect(page.locator("#screen-pipeline")).to_contain_text("Simulated outcomes are not patient outcomes.")
-    # a run links its lab row, which the deep link marks
+    # a step links its results row, which the deep link marks (and opens the run records)
     stages.nth(1).locator("a").click()
     expect(screen(page, "lab")).to_be_visible()
     expect(page.locator(f"#lab-rows tr[data-run-id='{sft['run_id']}']")).to_have_attribute("aria-current", "true")
     expect(page.locator("#lab-rows tr[aria-current=true]")).to_have_count(1)
-    gr = page.locator(f"#lab-rows tr[data-run-id='{grpo['run_id']}']")
-    expect(gr.locator("td[data-label=Row]")).to_have_text("GRPO")
-    expect(gr.locator("td[data-label=Metric]")).to_have_text(
-        f"mean adherence {grpo['metrics']['mean_adherence']:g} · violation rate {grpo['metrics']['episode_violation_rate']:g}")  # JS String(): 0 not 0.0
+    expect(page.locator("#lab-records")).to_have_attribute("open", "")
+    # HAC-79 + HAC-76: the ran grpo policy is listed first with the coaching approaches, in plain words
+    gr = page.locator(f"#env-rows tr[data-run-id='{grpo['run_id']}']")
+    expect(page.locator("#env-rows tr").first).to_have_attribute("data-run-id", grpo["run_id"])
+    expect(gr.locator("td[data-label='Coaching approach'] strong")).to_have_text("Step 3 · Practice with simulated members")
+    expect(gr.locator("td[data-label='Average adherence']")).to_have_text(_pc(grpo["metrics"]["mean_adherence"]))
+    expect(gr.locator("td[data-label='Sessions with a safety-rule breach']")).to_have_text(
+        _pc(grpo["metrics"]["episode_violation_rate"]))
+    expect(page.locator(f"#lab-rows tr[data-run-id='{grpo['run_id']}']")).to_have_count(0)  # not a prompt-scored step
     assert_axe_clean(page, axe_source, "lab deep link")
+
+
+_G5_SPLIT_WORDS = """([sel, cellSel]) => Array.from(document.querySelectorAll(sel)).map(t => {
+  const out = []; let cells = 0;
+  t.querySelectorAll(cellSel).forEach(c => {
+    cells++;
+    const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (n.parentElement.closest('.run-id')) continue;
+      const re = /\\S+/g; let m;
+      while ((m = re.exec(n.data))) {
+        const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+        if (r.getClientRects().length > 1) out.push(m[0]);
+      }
+    }
+  });
+  return { cells: cells, split: out }; })"""
+
+
+@pytest.mark.parametrize("width", [1280, 1920])
+@pytest.mark.parametrize(("route", "tables"), [("lab", 3), ("inventory", 1)])
+def test_hac76_g5_results_tables_never_break_a_word(browser: Browser, page_errors, base_url: str, width: int,
+                                                    route: str, tables: int):
+    """G5 (HAC-74): at 1280 the lab table broke words mid-word. Every table cell's words now fit on their
+    line: no word in a header or cell is split across lines (run ids and digests excepted). Each screen is
+    checked on its own route (a hidden screen has no line boxes) and every table must have cells."""
+    page = _new_page(browser, page_errors, viewport={"width": width, "height": 1000})
+    goto(page, base_url, route)
+    wait_route_ready(page, route)
+    if route == "lab":
+        page.locator("#lab-records > summary").click()
+    got = page.evaluate(_G5_SPLIT_WORDS, [f"#screen-{route} table", "th, td"])
+    assert len(got) == tables, f"#{route}: {len(got)} tables"
+    for i, t in enumerate(got):
+        assert t["cells"] > 0, f"#{route} table {i}: no cells checked"
+        assert t["split"] == [], f"#{route} table {i} @{width}px: words broken across lines: {t['split']}"
+    assert_no_hscroll(page, f"{route} @ {width}px")
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", [375, 390, 1280, 1920])
+def test_hac76_headline_tiles_never_break_a_word(browser: Browser, page_errors, base_url: str, width: int):
+    """G5 on the overview: a headline tile's number and label never split mid-word ("100.0 / %",
+    "Passe / d" at 375 before the 1-up phone layout)."""
+    page = _new_page(browser, page_errors, viewport={"width": width, "height": 900})
+    goto(page, base_url, "pipeline")
+    wait_route_ready(page, "pipeline")
+    expect(page.locator("#pipe-kpis > li")).to_have_count(4)
+    (tiles,) = page.evaluate(_G5_SPLIT_WORDS, ["#pipe-kpis", ":scope > li"])
+    assert tiles["cells"] == 4
+    assert tiles["split"] == [], f"@{width}px: words broken across lines: {tiles['split']}"
+    # the training steps (narrow cards in the horizontal lane at 1280): "150 sessio / ns" before HAC-82's merge fix
+    (steps,) = page.evaluate(_G5_SPLIT_WORDS, ["#pipe-offline", ":scope > li .stage"])
+    assert steps["cells"] == 4
+    assert steps["split"] == [], f"training steps @{width}px: words broken across lines: {steps['split']}"
+    assert_no_hscroll(page, f"pipeline @ {width}px")
+    page.context.close()
 
 
 def test_rev3_pipeline_mocked_lab_mismatch_and_nulls(page: Page, base_url: str):
@@ -1232,10 +1284,10 @@ def test_rev3_pipeline_mocked_lab_mismatch_and_nulls(page: Page, base_url: str):
     wait_route_ready(page, "pipeline")
     k1 = page.locator("#pipe-kpis > li").nth(0)
     expect(k1.locator(".kpi-v")).to_have_text("⚠ provenance mismatch")
-    expect(k1.locator(".kpi-s")).to_contain_text("base 0.457")  # the mocked number, read per request
+    expect(k1.locator(".kpi-s")).to_contain_text("Before training: 45.7%")  # the mocked number, read per request
     dpo = page.locator("#pipe-offline > li").nth(2)
     expect(dpo).to_contain_text("⚠ provenance mismatch")
-    assert not re.search(r"\d\.\d{3}", dpo.inner_text()), dpo.inner_text()
+    assert not re.search(r"\d%", dpo.inner_text()), dpo.inner_text()
 
 
 @pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
@@ -1256,7 +1308,7 @@ def test_rev3_pipeline_failed_lab_keeps_the_live_lane(browser: Browser, page_err
     expect(msg).to_contain_text("We had a problem on our side (error 500)")
     expect(page.locator("#h-pipeline")).to_be_focused()  # a failed GET leaves focus on the h1
     expect(page.locator("#lane-live")).to_be_visible()
-    expect(page.get_by_role("list", name="Live loop, 5 stages").locator("> li")).to_have_count(5)
+    expect(page.get_by_role("list", name="Every check-in, 5 steps").locator("> li")).to_have_count(5)
     expect(page.locator("#lane-offline")).to_be_hidden()
     expect(page.locator("#pipe-kpis")).to_be_hidden()
     where = f"pipeline 500 @ {viewport['width']}px"
@@ -1280,29 +1332,21 @@ def test_rev3_pipeline_layout_vertical_below_72rem_horizontal_from_72rem(browser
         page.context.close()
 
 
-def test_rev3_real_input_gates_two_columns_from_48rem(browser: Browser, page_errors, base_url: str):
-    for width, cols in ((1280, "2"), (375, "1")):
-        page = _new_page(browser, page_errors, viewport={"width": width, "height": 900})
-        goto(page, base_url, "input")
-        page.click("#ri-btn")
-        expect(page.locator("#ri-panel ol.gates li")).to_have_count(len(load_checklist()))
-        assert page.locator("#ri-panel ol.gates").evaluate("e => getComputedStyle(e).columnCount") == cols
-        page.context.close()
-
-
 def test_rev3_console_old_links_and_path_routes_resolve(page: Page, base_url: str):
     """G36: /admin#research and /admin#lab/<run> keep working; /admin/<route>[#<run>] is rewritten to the hash form."""
-    page.goto(f"{base_url}admin#research")
-    expect(screen(page, "playground")).to_be_visible()
-    expect(page.locator(f"{CONSOLE_NAV} a[href='#playground']")).to_have_attribute("aria-current", "page")
+    for old in ("research", "playground"):
+        page.goto(f"{base_url}admin#{old}")
+        expect(screen(page, "sessions")).to_be_visible()
+        expect(page.locator(f"{CONSOLE_NAV} a[href='#sessions']")).to_have_attribute("aria-current", "page")
     run = next(r["run_id"] for r in _lab(page, base_url)["rows"] if r["row"] == "dpo")
     page.goto(f"{base_url}admin#lab/{run}")
     expect(page.locator(f"#lab-rows tr[data-run-id='{run}']")).to_have_attribute("aria-current", "true")
     page.goto(f"{base_url}admin/lab#{run}")
     expect(page.locator(f"#lab-rows tr[data-run-id='{run}']")).to_have_attribute("aria-current", "true")
     assert page.evaluate("location.pathname + location.hash") == f"/admin#lab/{run}"
-    page.goto(f"{base_url}admin/input")
-    expect(page.locator("#h-input")).to_be_focused()
-    assert page.evaluate("location.pathname + location.hash") == "/admin#input"
+    page.goto(f"{base_url}admin/playground")
+    expect(page.locator("#h-sessions")).to_be_focused()
+    assert page.evaluate("location.pathname + location.hash") == "/admin#playground"
+    assert page.request.get(f"{base_url}admin/input").status == 404  # HAC-76: the real-input screen is gone
     page.goto(f"{base_url}admin#nope")
     expect(screen(page, "pipeline")).to_be_visible()  # an unknown route opens the default

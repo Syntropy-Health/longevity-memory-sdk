@@ -543,13 +543,15 @@ The app still starts in demo mode, logs one refusal line listing the open gate i
   nav and every link stay on the member app: an evidence-thread link the API points at a research
   route (`#research`, `#lab/<run>`) is shown as text. It opens on the seeded persona's journal;
   "Start a fresh journal" makes an empty one.
-- **Research console** at `/admin` (sidebar shell, rev 3 §4; G36): hash routes `#pipeline`
-  (default: the static live loop plus KPIs and the offline lane read per request from `/api/lab`),
-  `#lab[/<run_id>]`, `#inventory` (the concept registry from `/api/inventory`, one table row per
-  vertical), `#playground` (alias `#research`; the old episode/intent/draft playground, the only
-  place "Intent"/"Draft" may appear) and `#input` (the "Request real input" control: `POST
-  /api/mode` and the refusal with its gate list in an `aria-live` region). `/admin/<route>` serves
-  the same shell and is rewritten to `/admin#<route>`. The nav also links Dashboard ↗ (`/results`,
+- **Research console** at `/admin` (sidebar shell, rev 3 §4; G36, as amended by G39): hash routes
+  `#pipeline` (default, "Overview": the static check-in loop in plain words plus headline results and
+  the training steps read per request from `/api/lab`), `#lab[/<run_id>]` ("Results"), `#inventory`
+  ("Health areas": the concept registry from `/api/inventory`, one table row per vertical) and
+  `#sessions` ("Simulated sessions", aliases `#playground` and `#research`; the old episode
+  playground in plain labels). G39 (HAC-76): there is no `#input` screen and no "Request real input"
+  control on either surface; real input stays refused server-side (`POST /api/mode` → 403, AD7).
+  `/admin/<route>` (`app.ADMIN_ROUTES` plus `app.ADMIN_ROUTE_ALIASES`) serves the same shell and is
+  rewritten to `/admin#<route>`. The nav also links Charts ↗ (`/results`,
   new tab), and the sidebar links the member app and `/docs`.
 
 On each surface there is one `<main>`, one `<h1>` per screen, and focus moves to the screen `<h1>`
@@ -718,14 +720,15 @@ Tests marked **[sealed]** are the Test Author's contract and are written from th
   `requested=true, enabled=false`, and check-in endpoints still accept fixtures only.
 - T9.3 [sealed] a monkeypatched checklist with every item closed → still `enabled=false`
   (`build_disallowed`).
-- T9.4 [ui] clicking the "Real input" control shows the refusal and lists the gate labels.
+- T9.4 [ui] (as amended by G39) neither surface shows a real-input control or mode toggle, and
+  `POST /api/mode` still answers 403 with every open gate (the refusal is server-side only).
 - T9.5 [unit] `real-input-pathway.md` names every gate with an owner or "unassigned", matching the
   YAML.
 
 **R10: accessibility**
-- T10.1 [ui] (as amended by G38) axe-core (tags wcag2a, wcag2aa, wcag21a, wcag21aa) on each of the
-  10 routes with a realistic state, the 5 member routes at `/` (today, review, passport, next,
-  timeline) and the 5 console routes at `/admin` (pipeline, lab, inventory, playground, input) →
+- T10.1 [ui] (as amended by G38, G39) axe-core (tags wcag2a, wcag2aa, wcag21a, wcag21aa) on each of
+  the 9 routes with a realistic state, the 5 member routes at `/` (today, review, passport, next,
+  timeline) and the 4 console routes at `/admin` (pipeline, lab, inventory, sessions) →
   0 violations with impact serious or critical.
 - T10.2 [ui] (as amended by G38) a keyboard-only journey (Tab, Shift+Tab, Enter, Space, arrow keys
   only; no mouse) completes check-in (fixture) → review → passport → open a thread → choose → View

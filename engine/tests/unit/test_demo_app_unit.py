@@ -33,7 +33,7 @@ def test_health_and_index(client):
     # AM-2 D1 (G31): the playground is on the research console at /admin, never in the member app
     assert "Daypart playground" not in r.text
     a = client.get("/admin")
-    assert a.status_code == 200 and "Daypart playground" in a.text
+    assert a.status_code == 200 and "Simulated coaching sessions" in a.text
 
 
 def test_intents_lists_every_intent_with_safe_default_text(client):
