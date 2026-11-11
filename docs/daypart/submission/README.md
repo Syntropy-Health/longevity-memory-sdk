@@ -29,6 +29,7 @@ is synthetic, and the prototype gives no diagnosis, treatment or dosing advice
 | [deck-outline.md](deck-outline.md) | The 8-slide deck outline: one message, ledger rows and illustration per slide |
 | [technical-appendix.md](technical-appendix.md) | Technical and responsible-AI appendix: mechanisms, training, rigour, safety, data rights, validation path |
 | [sources/hosted-probe-2026-11-10.md](sources/hosted-probe-2026-11-10.md) | What the hosted build at 68236f1 did when tested as a judge would |
+| [sources/hosted-probe-2026-11-11.md](sources/hosted-probe-2026-11-11.md) | HAC-75 re-probe of the hosted build at 92d57c8: Inclinations and the GRPO lab row |
 
 ## Demo
 
