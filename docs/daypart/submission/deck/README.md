@@ -1,48 +1,46 @@
-# FHDIC deck (HAC-65, rebuilt for HAC-77)
+# FHDIC deck (HAC-86: web deck)
 
-**Template pending.** The organiser's official template is not public (HAC-63; ledger P1), so this
-deck uses a plain, accessible layout and says "Template pending" on every slide. It claims no
-template compliance. When a person with the dashboard login has the template, move the slides
-into it. The 9 slides move the same way: the editable PPTX holds every text as a native text box and every diagram as shapes, so
-the move is copy and paste.
+The submission deck is a web page served by the demo app at **`/deck`**
+(<https://supermomo668--daypart-demo-playground.us-east.modal.run/deck>). It uses the member app's
+tokens (dark navy, Inter, periwinkle and teal accents) and reads top-down:
+
+| slides | section | what |
+|---|---|---|
+| 1–2 | Problem | who it is for, what fails today, why a record you can see, correct and act on matters |
+| 3–5 | Design | the member flow (check-in → review → passport → Inclinations → next step → a person), with real screens |
+| 6–9 | Technical solution | architecture, memory and the honesty layer, question library + reward model + GRPO, results |
+| 10 | Next | next steps, the demo, the deck and the repo |
+
+Navigation: ←/→, Space, PageUp/PageDown, Home/End, the section tabs, the arrow buttons, a click on the
+slide, and `#/<n>` deep links. **N** opens the speaker notes. At phone width the slides reflow into one
+scrolling column, and the wide diagrams scroll sideways.
+
+**Still true.** Every number on a slide comes from an [evidence-ledger](../evidence-ledger.md) row.
+Each slide and each figure names its rows in a `data-ledger` attribute, and the speaker notes name them
+again. The charts are drawn from the `DATA` table in `build_web_deck.py`, keyed by ledger row, so a chart
+cannot drift from the ledger. Per-trait recovery values (slide 8) are row L75's, read from
+`docs/daypart/results/metrics.json`. The visual deck carries no caveat labels (HAC-86). The ledger, the
+appendix and the form answers keep them unchanged.
 
 | file | what |
 |---|---|
-| `clinical-human-clone-deck.pptx` | editable deck, 9 slides, 16:9. The speaker notes name the ledger rows behind each slide. |
-| `clinical-human-clone-deck.pdf` | the same 9 slides as a PDF: 0.74 MB (limit 5 MB), tagged, 2 live links |
+| `build_web_deck.py` | the slide spec. It writes `engine/daypart/demo/deck/index.html` and copies `screens/` next to it (standard library only). |
+| `engine/daypart/demo/deck/deck.css`, `deck.js` | the style and the navigation, hand-written |
+| `export_deck.py` | prints `/deck?export=1` to the PDF and renders `slide-N.png` (1600×900) for the video |
+| `clinical-human-clone-deck.pdf` | the form PDF: 10 pages at 1600×900, 1.04 MB (limit 5 MB), tagged, live links to the demo, the deck and the repo |
 | `screens/*.jpg` | crops of real screenshots of the hosted build (`daypart/build` 4ba3adb, 2026-11-11) |
-| `build_deck.py` | the one slide spec. It writes the PPTX and `deck.html`. |
-| `deck_pdf.js` | prints `deck.html` to the PDF and renders slide PNGs (`DSF=1.25` gives 1600×900 for the video) |
 
-Source: [deck outline](../deck-outline.md) and [evidence ledger](../evidence-ledger.md). Every
-number on a slide comes from a ledger row named in that slide's notes. The rules from the outline,
-as applied:
-
-- One message per slide, as the outline's slide title and message. Body type is at least 12.5 pt
-  and titles 34 pt. Ink `#111318` on white, and no text colour below 7:1 contrast.
-- Footer on every slide: "Synthetic / simulated results · Synthetic data only · Not medical advice
-  · Not tested with people".
-- Slide 6 (HAC-77) covers the question library, the reward model and the learned policy (GRPO),
-  with the passport's Inclinations section and its numbers from ledger rows L74–L81. It is labelled
-  simulated: a message-type policy, not a language model.
-- Charts (slide 5) state the unit (prompts passed), the denominator (n = 141, or 51 for the check-in
-  slice) and the seed.
-- Anything not built is labelled CONCEPT: every validation step (slide 8) and every next step
-  (slide 9). The learned policy ran on simulated members (L79), so it is labelled SIMULATED, not
-  concept.
-- No library, platform or model name appears in slide text. The training stages read "Fine-tuned
-  (stage 1)" and "Preference-tuned (stage 2)". The only platform name on any slide is inside the
-  demo URL on slide 9. The method names Jev and GRPO appear on slide 6 because the brief asks for
-  that slide by name.
+**No PPTX.** The deck is HTML and SVG now. An editable PPTX would mean redrawing every figure as shapes,
+so the form gets the PDF and the hosted page instead. The HAC-77 PPTX and its builder were removed.
 
 Rebuild (from the repo root):
 
 ```sh
-python docs/daypart/submission/deck/build_deck.py <capture_dir>   # needs python-pptx, Pillow; omit the dir to reuse screens/
-node docs/daypart/submission/deck/deck_pdf.js docs/daypart/submission/deck   # needs playwright
+python docs/daypart/submission/deck/build_web_deck.py
+# serve the app (e.g. `cd engine && uv run daypart-demo`, or use the hosted URL), then:
+python docs/daypart/submission/deck/export_deck.py <base_url> --png <slides_dir>   # needs the engine `ui` group
 ```
 
-`<capture_dir>` is the output of [`../video/capture/capture.js`](../video/capture/capture.js),
-which since HAC-77 also takes `s4c-pii-1280.png`, the personal-data refusal. That screenshot uses
-the fictional text "My name is Sam Lee, email sam.lee@example.com, slept 7 hours" (422, nothing
-saved). The real-input screenshot is gone: HAC-76 removed that screen.
+Tests: `engine/tests/unit/test_deck_unit.py` covers the route, the sections, the ledger rows, the absent
+caveat labels and the word budget. `engine/tests/ui/test_deck_ui.py` covers keyboard, click and hash
+navigation, axe at 1280 and 375, and the 1600×900 export.

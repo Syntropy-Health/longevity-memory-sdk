@@ -3,7 +3,8 @@
     python make_video.py --footage <capture_dir> --slides <slide_png_dir> --out <mp4> [--ffmpeg BIN] [--font TTF]
 
 <capture_dir> holds the Playwright take and clips-1280.json written by capture/capture.js.
-<slide_png_dir> holds slide-N.png rendered by ../deck/deck_pdf.js with DSF=1.25 (1600x900).
+<slide_png_dir> holds slide-N.png (1600x900) from ../deck/export_deck.py --png.
+Without the raw footage, recut_slides.py re-renders only the slide segments over the last MP4 (HAC-86).
 
 One plan (SEGMENTS below) drives three outputs, so they cannot disagree:
   the MP4 (1920x1080, 30 fps, H.264, silent AAC track; captions burned in),
@@ -28,9 +29,14 @@ BG = "0x0B0D12"
 # kind, source (clip id or slide number), hold seconds (footage) or duration (slide), label, captions
 # captions: (start, end, text) relative to the segment start. Every figure traces to a ledger row.
 SEGMENTS = [
-    ("slide", 1, 12, "Slide 1 · Problem and user", [
-        (0.3, 6, "People's goals and barriers change week to week."),
-        (6, 11.8, "Generic reminders don't show what they know about you, or why they suggest something.")]),
+    # HAC-86: slide numbers are the web deck's (/deck); the order is top-down: problem, design, the real
+    # footage, technical solution, next steps.
+    ("slide", 1, 12, "Problem", [
+        (0.3, 6, "Healthy routines break when the week changes."),
+        (6, 11.8, "Generic reminders neither know you nor explain why.")]),
+    ("slide", 3, 12, "Design · the member flow", [
+        (0.3, 6, "One sentence in, a reviewed record out."),
+        (6, 11.8, "Check in, review, passport, Inclinations, next step. Pain or crisis goes to a person.")]),
     ("clip", "s2-checkin-review", 2.0, "Real recording · hosted build · check-in and review", [
         (0.3, 5, "A synthetic check-in starts as one plain sentence."),
         (5, 10, "It proposes 3 values, each with the words it came from. Mood gave none."),
@@ -57,26 +63,23 @@ SEGMENTS = [
     ("clip", "s5b-results", 3.0, "Real recording · hosted build · research console, results", [
         (0.3, 5.5, "Each training step was tested on the same 141 held-out practice prompts."),
         (5.5, 11.9, "With simulated members, the learned approach logged 84.0% of days, against 83.3% for the best fixed one.")]),
-    ("slide", 5, 16, "Slide 5 · Learning and evidence (synthetic / simulated results)", [
-        (0.3, 6, "On 141 held-out synthetic prompts, the base model passed 45."),
-        (6, 11, "Both fine-tuned stages passed all 141. 90 base replies were empty."),
-        (11, 15.8, "These are simulated results, not patient outcomes.")]),
-    ("slide", 6, 17, "Slide 6 · What helps this member (simulated)", [
-        (0.3, 6, "7 questions recover simulated members' hidden traits 76–91% of the time."),
-        (6, 11.5, "The reward model reads term by term. Its top message type matches the simulator's for 83%."),
-        (11.5, 16.8, "The learned policy gains a little: 0.840 against 0.833. Synthetic only, no new spend.")]),
-    ("slide", 3, 13, "Slide 3 · How it works", [
-        (0.3, 6.5, "Live: check-in, safety checks, proposals, review, memory, passport."),
-        (6.5, 12.8, "Offline: synthetic members, evaluation, training, frozen comparison.")]),
-    ("slide", 7, 14, "Slide 7 · Responsible AI and limits", [
-        (0.3, 7, "Synthetic data only. No diagnosis, treatment or dosing. No clinical review."),
-        (7, 13.8, "The rules caught 74 of 74 test violations: a measurement, not a proof.")]),
-    ("slide", 8, 12, "Slide 8 · Feasibility and path to deployment", [
-        (0.3, 6, "It runs today as a hosted prototype."),
-        (6, 11.8, "Reaching people needs consent, privacy, clinical oversight and a study first.")]),
-    ("slide", 9, 12, "Slide 9 · Impact and next steps", [
-        (0.3, 6, "Next: a clinical reviewer, a consented pilot and a pre-registered measure."),
-        (6, 12, "The prototype link is in the submission.")]),
+    ("slide", 6, 13, "Technical · architecture", [
+        (0.3, 6.5, "Rules run live, with no model call in the check-in loop."),
+        (6.5, 12.8, "Training and evaluation run offline and publish versioned results.")]),
+    ("slide", 7, 14, "Technical · memory and the honesty layer", [
+        (0.3, 7, "Memory keeps only what the person confirmed."),
+        (7, 13.8, "The boundary rules caught 74 of 74 labelled violations, with 0 false alarms on 128 rows.")]),
+    ("slide", 8, 17, "Technical · question library, reward model, GRPO", [
+        (0.3, 6, "7 answers recover each hidden trait 76–91% of the time."),
+        (6, 11.5, "The reward model reads term by term; its top message type matches for 83%."),
+        (11.5, 16.8, "GRPO learns which message type to send.")]),
+    ("slide", 9, 16, "Technical · results", [
+        (0.3, 6, "On 141 held-out prompts, the base model passed 45."),
+        (6, 11, "Both trained stages passed all 141."),
+        (11, 15.8, "The learned policy reached 0.840 mean simulated adherence, against 0.833 for the best script.")]),
+    ("slide", 10, 12.8, "Next steps", [
+        (0.3, 6.5, "Next: a clinical reviewer, a consented pilot, a measured result."),
+        (6.5, 12.6, "The prototype and this deck are live at the demo link.")]),
 ]
 TAG = "Synthetic demo · simulated results · not medical advice"
 
@@ -100,8 +103,9 @@ def build(footage: Path, slides: Path, out: Path, ffmpeg: str, font: str, bold: 
     for i, (kind, src, hold, label, caps) in enumerate(SEGMENTS):
         lf = tmp / f"label{i}.txt"; lf.write_text(label)
         tf = tmp / "tag.txt"; tf.write_text(TAG)
-        draw = (f"drawtext=fontfile={bold}:textfile={lf}:fontsize=30:fontcolor=white:x=160:y=26,"
-                f"drawtext=fontfile={font}:textfile={tf}:fontsize=24:fontcolor=0xC9CDD6:x=w-160-tw:y=30")
+        draw = f"drawtext=fontfile={bold}:textfile={lf}:fontsize=30:fontcolor=white:x=160:y=26"
+        if kind == "clip":  # HAC-86: the tag rides on the footage only; the slides carry no caveat labels
+            draw += f",drawtext=fontfile={font}:textfile={tf}:fontsize=24:fontcolor=0xC9CDD6:x=w-160-tw:y=30"
         place = f"scale=1600:900:flags=lanczos,pad=1920:1080:160:80:color={BG},setsar=1,fps={FPS},format=yuv420p"
         seg = tmp / f"seg{i:02}.mp4"
         if kind == "clip":

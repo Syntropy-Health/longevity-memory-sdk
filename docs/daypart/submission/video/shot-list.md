@@ -59,12 +59,21 @@ Rebuild:
 
 ```sh
 BUILD_SHA=<deployed sha> node capture/capture.js <cap_dir> 1280
-DSF=1.25 node ../deck/deck_pdf.js ../deck <slides_dir>
+python ../deck/export_deck.py <demo base url> --png <slides_dir>   # 1600x900 slide frames from /deck
 python make_video.py --footage <cap_dir> --slides <slides_dir> --out clinical-human-clone-demo.mp4 \
   --ffmpeg <full ffmpeg> --font LiberationSans-Regular.ttf --bold LiberationSans-Bold.ttf --crf 27
 ```
 
 A new capture is a new take, so its offsets differ, and the plan's captions were timed to this
 take (each caption must end before its clip plus hold). Re-check `clips-1280.json` before re-cutting.
+
+HAC-86 re-cut (slides only). The raw take is not kept, so `recut_slides.py` keeps the footage block of
+the last cut frame for frame and re-renders only the slide segments from the web deck:
+
+```sh
+python ../deck/export_deck.py <demo base url> --png <slides_dir>
+python recut_slides.py --old <HAC-77 mp4> --old-plan <its edit-plan.json> --old-srt <its captions.srt> \
+  --slides <slides_dir> --out clinical-human-clone-demo.mp4 --ffmpeg <full ffmpeg> --fonts <Liberation Sans dir>
+```
 
 The judge-path check is in [judge-path.md](judge-path.md).
