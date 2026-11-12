@@ -52,7 +52,11 @@ def test_deck_route_and_assets(client, page):
     for src in set(re.findall(r'src="(/deck/screens/[^"]+)"', page)):
         r = client.get(src)
         assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg", src
-    assert client.get("/deck/../app.py").status_code == 404
+    # The client normalises a literal "/deck/../app.py" before sending it, so it never reaches the deck route.
+    # Percent-encoded traversal does reach it; the 404 must come from the allow-list, not from routing.
+    for probe in ("/deck/..%2Fapp.py", "/deck/%2E%2E%2Fapp.py", "/deck/screens%2F..%2F..%2Fapp.py"):
+        r = client.get(probe)
+        assert r.status_code == 404 and r.json() == {"detail": "unknown deck asset"}, probe
     assert client.get("/deck/nope.js").status_code == 404
     r = client.get("/deck/", follow_redirects=False)
     assert r.status_code == 307 and r.headers["location"] == "/deck"
