@@ -43,6 +43,8 @@ log = logging.getLogger("daypart.demo")
 # playground is "sessions"; its old names stay served as aliases so earlier links still open it.
 ADMIN_ROUTES = ("pipeline", "lab", "inventory", "sessions")
 ADMIN_ROUTE_ALIASES = ("playground", "research")
+# HAC-86: the submission deck's static assets, served at /deck/<name> (screens/*.jpg are added at startup).
+DECK_MEDIA = {"deck.css": "text/css; charset=utf-8", "deck.js": "text/javascript; charset=utf-8"}
 
 IntentName = Annotated[str, Field(json_schema_extra={"enum": list(INTENTS)})]
 
@@ -193,6 +195,30 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
         if route not in ADMIN_ROUTES and route not in ADMIN_ROUTE_ALIASES:
             raise HTTPException(status_code=404, detail="unknown console route")
         return admin_html
+
+    # HAC-86: the submission deck, a static page with its own assets, served from the package so the hosted
+    # build publishes it with the demo. Assets are an allow-list read once at startup (no path lookups).
+    deck_dir = files("daypart.demo").joinpath("deck")
+    deck_html = deck_dir.joinpath("index.html").read_text(encoding="utf-8")
+    deck_assets: dict[str, tuple[bytes, str]] = {}
+    for name, media in DECK_MEDIA.items():
+        deck_assets[name] = (deck_dir.joinpath(name).read_bytes(), media)
+    for shot in deck_dir.joinpath("screens").iterdir():
+        if shot.name.endswith(".jpg"):
+            deck_assets[f"screens/{shot.name}"] = (shot.read_bytes(), "image/jpeg")
+
+    @app.get("/deck", response_class=HTMLResponse, include_in_schema=False)
+    def deck() -> str:
+        return deck_html
+
+    @app.get("/deck/{asset:path}", include_in_schema=False)
+    def deck_asset(asset: str) -> Response:
+        if asset == "":
+            return RedirectResponse("/deck", status_code=307)
+        if asset not in deck_assets:
+            raise HTTPException(status_code=404, detail="unknown deck asset")
+        body, media = deck_assets[asset]
+        return Response(body, media_type=media, headers={"Cache-Control": "public, max-age=300"})
 
     @app.get("/results", include_in_schema=False)
     def results() -> RedirectResponse:

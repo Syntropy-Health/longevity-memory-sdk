@@ -7,14 +7,23 @@
       "start": 0.0,
       "duration": 12,
       "kind": "deck slide",
-      "source": "deck slide 1",
+      "source": "web deck slide 1 (/deck#/1)",
       "url": null,
-      "label": "Slide 1 \u00b7 Problem and user"
+      "label": "Problem"
     },
     {
       "n": 2,
       "start": 11.6,
-      "duration": 16.98,
+      "duration": 12,
+      "kind": "deck slide",
+      "source": "web deck slide 3 (/deck#/3)",
+      "url": null,
+      "label": "Design \u00b7 the member flow"
+    },
+    {
+      "n": 3,
+      "start": 23.2,
+      "duration": 16.58,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 3.36\u201318.34 s",
       "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/",
@@ -23,8 +32,8 @@
       "label": "Real recording \u00b7 hosted build \u00b7 check-in and review"
     },
     {
-      "n": 3,
-      "start": 28.18,
+      "n": 4,
+      "start": 39.38,
       "duration": 14.47,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 18.64\u201331.11 s",
@@ -34,8 +43,8 @@
       "label": "Real recording \u00b7 hosted build \u00b7 Health Clone Passport"
     },
     {
-      "n": 4,
-      "start": 42.25,
+      "n": 5,
+      "start": 53.45,
       "duration": 12.64,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 31.12\u201341.26 s",
@@ -45,8 +54,8 @@
       "label": "Real recording \u00b7 hosted build \u00b7 passport, Inclinations"
     },
     {
-      "n": 5,
-      "start": 54.49,
+      "n": 6,
+      "start": 65.69,
       "duration": 7.61,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 41.48\u201347.09 s",
@@ -56,8 +65,8 @@
       "label": "Real recording \u00b7 hosted build \u00b7 suggested next step"
     },
     {
-      "n": 6,
-      "start": 61.7,
+      "n": 7,
+      "start": 72.9,
       "duration": 9.08,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 51.01\u201358.09 s",
@@ -67,8 +76,8 @@
       "label": "Real recording \u00b7 hosted build \u00b7 crisis hand-off"
     },
     {
-      "n": 7,
-      "start": 70.38,
+      "n": 8,
+      "start": 81.58,
       "duration": 6.28,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 58.31\u201363.59 s",
@@ -78,8 +87,8 @@
       "label": "Real recording \u00b7 hosted build \u00b7 timeline"
     },
     {
-      "n": 8,
-      "start": 76.26,
+      "n": 9,
+      "start": 87.46,
       "duration": 10.63,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 64.41\u201373.04 s",
@@ -89,9 +98,9 @@
       "label": "Real recording \u00b7 hosted build \u00b7 research console, overview"
     },
     {
-      "n": 9,
-      "start": 86.49,
-      "duration": 12.14,
+      "n": 10,
+      "start": 97.69,
+      "duration": 11.74,
       "kind": "real footage",
       "source": "page@3564e709ec76795b9b4367c619b0857a.webm 73.08\u201382.22 s",
       "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
@@ -100,58 +109,49 @@
       "label": "Real recording \u00b7 hosted build \u00b7 research console, results"
     },
     {
-      "n": 10,
-      "start": 98.23,
-      "duration": 16,
-      "kind": "deck slide",
-      "source": "deck slide 5",
-      "url": null,
-      "label": "Slide 5 \u00b7 Learning and evidence (synthetic / simulated results)"
-    },
-    {
       "n": 11,
-      "start": 113.83,
-      "duration": 17,
+      "start": 109.03,
+      "duration": 13,
       "kind": "deck slide",
-      "source": "deck slide 6",
+      "source": "web deck slide 6 (/deck#/6)",
       "url": null,
-      "label": "Slide 6 \u00b7 What helps this member (simulated)"
+      "label": "Technical \u00b7 architecture"
     },
     {
       "n": 12,
-      "start": 130.43,
-      "duration": 13,
+      "start": 121.63,
+      "duration": 14,
       "kind": "deck slide",
-      "source": "deck slide 3",
+      "source": "web deck slide 7 (/deck#/7)",
       "url": null,
-      "label": "Slide 3 \u00b7 How it works"
+      "label": "Technical \u00b7 memory and the honesty layer"
     },
     {
       "n": 13,
-      "start": 143.03,
-      "duration": 14,
+      "start": 135.23,
+      "duration": 17,
       "kind": "deck slide",
-      "source": "deck slide 7",
+      "source": "web deck slide 8 (/deck#/8)",
       "url": null,
-      "label": "Slide 7 \u00b7 Responsible AI and limits"
+      "label": "Technical \u00b7 question library, reward model, GRPO"
     },
     {
       "n": 14,
-      "start": 156.63,
-      "duration": 12,
+      "start": 151.83,
+      "duration": 16,
       "kind": "deck slide",
-      "source": "deck slide 8",
+      "source": "web deck slide 9 (/deck#/9)",
       "url": null,
-      "label": "Slide 8 \u00b7 Feasibility and path to deployment"
+      "label": "Technical \u00b7 results"
     },
     {
       "n": 15,
-      "start": 168.23,
-      "duration": 12,
+      "start": 167.43,
+      "duration": 12.8,
       "kind": "deck slide",
-      "source": "deck slide 9",
+      "source": "web deck slide 10 (/deck#/10)",
       "url": null,
-      "label": "Slide 9 \u00b7 Impact and next steps"
+      "label": "Next steps"
     }
   ]
 }
