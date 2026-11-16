@@ -15,6 +15,9 @@ worst-case quote (presenter seconds x RATE_HIGH) with --cap-usd and stops if the
 does not track spend across runs or earlier renders; it records the wallet before and after this one.
 It polls for at most --poll-timeout seconds (re-running resumes the same video), and it stops if
 presenter.json records a failed render: read the failure, then delete presenter.json to pay for a new one.
+It writes a `submitting` marker to presenter.json before the paid POST and the video id after it, so a
+submit that dies in between (timeout, crash, a response with no id) never gets a second POST on re-run:
+`presenter` stops and asks for a wallet check first.
 
 `compose` builds every segment at 1920x1080 30 fps and burns in the captions. Standard library
 only; needs a full ffmpeg (libx264, libass).
@@ -212,6 +215,11 @@ def presenter(a: argparse.Namespace) -> None:
     if log.get("status") == "failed":
         raise SystemExit(f"{log_p} records a failed render ({log.get('video_id')}: {log.get('failure')}). "
                          f"Check the wallet, then delete {log_p} and re-run to submit a new (paid) render.")
+    if log.get("status") == "submitting" and not log.get("video_id"):
+        raise SystemExit(f"{log_p} records a submit that started but never got a video id back: HeyGen may have "
+                         f"accepted it and charged for it. Check the wallet and the HeyGen video list first. If a "
+                         f"render exists, put its id in {log_p} as video_id and re-run to poll it (no new spend); "
+                         f"if none does, delete {log_p} and re-run to submit a new (paid) render.")
     if not log.get("video_id"):
         quote = tl["presenter_secs"] * RATE_HIGH
         if quote > a.cap_usd:
@@ -226,11 +234,19 @@ def presenter(a: argparse.Namespace) -> None:
         body = {"type": "avatar", "avatar_id": p["avatar_id"], "engine": {"type": p["engine"]},
                 "audio_asset_id": asset["asset_id"], "title": "HAC-92 presenter (private)",
                 "aspect_ratio": "16:9", "resolution": "1080p"}
-        v = api("POST", "/v3/videos", key, body)["data"]
-        log = {"asset_id": asset["asset_id"], "video_id": v.get("video_id") or v.get("id"), "request": body,
+        # The marker goes down before the paid POST: if the POST times out after HeyGen accepted it, or
+        # the response carries no id, a re-run stops at the check above instead of paying again.
+        log = {"status": "submitting", "asset_id": asset["asset_id"], "request": body,
                "wallet_before_usd": before, "audio_secs": tl["presenter_secs"], "created": time.time()}
         log_p.write_text(json.dumps(log, indent=1))
-        print("submitted", log["video_id"])
+        v = api("POST", "/v3/videos", key, body)["data"]
+        video_id = v.get("video_id") or v.get("id")
+        if not video_id:
+            raise SystemExit(f"POST /v3/videos returned no video id ({json.dumps(v)}). {log_p} stays marked "
+                             f"`submitting`: check the wallet before re-running.")
+        log.update(status="submitted", video_id=video_id)
+        log_p.write_text(json.dumps(log, indent=1))
+        print("submitted", video_id)
     deadline = time.monotonic() + a.poll_timeout
     while True:
         d = api("GET", f"/v3/videos/{log['video_id']}", key)["data"]
