@@ -1,11 +1,15 @@
-// FHDIC submission deck (HAC-86): keyboard, click and hash navigation over <section class="slide">.
+// FHDIC submission deck (HAC-86, v2 HAC-105): keyboard, click and hash navigation over <section class="slide">.
 // ←/→, PageUp/PageDown, Space, Home/End move; N toggles the speaker notes; #/<n> deep-links a slide.
-// ?export=1 lays every slide out at 1600x900 for the PDF and the video frames (no navigation).
+// ?export=1 lays every slide out at 1600x900 for the PDF and the video frames (no navigation, no motion).
+// v2 motion: staggered reveals (CSS, keyed on .is-current / .is-seen), counters that run up to the value the
+// page already carries (.num[data-to]), and the pointer spotlight on .glow cards (ported from 21st GlowCard).
+// prefers-reduced-motion turns all of it off; the numbers are then shown as written.
 (function () {
   "use strict";
   var root = document.documentElement;
   var params = new URLSearchParams(location.search);
   if (params.get("export") === "1") { root.classList.add("export"); return; }
+  root.classList.add("js");
 
   var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
   var n = slides.length;
@@ -19,7 +23,30 @@
   var live = document.getElementById("live");
   var tabs = Array.prototype.slice.call(document.querySelectorAll(".sections a"));
   var phone = window.matchMedia("(max-width: 760px)");
+  var still = window.matchMedia("(prefers-reduced-motion: reduce)");
   var cur = -1;
+
+  // ---- counters: tween 0 -> data-to (ease-out expo), then leave the exact written value in place
+  function countUp(slide) {
+    var nums = slide.querySelectorAll(".num[data-to]");
+    Array.prototype.forEach.call(nums, function (el) {
+      var to = parseFloat(el.getAttribute("data-to"));
+      var dec = parseInt(el.getAttribute("data-dec") || "0", 10);
+      var final = to.toFixed(dec);
+      if (el._raf) cancelAnimationFrame(el._raf);
+      if (still.matches || !isFinite(to) || to === 0) { el.textContent = final; return; }
+      var t0 = null, dur = 1400, delay = 350;
+      el.textContent = (0).toFixed(dec);
+      function step(ts) {
+        if (t0 === null) t0 = ts + delay;
+        var p = Math.min(Math.max((ts - t0) / dur, 0), 1);
+        var e = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+        el.textContent = p === 1 ? final : (to * e).toFixed(dec);
+        if (p < 1) el._raf = requestAnimationFrame(step);
+      }
+      el._raf = requestAnimationFrame(step);
+    });
+  }
 
   function fromHash() {
     var m = /^#\/(\d+)$/.exec(location.hash);
@@ -50,6 +77,7 @@
     if (location.hash !== want) history.replaceState(null, "", want);
     var h = s.querySelector("h1, h2");
     if (live && !phone.matches) live.textContent = "Slide " + (i + 1) + " of " + n + ": " + (h ? h.textContent : "");
+    if (!phone.matches) countUp(s);
     if (phone.matches && focus) s.scrollIntoView({ block: "start" });
     else if (focus && h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
   }
@@ -88,13 +116,45 @@
   });
   window.addEventListener("hashchange", function () { show(fromHash(), true); });
   phone.addEventListener("change", function () { var i = cur; cur = -1; show(i, false); });
-  // Phone width: all slides are on the page; keep the counter and tabs in step with scrolling.
+
+  // ---- pointer spotlight: every .glow card on the current slide gets the pointer in its own coordinates,
+  // so the edge light spills across neighbouring cards (the GlowCard effect, without fixed attachment).
+  var px = 0, py = 0, pending = false;
+  function paint() {
+    pending = false;
+    var s = slides[cur];
+    if (!s) return;
+    var xp = (px / window.innerWidth).toFixed(3);
+    Array.prototype.forEach.call(s.querySelectorAll(".glow"), function (c) {
+      var r = c.getBoundingClientRect();
+      c.style.setProperty("--x", (px - r.left).toFixed(1) + "px");
+      c.style.setProperty("--y", (py - r.top).toFixed(1) + "px");
+      c.style.setProperty("--xp", xp);
+    });
+  }
+  document.addEventListener("pointermove", function (e) {
+    if (still.matches || e.pointerType === "touch") return;
+    px = e.clientX; py = e.clientY;
+    if (!pending) { pending = true; requestAnimationFrame(paint); }
+  }, { passive: true });
+
+  // Phone width: all slides are on the page; keep the counter and tabs in step with scrolling,
+  // and reveal (and count up) each slide the first time it scrolls into view.
   if ("IntersectionObserver" in window) {
     var io = new IntersectionObserver(function (es) {
       if (!phone.matches) return;
       es.forEach(function (en) { if (en.isIntersecting) show(slides.indexOf(en.target), false); });
     }, { rootMargin: "-40% 0px -55% 0px" });
-    slides.forEach(function (s) { io.observe(s); });
+    var seen = new IntersectionObserver(function (es) {
+      es.forEach(function (en) {
+        if (!en.isIntersecting || !phone.matches || en.target.classList.contains("is-seen")) return;
+        en.target.classList.add("is-seen");
+        countUp(en.target);
+      });
+    }, { threshold: 0.12 });
+    slides.forEach(function (s) { io.observe(s); seen.observe(s); });
+  } else {
+    slides.forEach(function (s) { s.classList.add("is-seen"); });
   }
   show(fromHash(), false);
 })();

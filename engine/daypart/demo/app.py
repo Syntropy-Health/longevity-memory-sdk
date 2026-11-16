@@ -44,7 +44,9 @@ log = logging.getLogger("daypart.demo")
 ADMIN_ROUTES = ("pipeline", "lab", "inventory", "sessions")
 ADMIN_ROUTE_ALIASES = ("playground", "research")
 # HAC-86: the submission deck's static assets, served at /deck/<name> (screens/*.jpg are added at startup).
-DECK_MEDIA = {"deck.css": "text/css; charset=utf-8", "deck.js": "text/javascript; charset=utf-8"}
+# HAC-105: the deck's display font is vendored (no CDN at runtime).
+DECK_MEDIA = {"deck.css": "text/css; charset=utf-8", "deck.js": "text/javascript; charset=utf-8",
+              "fonts/InterVariable.woff2": "font/woff2"}
 
 IntentName = Annotated[str, Field(json_schema_extra={"enum": list(INTENTS)})]
 
@@ -202,7 +204,7 @@ def create_app(cohort_seed: int = 0, results_url: str | None = None) -> FastAPI:
     deck_html = deck_dir.joinpath("index.html").read_text(encoding="utf-8")
     deck_assets: dict[str, tuple[bytes, str]] = {}
     for name, media in DECK_MEDIA.items():
-        deck_assets[name] = (deck_dir.joinpath(name).read_bytes(), media)
+        deck_assets[name] = (deck_dir.joinpath(*name.split("/")).read_bytes(), media)
     for shot in deck_dir.joinpath("screens").iterdir():
         if shot.name.endswith(".jpg"):
             deck_assets[f"screens/{shot.name}"] = (shot.read_bytes(), "image/jpeg")
