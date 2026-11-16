@@ -1,5 +1,7 @@
 # FHDIC demo video: shot list and edit (HAC-65, re-filmed for HAC-77)
 
+> **Superseded by [v2](v2/README.md) (HAC-92):** a HeyGen presenter and voice in the Meta video's style, with a scientific structure. This file documents the v1 cut.
+
 **Status: made.** `clinical-human-clone-demo.mp4` is 3:00 long, 1920×1080, 30 fps, H.264 (CRF 27)
 and 9.9 MB, under the 10 MB attachment limit (md5 `d4d2fb13c4402dbe3fbd6231ceec6ba4`). It is attached to HAC-77 and is not in
 git. The HAC-65 cut (2:37, build e50ebb7) is superseded. Captions are burned in and are also in
