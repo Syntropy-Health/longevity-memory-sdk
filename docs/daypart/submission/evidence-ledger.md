@@ -170,6 +170,12 @@ training fold (117) and a held-out fold (58). None is a patient outcome or clini
 | L80 | The passport shows an Inclinations section: the answers that weigh most, and up to three next steps, each linked to one of them with its reason; every string passes the narration guard and the boundary rules, and when it cannot be built the section says "Not available for this journal." (never partial). The answers behind it are simulated, not given by a person. | `engine/daypart/passport/view.py` · `engine/daypart/rm/inclinations.py` · `engine/daypart/demo/static/index.html` · `engine/tests/unit/test_passport_inclinations_unit.py` |
 | L81 | The hosted prototype serves `daypart/build` @ 92d57c8 (HAC-75), deployed by CI run 42929492491 on 2026-11-11 after every gate job passed; agents re-probed it the same day: SC1 smoke 9 of 9, the prepared member's passport shows Inclinations (3 drivers, 3 next steps each linked to one, no digits in the text), and the lab's GRPO row is `ok` at mean simulated adherence 0.840 with 0 violations. | `docs/daypart/submission/sources/hosted-probe-2026-11-11.md` · `.github/workflows/engine.yml` |
 
+## Demo video (HAC-92)
+
+| id | claim | evidence |
+|---|---|---|
+| L82 | A saved check-in that reports pain or mood (a `symptoms_wellbeing` observation) always gets the clinician hand-off as its next step, whatever the value: rule 1 of `next-step-v1`, ahead of the adherence rules. The reason names the concept, never the value. The demo v2 take shows it: the check-in "pain 4/10" is saved and the next step at `/#next` routes to a person. | `engine/daypart/checkin/next_step.py` · `engine/tests/unit/test_next_step_unit.py` · `docs/daypart/submission/video/v2/clips-1280.json` |
+
 ## Pending or omitted claims
 
 Claims the brief or a draft might make that this pack does not, because nothing in the repository

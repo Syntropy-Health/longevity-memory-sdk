@@ -10,8 +10,11 @@ render_cards.js) and the captions (<work>/captions.srt, <work>/captions.ass). Fo
 the windows in FOOTAGE: offsets into the one real take, never sped up or re-staged.
 
 `presenter` uploads presenter.wav (narration audio only: no health data, no footage) and renders
-it once on the Meta video's presenter (Sable, avatar_v). It refuses to run if the wallet has
-already moved past the cap, and records the wallet before and after.
+it once on the Meta video's presenter (Sable, avatar_v). Before it submits, it compares one render's
+worst-case quote (presenter seconds x RATE_HIGH) with --cap-usd and stops if the quote is higher. It
+does not track spend across runs or earlier renders; it records the wallet before and after this one.
+It polls for at most --poll-timeout seconds (re-running resumes the same video), and it stops if
+presenter.json records a failed render: read the failure, then delete presenter.json to pay for a new one.
 
 `compose` builds every segment at 1920x1080 30 fps and burns in the captions. Standard library
 only; needs a full ffmpeg (libx264, libass).
@@ -186,6 +189,16 @@ def api(method: str, path: str, key: str, body: dict | None = None, raw: bytes |
         return json.load(r)
 
 
+def ff_escape(path: str | Path) -> str:
+    """Escape a path for an ffmpeg filter option value inside a filtergraph (two levels)."""
+    s = str(path)
+    for c in "\\':":  # level 1: the option value
+        s = s.replace(c, "\\" + c)
+    for c in "\\'[],;":  # level 2: the filtergraph
+        s = s.replace(c, "\\" + c)
+    return s
+
+
 def wallet(key: str) -> float:
     return api("GET", "/v3/users/me", key)["data"]["wallet"]["remaining_balance"]
 
@@ -196,6 +209,9 @@ def presenter(a: argparse.Namespace) -> None:
     tl = json.loads((work / "timeline.json").read_text())
     log_p = work / "presenter.json"
     log = json.loads(log_p.read_text()) if log_p.exists() else {}
+    if log.get("status") == "failed":
+        raise SystemExit(f"{log_p} records a failed render ({log.get('video_id')}: {log.get('failure')}). "
+                         f"Check the wallet, then delete {log_p} and re-run to submit a new (paid) render.")
     if not log.get("video_id"):
         quote = tl["presenter_secs"] * RATE_HIGH
         if quote > a.cap_usd:
@@ -215,10 +231,14 @@ def presenter(a: argparse.Namespace) -> None:
                "wallet_before_usd": before, "audio_secs": tl["presenter_secs"], "created": time.time()}
         log_p.write_text(json.dumps(log, indent=1))
         print("submitted", log["video_id"])
+    deadline = time.monotonic() + a.poll_timeout
     while True:
         d = api("GET", f"/v3/videos/{log['video_id']}", key)["data"]
         if d["status"] in ("completed", "failed"):
             break
+        if time.monotonic() > deadline:
+            raise SystemExit(f"video {log['video_id']} still {d['status']} after {a.poll_timeout:.0f} s: "
+                             f"re-run `presenter` to keep polling (no new render, no new spend)")
         time.sleep(20)
     log.update(status=d["status"], duration=d.get("duration"), failure=d.get("failure_message"))
     if d["status"] == "completed":
@@ -235,7 +255,7 @@ def compose(a: argparse.Namespace) -> None:
     ff = a.ffmpeg
     parts = []
     tag = "SYNTHETIC DEMO · SIMULATED RESULTS · NOT MEDICAL ADVICE"
-    font = f"{a.fonts}/JetBrainsMono.ttf"
+    font = ff_escape(Path(a.fonts) / "JetBrainsMono.ttf")
     only = set(filter(None, a.only.split(",")))
     for s in tl["segments"]:
         out = work / f"part-{s['id']}.mp4"
@@ -271,9 +291,10 @@ def compose(a: argparse.Namespace) -> None:
         run(cmd)
         parts.append(out)
     lst = work / "parts.txt"
-    lst.write_text("".join(f"file '{p}'\n" for p in parts))
+    # concat demuxer quoting: close the quote, emit an escaped ', reopen (a --work path may hold ').
+    lst.write_text("".join("file '" + str(p).replace("'", "'\\''") + "'\n" for p in parts))
     run([ff, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(lst), "-i", str(work / "narration.wav"),
-         "-vf", f"subtitles={work / 'captions.ass'}:fontsdir={a.fonts}", "-map", "0:v", "-map", "1:a",
+         "-vf", f"subtitles={ff_escape(work / 'captions.ass')}:fontsdir={ff_escape(a.fonts)}", "-map", "0:v", "-map", "1:a",
          "-c:v", "libx264", "-preset", "slow", "-crf", str(a.crf), "-pix_fmt", "yuv420p", "-r", str(FPS),
          "-c:a", "aac", "-b:a", "128k", "-ar", str(SR), "-ac", "2", "-movflags", "+faststart", "-shortest", a.out])
     print("wrote", a.out)
@@ -307,7 +328,7 @@ RUBRIC = [
      "governance gates, clinical reviewer, consented pilot (s14); demo URL and repo (s15)."),
     (7, "Safety, autonomy, inclusion, stated limits and assumptions", 5,
      "published requirement; weight assumed", ["s04", "s05", "s08", "s09", "s14"],
-     "nothing saved until the person reviews (s04, s05); hand-off to a person (s08); crisis refusal (s09); "
+     "nothing saved until the person reviews (s04, s05); hand-off to a person after a pain report (s08, L82); crisis refusal (s09); "
      "limits (s14). Inclusion (languages, accessibility) is not spoken: gap."),
     (8, "Presentation and demo quality (clarity, fits cap)", 5, "assumption", None,
      "the whole cut: captions burned in, every number names its ledger row, under the 3:00 cap."),
@@ -316,6 +337,14 @@ RUBRIC = [
 BEATS = [("Problem", 15, ["s01"]), ("Product", 15, ["s02"]), ("Solution / method", 30, ["s03", "s04"]),
          ("Demo", 55, ["s05", "s06", "s07", "s08", "s09", "s10"]), ("Evidence / results", 35, ["s11", "s12"]),
          ("Expected outcome / impact", 15, ["s13"]), ("Limits", 10, ["s14"]), ("Close", 5, ["s15"])]
+# HAC-91 §3e Limits beat: the caveats it suggests (from FHDIC.md) and whether s14 says each one.
+LIMITS = [
+    ("No clinician has reviewed the content; no person's health data was used", "said (s14)", ["L73", "L56"]),
+    ("Real input stays off behind 12 open governance gates", "said (s14)", ["L56", "L61"]),
+    ("Preference tuning used only 84 DPO pairs", "omitted", ["L57"]),
+    ("Short, repeated replies", "omitted", []),
+    ("No consumer UI: the hosted surfaces are demonstrations, not a product", "omitted", []),
+]
 # Criteria 1 and 3 turn on lapse -> recovery and sustained change: where the cut covers each, or not.
 LAPSE = [
     ("Lapse framed as the problem", ["s01"], "covered", ["L66"],
@@ -401,6 +430,14 @@ def docs(a: argparse.Namespace) -> None:
     c.append(f"| **total** | 180 s (target 175 s) | {tl['total']:.1f} s | {tl['total'] - 180:+.1f} s | | |")
     c += ["\nEvery beat is within about 5 s of its budget. The CTO accepted the residual differences "
           "(HAC-92, 2026-11-16): no re-time and no new render for timing alone.\n",
+          f"## Limits beat (HAC-91 §3e) vs s14 ({rng(['s14'])})\n",
+          "§3e suggests the caveats in FHDIC.md (84 DPO pairs, short repeated replies, no consumer UI). "
+          "s14 states the review, health-data and governance limits instead; the three suggested caveats "
+          "are not said anywhere in the cut. Adding them needs a new presenter line, so a new render.\n",
+          "| caveat | in the cut | evidence rows |", "|---|---|---|"]
+    for what, status, ev in LIMITS:
+        c.append(f"| {what} | {status} | {' · '.join(ev) or '–'} |")
+    c += ["",
           "## Lapse → recovery and sustained change (criteria 1 and 3)\n",
           "| what the criterion asks | where | status | what is said or shown | evidence rows |",
           "|---|---|---|---|---|"]
@@ -419,6 +456,7 @@ def main() -> None:
     p = sub.add_parser("plan"); p.add_argument("--tts", required=True); p.add_argument("--clips", required=True)
     p.add_argument("--work", required=True); p.add_argument("--ffmpeg", required=True)
     p = sub.add_parser("presenter"); p.add_argument("--work", required=True); p.add_argument("--cap-usd", type=float, default=30.0)
+    p.add_argument("--poll-timeout", type=float, default=3600.0, help="seconds to wait for the render before stopping")
     p = sub.add_parser("compose"); p.add_argument("--work", required=True); p.add_argument("--footage", required=True)
     p.add_argument("--cards", required=True); p.add_argument("--fonts", required=True); p.add_argument("--ffmpeg", required=True)
     p.add_argument("--out", required=True); p.add_argument("--crf", type=int, default=24)
