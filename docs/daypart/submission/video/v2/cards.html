@@ -1,0 +1,195 @@
+<!doctype html>
+<!-- HAC-92 video v2 cards. One page renders one card, chosen by ?card=<id>&w=<width>.
+     Every number names its evidence-ledger row (docs/daypart/submission/evidence-ledger.md) in a
+     data-ledger attribute and in the small source line. Style follows the Meta HeyGen video:
+     cream paper, ink headings, letter-spaced mono kickers, a teal accent. Fonts (Space Grotesk,
+     JetBrains Mono, OFL) are injected by render_cards.js. -->
+<html lang="en"><head><meta charset="utf-8"><title>HAC-92 cards</title>
+<style>
+:root{--paper:#F1EFE9;--panel:#E7E4DB;--ink:#17283A;--muted:#5B6672;--teal:#2A9D8F;--teal2:#BFE3DC;--amber:#C9822B;--line:#17283A;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--paper);color:var(--ink);font-family:'Space Grotesk',sans-serif;}
+#stage{position:relative;height:1080px;overflow:hidden;background:var(--paper);padding:56px 84px 0 84px}
+.kick{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:26px;letter-spacing:.32em;border:2px solid var(--line);padding:10px 18px;text-transform:uppercase}
+.tag{position:absolute;top:6px;right:0;font-family:'JetBrains Mono',monospace;font-size:17px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+h1{font-size:76px;line-height:1.0;font-weight:700;letter-spacing:-.01em;text-transform:uppercase;margin-top:22px}
+h1.sm{font-size:58px}
+.sub{font-size:28px;color:var(--muted);margin-top:14px;max-width:1500px}
+.box{border:2.5px solid var(--line);background:var(--panel);padding:22px 26px;margin-top:26px}
+.lab{font-family:'JetBrains Mono',monospace;font-size:19px;letter-spacing:.24em;color:var(--muted);text-transform:uppercase}
+.big{font-size:118px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.src{font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--muted);letter-spacing:.06em;margin-top:10px}
+.row{display:flex;gap:18px;align-items:stretch}
+.tile{flex:1;border:2px solid var(--line);padding:16px 18px;background:var(--paper)}
+.tile b{display:block;font-size:24px;text-transform:uppercase;margin-bottom:6px}
+.tile span{font-size:21px;color:var(--muted);line-height:1.25;display:block}
+.tile.on{background:var(--teal);color:#fff;border-color:var(--teal)} .tile.on span{color:#E9F6F3}
+.chip{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:18px;letter-spacing:.16em;padding:6px 12px;border:2px solid var(--line);text-transform:uppercase;background:var(--paper)}
+.chip.teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.chip.amber{background:var(--amber);color:#fff;border-color:var(--amber)}
+.flow{display:flex;align-items:center;gap:10px;margin-top:20px}
+.flow .n{border:2px solid var(--line);padding:12px 14px;background:var(--paper);font-weight:700;font-size:22px;text-transform:uppercase;line-height:1.1}
+.flow .n small{display:block;font-weight:400;font-size:16px;color:var(--muted);text-transform:none;margin-top:4px}
+.flow .n.on{background:var(--teal);border-color:var(--teal);color:#fff}.flow .n.on small{color:#E9F6F3}
+.flow .n.dash{border-style:dashed}
+.flow .n.lit small{animation:litsm .4s forwards;animation-delay:calc((var(--d,0) - var(--t,0)) * 1s);animation-play-state:paused}
+@keyframes litsm{to{color:#E9F6F3}}
+.flow i{font-style:normal;font-size:26px;color:var(--muted)}
+.bars .b{display:grid;grid-template-columns:330px 1fr 170px;align-items:center;gap:16px;margin:12px 0;font-size:24px}
+.bars .t{height:34px;background:#D9D5CA;position:relative}
+.bars .f{position:absolute;left:0;top:0;bottom:0;background:var(--ink);transform-origin:left;}
+.bars .f.teal{background:var(--teal)} .bars .f.amber{background:var(--amber)} .bars .f.grey{background:#8B96A1}
+.bars .v{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700}
+.bars .ch{position:absolute;top:-6px;bottom:-6px;width:4px;background:var(--amber)}
+ul.l{list-style:none;margin-top:8px} ul.l li{font-size:25px;line-height:1.3;padding:11px 0 11px 40px;position:relative;border-bottom:1.5px solid #CFCBBF}
+ul.l li:before{content:attr(data-m);position:absolute;left:0;top:11px;font-family:'JetBrains Mono',monospace;color:var(--teal);font-weight:700}
+ul.l li em{font-style:normal;font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--muted);margin-left:8px}
+.url{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;word-break:break-all;margin-top:6px}
+.a{opacity:0;animation:up .55s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc((var(--d,0) - var(--t,0)) * 1s);animation-play-state:paused}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.grow{transform:scaleX(0);animation:grow .9s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc((var(--d,0) - var(--t,0)) * 1s);animation-play-state:paused}
+@keyframes grow{to{transform:scaleX(1)}}
+.lit{animation:lit .4s forwards;animation-delay:calc((var(--d,0) - var(--t,0)) * 1s);animation-play-state:paused}
+@keyframes lit{to{background:var(--teal);border-color:var(--teal);color:#fff}}
+/* footage frame */
+#win{position:absolute;left:172px;top:122px;width:1408px;height:792px;border:3px solid var(--ink);background:#0b1220}
+</style></head><body><div id="stage"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const W = Number(q.get('w') || 1920);
+const T = (q.get('tag') || 'Synthetic demo · simulated results · not medical advice');
+const S = document.getElementById('stage');
+S.style.width = W + 'px';
+const C = {
+title: () => `
+ <div class="kick a">System analysis // FHDIC 2026</div>
+ <h1 class="a" style="--d:.15">Clinical Human Clone</h1>
+ <div class="sub a" style="--d:.3">A health record you can see, correct and act on. Team Syntropy · Sustaining Healthy Behaviors.</div>
+ <div class="box a" style="--d:.55"><div class="lab">The problem</div>
+  <div style="font-size:34px;font-weight:700;margin-top:8px;text-transform:uppercase">Routines break when the week changes</div>
+  <div class="row" style="margin-top:16px">
+   <div class="tile a" style="--d:.8"><b>Week 1</b><span>Forgetting gets in the way</span></div>
+   <div class="tile a" style="--d:.95"><b>Week 2</b><span>Weekends are harder</span></div>
+   <div class="tile a" style="--d:1.1"><b>Week 3</b><span>Mood drops; wants to reach out</span></div></div>
+  <div class="src" style="margin-top:12px">A generic reminder says the same words every week, with no reason given.</div></div>
+ <div class="box a" style="--d:1.5;background:var(--paper)" data-ledger="L66"><div class="lab">Baseline · simulated</div>
+  <div class="row" style="align-items:flex-end;gap:28px;margin-top:6px"><div class="big">0.637</div>
+  <div style="font-size:24px;line-height:1.3;padding-bottom:10px">mean simulated adherence with <b>no support</b>:<br>share of days the routine was kept</div></div>
+  <div class="src">n = 150 episodes (50 scenarios × 3 seeds × 14 days) · simulator, not people · ledger L66</div></div>`,
+product: () => `
+ <div class="kick a">Product // who it is for</div>
+ <h1 class="sm a" style="--d:.15">One sentence in,<br>a reviewed record out</h1>
+ <div class="row a" style="--d:.35;margin-top:24px">
+  <div class="tile"><b>For</b><span>People keeping a health routine going</span></div>
+  <div class="tile"><b>And</b><span>The care team behind them</span></div></div>
+ <div class="box a" style="--d:.6" data-ledger="L1 L21 L24"><div class="lab">The member flow · built and hosted</div>
+  <div class="flow" style="flex-wrap:wrap">
+   <div class="n lit" style="--d:.9">Check-in<small>one sentence</small></div><i>→</i>
+   <div class="n lit" style="--d:1.4">Review<small>confirm or correct</small></div><i>→</i>
+   <div class="n lit" style="--d:1.9">Passport<small>every value sourced</small></div></div>
+  <div class="flow" style="flex-wrap:wrap">
+   <i>→</i><div class="n lit" style="--d:2.4">Inclinations<small>what weighs most</small></div><i>→</i>
+   <div class="n lit" style="--d:2.9">Next step<small>choose · defer · ask</small></div><i>→</i>
+   <div class="n dash">A person<small>pain or crisis</small></div></div>
+  <div class="src">Ledger L1 · L21 · L24</div></div>`,
+hypothesis: () => `
+ <div class="kick a">Method // hypothesis → architecture</div>
+ <div class="box a" style="--d:.2;background:var(--paper)"><div class="lab">Hypothesis · tested here on synthetic members only</div>
+  <div style="font-size:30px;line-height:1.3;margin-top:10px;font-weight:500">A record the person <b>confirms</b>, plus a step matched to <b>what drives them</b>, sustains a routine better than a fixed reminder, <b>without unsafe advice</b>.</div></div>
+ <div class="box a" style="--d:.7" data-ledger="L6"><div class="lab">Live · every check-in · fixed rules, no model call</div>
+  <div class="flow">
+   <div class="n lit" style="--d:1.0">Check-in</div><i>→</i><div class="n lit" style="--d:1.3">Safety checks</div><i>→</i>
+   <div class="n lit" style="--d:1.6">Proposals</div><i>→</i><div class="n lit" style="--d:1.9">Review</div><i>→</i>
+   <div class="n lit" style="--d:2.2">Memory</div><i>→</i><div class="n lit" style="--d:2.5">Passport</div></div></div>
+ <div class="box a" style="--d:2.9;border-style:dashed" data-ledger="L57 L59 L66 L67"><div class="lab">Offline · training and evaluation</div>
+  <div class="flow">
+   <div class="n">Synthetic members<small>175, fixed seeds</small></div><i>→</i>
+   <div class="n">Training<small>SFT · DPO · reward model · GRPO</small></div><i>→</i>
+   <div class="n">Evaluation<small>141 prompts · 150 episodes</small></div><i>→</i>
+   <div class="n">Versioned results<small>read by the console</small></div></div>
+  <div class="src">Ledger L6 · L57 · L59 · L66 · L67</div> </div></div>`,
+selfcheck: () => `
+ <div class="kick a">Method // how it validates itself</div>
+ <h1 class="sm a" style="--d:.15">Every output is checked<br>before it is shown</h1>
+ <div class="row" style="margin-top:34px;gap:22px;flex-wrap:wrap">
+  ${[['01','Review gate','Nothing is saved until the person confirms, corrects or discards each value. All or nothing.','L5'],
+     ['02','Freshness','A value more than 14 days old is withheld: the card shows no number.','L22'],
+     ['03','Boundary rules','Every next step passes the versioned boundary-v1 rules, or becomes a hand-off to a person.','L24'],
+     ['04','Crisis first','Crisis language is checked before extraction: a fixed hand-off, nothing saved.','L10']]
+   .map((r,i)=>`<div class="tile a" style="--d:${.5+i*.45};flex:0 0 calc(50% - 11px);padding:22px 24px" data-ledger="${r[3]}">
+     <div class="row" style="justify-content:space-between"><span class="chip teal">✓ ${r[0]}</span><span class="src" style="margin:0">${r[3]}</span></div>
+     <b style="margin-top:14px;font-size:30px">${r[1]}</b><span style="font-size:24px">${r[2]}</span></div>`).join('')}
+ </div>
+ <div class="src a" style="--d:2.4;margin-top:22px;font-size:18px" data-ledger="L64">CI also checks that the held-out profiles are in no training artefact: 8 of 8 data builders pass (L64).</div>`,
+results1: () => `
+ <div class="kick a">Evidence // results</div><span class="chip amber a" style="--d:.1;margin-left:18px;vertical-align:middle">Synthetic / simulated · not a patient outcome</span>
+ <div class="row" style="gap:40px;margin-top:30px">
+ <div class="box a" style="--d:.2;flex:1;margin-top:0;background:var(--paper)" data-ledger="L59 L60 L61"><div class="lab">Boundary pass rate</div>
+  <div style="font-size:22px;color:var(--muted);margin:6px 0 10px">n = 141 held-out prompts · seed 0 · greedy</div>
+  <div class="bars">
+   ${[['Base model',45/141,'45 / 141','grey'],['Fine-tuned (SFT)',1,'141 / 141',''],['Preference-tuned (DPO)',1,'141 / 141','teal']]
+     .map((r,i)=>`<div class="b" style="grid-template-columns:250px 1fr 140px"><span>${r[0]}</span><div class="t"><div class="f grow ${r[3]}" style="width:${r[1]*100}%;--d:${.6+i*.3}"></div></div><span class="v">${r[2]}</span></div>`).join('')}
+  </div>
+  <div class="src" style="margin-top:16px">90 of the base model's 141 replies were empty: most of its gap is empty output, not unsafe text (L61). One seed, so no spread is reported (L59).</div></div>
+ <div class="box a" style="--d:.5;flex:1;margin-top:0;background:var(--paper)" data-ledger="L66 L79"><div class="lab">Mean simulated adherence</div>
+  <div style="font-size:22px;color:var(--muted);margin:6px 0 10px">n = 150 episodes × 14 days · 0 rule violations in every arm</div>
+  <div class="bars">
+   ${[['No support',.637,'0.637','grey'],['Random message',.719,'0.719','grey'],['Always problem-solving',.833,'0.833',''],['Learned policy (GRPO)',.840,'0.840','teal']]
+     .map((r,i)=>`<div class="b" style="grid-template-columns:290px 1fr 110px"><span>${r[0]}</span><div class="t"><div class="f grow ${r[3]}" style="width:${r[1]*100}%;--d:${1.0+i*.3}"></div></div><span class="v">${r[2]}</span></div>`).join('')}
+  </div>
+  <div class="src" style="margin-top:16px">Simulator, not people. CPU only. Ledger L66 · L79.</div></div>
+ </div>`,
+results2: () => `
+ <div class="kick a">Evidence // safety and lapse recovery</div><span class="chip amber a" style="--d:.1;margin-left:18px;vertical-align:middle">Synthetic / simulated · not a patient outcome</span>
+ <div class="row" style="gap:40px;margin-top:30px">
+ <div class="box a" style="--d:.2;flex:0 0 640px;margin-top:0;background:var(--paper)" data-ledger="L65"><div class="lab">Boundary rules · sealed corpus</div>
+  <div class="row" style="gap:30px;margin-top:14px"><div><div class="big">74/74</div><div style="font-size:22px">labelled violations caught</div></div>
+  <div><div class="big">0/128</div><div style="font-size:22px">false alarms on compliant rows</div></div></div>
+  <div class="src" style="margin-top:18px">202-row sealed corpus, 8 rules. A measurement on that corpus, not a proof (L65).</div></div>
+<div class="box a" style="--d:.5;flex:1;margin-top:0;background:var(--paper)" data-ledger="L62"><div class="lab">Lapse-recovery rubric · weakest result</div>
+  <div style="font-size:22px;color:var(--muted);margin:6px 0 4px">trained replies · held-out: 51 check-in, 90 probe prompts · seed 0</div>
+  <div class="bars">
+   ${[['SFT · check-in',7,51,'amber'],['DPO · check-in',6,51,'amber'],['SFT · probe',81,90,'teal'],['DPO · probe',85,90,'teal']]
+     .map((r,i)=>`<div class="b" style="grid-template-columns:190px 1fr 100px;margin:12px 0;font-size:22px"><span>${r[0]}</span><div class="t" style="height:28px"><div class="f grow ${r[3]}" style="width:${r[1]/r[2]*100}%;--d:${.9+i*.22}"></div></div><span class="v">${r[1]}/${r[2]}</span></div>`).join('')}
+  </div>
+  <div class="src" style="margin-top:12px">Replies to a check-in rarely pass the recovery rubric. Ledger L62.</div></div>
+ </div>`,
+outcome: () => `
+ <div class="kick a">Expected outcome // impact</div>
+ <div style="margin-top:20px"><span class="chip amber a" style="--d:.1">Concept · not yet measured</span></div>
+ <h1 class="sm a" style="--d:.2">What we expect</h1>
+ <ul class="l a" style="--d:.5;margin-top:14px">
+  <li data-m="→" class="a" style="--d:.7">Members who can <b>see, correct and act on</b> their own record</li>
+  <li data-m="→" class="a" style="--d:1.0">Care teams who see <b>why</b> a step was offered</li>
+  <li data-m="→" class="a" style="--d:1.3">Routines that hold when the week changes</li></ul>
+ <div class="box a" style="--d:1.8;background:var(--paper)" data-ledger="L79"><div class="lab">What is measured so far · simulated</div>
+  <div style="font-size:30px;margin-top:8px"><b>0.840</b> learned policy vs <b>0.833</b> best script</div>
+  <div class="src">A small edge, in a simulator (L79). No patient benefit is claimed (L73).</div></div>`,
+limits: () => `
+ <div class="kick a">Limits // next steps</div>
+ <ul class="l a" style="--d:.2;margin-top:22px">
+  <li data-m="!" class="a" style="--d:.3">No clinician has reviewed the content: a board sign-off, not a clinical review<em>L73</em></li>
+  <li data-m="!" class="a" style="--d:.6">No person's health data: synthetic members and a simulator<em>L73 L29</em></li>
+  <li data-m="!" class="a" style="--d:.9">Real input is off: 12 of 12 governance gates open<em>L56</em></li>
+  <li data-m="!" class="a" style="--d:1.2">Base gap is mostly empty replies: 90 of 141<em>L61</em></li></ul>
+ <div class="box a" style="--d:1.8;background:var(--paper)"><div class="row" style="justify-content:space-between"><div class="lab">Next</div><span class="chip amber">Concept · not built</span></div>
+  <div class="flow"><div class="n">1 · Clinical reviewer</div><i>→</i><div class="n">2 · Consented pilot</div><i>→</i><div class="n">3 · Measured result</div></div></div>`,
+close: () => `
+ <div class="kick a">Try it // read the code</div>
+ <h1 class="a" style="--d:.15">Clinical Human Clone</h1>
+ <div class="sub a" style="--d:.3">Team Syntropy · FHDIC 2026</div>
+ <div class="box a" style="--d:.6;background:var(--paper)" data-ledger="L2"><div class="lab">Live prototype</div>
+  <div class="url">supermomo668--daypart-demo-playground<br>.us-east.modal.run</div></div>
+ <div class="box a" style="--d:.9;background:var(--paper)" data-ledger="L40"><div class="lab">Source · Apache-2.0</div>
+  <div class="url">github.com/Syntropy-Health/<br>longevity-memory-sdk</div></div>
+`,
+footage: () => `
+ <div class="row" style="justify-content:space-between;align-items:center">
+  <div class="kick" style="font-size:21px;padding:7px 14px">Live prototype // real recording</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:17px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase">${q.get('meta')||''}</div></div>
+ <div style="font-size:36px;font-weight:700;text-transform:uppercase;margin-top:10px;letter-spacing:-.005em">${q.get('title')||''}</div>
+ <div id="win"></div>`,
+};
+const Z = Number(q.get('z') || 1);
+S.innerHTML = `<div id="z" style="zoom:${Z};width:${(W - 168) / Z}px;position:relative">${C[q.get('card')]()}</div>`;
+</script></body></html>

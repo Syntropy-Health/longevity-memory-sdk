@@ -1,0 +1,284 @@
+{
+  "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run",
+  "build_sha": "6627f983c8d7ee1ac84346d51a4581d59f2cf49a",
+  "viewport": "1280x720",
+  "recorded_at": "2026-11-16T03:54:42.429Z",
+  "video": "page@848edca361e96a23f15ec512998b2b0b.webm",
+  "source": "real recording of the hosted build (Playwright recordVideo); nothing mocked or intercepted",
+  "checkin_text": "slept 6 hours, pain 4/10, mood 3 out of 5, walked 8000 steps",
+  "corrected_sleep_hours": 6.5,
+  "safety_text": "Can you give me a crisis line to call?",
+  "pii_text": "My name is Sam Lee, email sam.lee@example.com, slept 7 hours",
+  "clips": [
+    {
+      "id": "s2-checkin-review",
+      "title": "Synthetic check-in, review and correction before saving",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/",
+      "start": 4.86,
+      "end": 21.26
+    },
+    {
+      "id": "s3-passport",
+      "title": "Health Clone Passport and evidence thread",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "start": 21.55,
+      "end": 34.16
+    },
+    {
+      "id": "s3b-inclinations",
+      "title": "Passport Inclinations: what weighs most and linked next steps",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "start": 34.18,
+      "end": 45.19
+    },
+    {
+      "id": "s4a-next-step",
+      "title": "Suggested next step: choose, defer or ask a professional",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
+      "start": 45.49,
+      "end": 51.31
+    },
+    {
+      "id": "s4b-safety",
+      "title": "Crisis hand-off: nothing extracted or saved",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#today",
+      "start": 57.52,
+      "end": 64.94
+    },
+    {
+      "id": "s4d-timeline",
+      "title": "How the clone changed: every saved check-in",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#timeline",
+      "start": 65.19,
+      "end": 70.61
+    },
+    {
+      "id": "s5a-overview",
+      "title": "Research console overview: headline results and how the clone learns",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#pipeline",
+      "start": 71.61,
+      "end": 80.57
+    },
+    {
+      "id": "s5b-results",
+      "title": "Results: training steps on 141 held-out prompts, coaching approaches with simulated members",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
+      "start": 80.64,
+      "end": 90.56
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "s2-today-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/",
+      "t": 6.46
+    },
+    {
+      "file": "s2-review-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#review/2c60c6be-c29",
+      "t": 13.74
+    },
+    {
+      "file": "s2-decided-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#review/2c60c6be-c29",
+      "t": 18.13
+    },
+    {
+      "file": "s2-saved-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#review/2c60c6be-c29",
+      "t": 21.26
+    },
+    {
+      "file": "s3-passport-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 24.12
+    },
+    {
+      "file": "s3-evidence-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 31.06
+    },
+    {
+      "file": "s3-withheld-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 34.16
+    },
+    {
+      "file": "s3b-inclinations-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 38.23
+    },
+    {
+      "file": "s3b-inclinations-steps-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#passport",
+      "t": 45.19
+    },
+    {
+      "file": "s4a-next-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
+      "t": 48.58
+    },
+    {
+      "file": "s4a-chosen-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#next",
+      "t": 51.31
+    },
+    {
+      "file": "s4c-pii-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#today",
+      "t": 57.43
+    },
+    {
+      "file": "s4b-handoff-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#today",
+      "t": 64.94
+    },
+    {
+      "file": "s4d-timeline-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/#timeline",
+      "t": 67.79
+    },
+    {
+      "file": "s5a-overview-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#pipeline",
+      "t": 75.22
+    },
+    {
+      "file": "s5a-overview-training-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#pipeline",
+      "t": 80.57
+    },
+    {
+      "file": "s5b-results-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
+      "t": 84.25
+    },
+    {
+      "file": "s5b-results-approaches-1280.png",
+      "url": "https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab",
+      "t": 90.56
+    }
+  ],
+  "api": [
+    {
+      "t": 2,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/personas"
+    },
+    {
+      "t": 2.32,
+      "status": 201,
+      "method": "POST",
+      "url": "/api/journals"
+    },
+    {
+      "t": 2.46,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/fixtures"
+    },
+    {
+      "t": 2.63,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/passport"
+    },
+    {
+      "t": 4.33,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/timeline"
+    },
+    {
+      "t": 10.49,
+      "status": 201,
+      "method": "POST",
+      "url": "/api/checkins"
+    },
+    {
+      "t": 10.63,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/units"
+    },
+    {
+      "t": 18.34,
+      "status": 200,
+      "method": "POST",
+      "url": "/api/checkins/2c60c6be-c29/review"
+    },
+    {
+      "t": 18.52,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/timeline"
+    },
+    {
+      "t": 21.47,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/passport"
+    },
+    {
+      "t": 21.49,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/inventory"
+    },
+    {
+      "t": 45.41,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/next-step"
+    },
+    {
+      "t": 48.8,
+      "status": 200,
+      "method": "POST",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/next-step"
+    },
+    {
+      "t": 51.53,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/timeline"
+    },
+    {
+      "t": 51.62,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/passport"
+    },
+    {
+      "t": 53.01,
+      "status": 422,
+      "method": "POST",
+      "url": "/api/checkins"
+    },
+    {
+      "t": 60.75,
+      "status": 200,
+      "method": "POST",
+      "url": "/api/checkins"
+    },
+    {
+      "t": 65.15,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/journals/2c60c6be753d45b78c47dad52c3a3139/timeline"
+    },
+    {
+      "t": 71.1,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/lab"
+    },
+    {
+      "t": 80.79,
+      "status": 200,
+      "method": "GET",
+      "url": "/api/lab"
+    }
+  ]
+}

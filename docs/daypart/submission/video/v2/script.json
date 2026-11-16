@@ -1,0 +1,205 @@
+{
+ "title": "Clinical Human Clone: FHDIC demo video v2 (HAC-92)",
+ "note": "Editable script. Every spoken number names its evidence-ledger row (docs/daypart/submission/evidence-ledger.md). 'kind' is the visual source: presenter = HeyGen presenter (Sable, avatar_v) with a card; card = a full-frame graphic card; footage = real recording of the hosted build (capture/clips-1280.json id). The register is hypothesis -> method -> evidence -> limit. Section budget is the HAC-92 draft until the HAC-91 rubric lands. 'say' is the spoken form where the voice needs numbers spelled out; captions show 'text'.",
+ "voice": {
+  "provider": "heygen",
+  "model": "heygen-voice-1-turbo-free",
+  "voice_id": "0274c318e85243c4a4c812fc73819ab2",
+  "voice_name": "Clinical Warmth"
+ },
+ "presenter": {
+  "provider": "heygen",
+  "avatar_id": "14a49b9113914452bc76f94c1a23e278",
+  "avatar_name": "Sable",
+  "engine": "avatar_v"
+ },
+ "segments": [
+  {
+   "id": "s01",
+   "section": "1 Title and problem",
+   "kind": "presenter",
+   "card": "title",
+   "register": "problem",
+   "ledger": [
+    "L66"
+   ],
+   "text": "Healthy routines break when the week changes, and generic reminders don't explain why. In our simulator, with no support, members kept their routine on 63.7 percent of days, over 150 two-week episodes.",
+   "say": "Healthy routines break when the week changes, and generic reminders don't explain why. In our simulator, with no support, members kept their routine on sixty-three point seven percent of days, over 150 two-week episodes."
+  },
+  {
+   "id": "s02",
+   "section": "2 Product and who it is for",
+   "kind": "presenter",
+   "card": "product",
+   "register": "product",
+   "ledger": [
+    "L1",
+    "L21",
+    "L24"
+   ],
+   "text": "Clinical Human Clone is for people keeping a routine going, and the care team behind them. One sentence becomes a reviewed record, a passport that shows where each value came from, and one bounded next step."
+  },
+  {
+   "id": "s03",
+   "section": "3 Method",
+   "kind": "card",
+   "card": "hypothesis",
+   "register": "hypothesis",
+   "ledger": [
+    "L6",
+    "L57",
+    "L66"
+   ],
+   "text": "Hypothesis: a record the person confirms, plus a step matched to what drives them, sustains a routine better than a fixed reminder, without unsafe advice. Method: fixed rules run live, with no model call. Training and evaluation run offline, on synthetic members."
+  },
+  {
+   "id": "s04",
+   "section": "3 Method",
+   "kind": "card",
+   "card": "selfcheck",
+   "register": "method",
+   "ledger": [
+    "L5",
+    "L22",
+    "L24"
+   ],
+   "text": "The system checks itself. Nothing is saved until the person reviews it. A value older than 14 days is withheld. Every next step must pass versioned boundary rules, or it becomes a hand-off to a person."
+  },
+  {
+   "id": "s05",
+   "section": "4 Live prototype demo",
+   "kind": "footage",
+   "clip": "s2-checkin-review",
+   "register": "demo",
+   "ledger": [
+    "L45",
+    "L5"
+   ],
+   "text": "This is the hosted prototype, recorded live. One synthetic sentence gives three values, each with its source words. Sleep is corrected to six and a half hours, then saved."
+  },
+  {
+   "id": "s06",
+   "section": "4 Live prototype demo",
+   "kind": "footage",
+   "clip": "s3-passport",
+   "register": "demo",
+   "ledger": [
+    "L21",
+    "L22"
+   ],
+   "text": "The passport traces each value through a five-step evidence thread, from check-in to card. A card with no recent value is withheld."
+  },
+  {
+   "id": "s07",
+   "section": "4 Live prototype demo",
+   "kind": "footage",
+   "clip": "s3b-inclinations",
+   "register": "demo",
+   "ledger": [
+    "L80"
+   ],
+   "text": "Inclinations show what weighs most for this member, from simulated answers, and tie each next step to one of them."
+  },
+  {
+   "id": "s08",
+   "section": "4 Live prototype demo",
+   "kind": "footage",
+   "clip": "s4a-next-step",
+   "register": "demo",
+   "ledger": [
+    "L24",
+    "L53"
+   ],
+   "text": "After a pain report, the next step routes to a person."
+  },
+  {
+   "id": "s09",
+   "section": "4 Live prototype demo",
+   "kind": "footage",
+   "clip": "s4b-safety",
+   "register": "demo",
+   "ledger": [
+    "L10",
+    "L47"
+   ],
+   "text": "Crisis language is never processed. A fixed hand-off appears, and nothing is saved."
+  },
+  {
+   "id": "s10",
+   "section": "4 Live prototype demo",
+   "kind": "footage",
+   "clip": "s5b-results",
+   "register": "demo",
+   "ledger": [
+    "L25"
+   ],
+   "text": "The research console reports every result with its run, its split and its sample size."
+  },
+  {
+   "id": "s11",
+   "section": "5 Results",
+   "kind": "card",
+   "card": "results1",
+   "register": "evidence",
+   "ledger": [
+    "L59",
+    "L60",
+    "L66",
+    "L79"
+   ],
+   "text": "Results, all synthetic or simulated. On 141 held-out prompts, the base model passed the boundary check 45 times; both trained stages passed all 141. Over 150 simulated episodes, the learned policy reached 0.840 mean adherence, against 0.833 for the best script.",
+   "say": "Results, all synthetic or simulated. On 141 held-out prompts, the base model passed the boundary check 45 times; both trained stages passed all 141. Over 150 simulated episodes, the learned policy reached zero point eight four zero mean adherence, against zero point eight three three for the best script."
+  },
+  {
+   "id": "s12",
+   "section": "5 Results",
+   "kind": "card",
+   "card": "results2",
+   "register": "evidence",
+   "ledger": [
+    "L65",
+    "L62"
+   ],
+   "text": "The boundary rules caught 74 of 74 labelled violations, with no false alarms on 128 compliant rows. Our weakest result is lapse recovery: the trained replies pass that rubric on only 7 and 6 of 51 check-in prompts.",
+   "say": "The boundary rules caught seventy-four of seventy-four labelled violations, with no false alarms on one hundred twenty-eight compliant rows. Our weakest result is lapse recovery: the trained replies pass that rubric on only seven and six of fifty-one check-in prompts."
+  },
+  {
+   "id": "s13",
+   "section": "6 Expected outcome and impact",
+   "kind": "presenter",
+   "card": "outcome",
+   "register": "concept",
+   "ledger": [
+    "L73",
+    "L79"
+   ],
+   "text": "What we expect, not yet measured: members who can see, correct and act on their record, and care teams who see why a step was offered. The policy's edge over the best script is small, and simulated."
+  },
+  {
+   "id": "s14",
+   "section": "7 Limits and next steps",
+   "kind": "presenter",
+   "card": "limits",
+   "register": "limit",
+   "ledger": [
+    "L73",
+    "L56",
+    "L61"
+   ],
+   "text": "The limits. No clinician has reviewed the content, and no person's health data was used. Real input stays off behind 12 open governance gates. Next: a clinical reviewer, a consented pilot, and a measured result."
+  },
+  {
+   "id": "s15",
+   "section": "8 Close",
+   "kind": "presenter",
+   "card": "close",
+   "register": "close",
+   "ledger": [
+    "L2",
+    "L40",
+    "L71"
+   ],
+   "text": "Try the prototype and read the open-source code at the links on screen. Clinical Human Clone, from Team Syntropy."
+  }
+ ]
+}
