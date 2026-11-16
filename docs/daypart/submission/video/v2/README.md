@@ -53,12 +53,18 @@ python make_video_v2.py docs --work <w>                                      # t
 cp <w>/captions.srt .
 ```
 
+`docs` reads each segment's `ledger` rows from `<w>/timeline.json`, not from `script.json`. After a
+ledger edit in `script.json`, run `plan` first (free) and then `docs`; `docs` alone writes the old rows.
+
 A new capture is a new take. Re-check the `FOOTAGE` windows and `TAKE_LAG` in `make_video_v2.py`
 against its `clips-1280.json`. A changed presenter line means a new presenter render, and a new spend.
 
 `presenter` polls for at most `--poll-timeout` seconds (default 3600); re-running it keeps polling the
 same video, with no new spend. If `<w>/presenter.json` records a failed render, `presenter` stops: read
-the failure, then delete that file to submit a new, paid render.
+the failure, then delete that file to submit a new, paid render. `presenter` marks `<w>/presenter.json`
+as `submitting` before the paid POST. If the POST times out or returns no video id, the file keeps that
+marker and a re-run stops without posting again: check the wallet and the HeyGen video list first, then
+either add the render's id as `video_id` (to poll it) or delete the file (to pay for a new render).
 
 ## HeyGen spend (HAC-92, cap USD 30)
 
