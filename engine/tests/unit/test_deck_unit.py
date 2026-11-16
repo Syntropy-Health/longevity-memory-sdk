@@ -46,7 +46,8 @@ def _slides(page: str) -> list[str]:
 
 
 def test_deck_route_and_assets(client, page):
-    for path, media in [("/deck/deck.css", "text/css"), ("/deck/deck.js", "text/javascript")]:
+    for path, media in [("/deck/deck.css", "text/css"), ("/deck/deck.js", "text/javascript"),
+                        ("/deck/fonts/InterVariable.woff2", "font/woff2")]:
         r = client.get(path)
         assert r.status_code == 200 and r.headers["content-type"].startswith(media)
     for src in set(re.findall(r'src="(/deck/screens/[^"]+)"', page)):
@@ -93,6 +94,19 @@ def test_no_caveat_labels_and_no_unsupported_claims(page):
 def test_body_text_is_short(page):
     for lead in re.findall(r'<p class="lead">([^<]*)</p>', page):
         assert len(lead.split()) <= 25, lead
+
+
+def test_no_external_runtime_assets(client, page):
+    # HAC-105: fonts and scripts are vendored; nothing is fetched from a CDN when the deck runs.
+    assert not re.search(r'(?:src|href)="(?:https?:)?//(?!supermomo668--daypart-demo-playground|github.com/Syntropy-Health)', page)
+    css = client.get("/deck/deck.css").text
+    assert not re.search(r"url\((?:['\"])?(?:https?:)?//", css) and "@import" not in css
+
+
+def test_counters_carry_their_final_value(page):
+    # Animated counters start from the value the page already shows, so export, print and no-JS read it as written.
+    for to, dec, text in re.findall(r'<span class="num" data-to="([^"]+)" data-dec="(\d+)"[^>]*>([^<]*)</span>', page):
+        assert f"{float(to):.{int(dec)}f}" == text
 
 
 def test_links_to_demo_and_repo(page):

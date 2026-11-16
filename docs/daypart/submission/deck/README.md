@@ -1,8 +1,18 @@
-# FHDIC deck (HAC-86: web deck)
+# FHDIC deck (HAC-86 web deck; v2 visual overhaul HAC-105)
 
 The submission deck is a web page served by the demo app at **`/deck`**
 (<https://supermomo668--daypart-demo-playground.us-east.modal.run/deck>). It uses the member app's
-tokens (dark navy, Inter, periwinkle and teal accents) and reads top-down:
+tokens (dark navy, Inter, periwinkle and teal accents) and reads top-down. v2 (HAC-105) keeps the story and
+reworks the look:
+- an aurora background on the cover and the close, and a gradient mesh elsewhere
+- glass bento cards with a pointer spotlight
+- display type with tight tracking
+- counters that run up to each result number, and bars that grow
+- staggered reveals and blurred slide transitions
+
+All motion is off under `prefers-reduced-motion` and in `?export=1`. Inter is vendored at `deck/fonts/`, so the
+deck loads nothing from a CDN. The 21st.dev components ported by hand are named in
+[`engine/daypart/demo/deck/CREDITS.md`](../../../../engine/daypart/demo/deck/CREDITS.md).
 
 | slides | section | what |
 |---|---|---|
@@ -25,9 +35,10 @@ appendix and the form answers keep them unchanged.
 | file | what |
 |---|---|
 | `build_web_deck.py` | the slide spec. It writes `engine/daypart/demo/deck/index.html` and copies `screens/` next to it (standard library only). |
-| `engine/daypart/demo/deck/deck.css`, `deck.js` | the style and the navigation, hand-written |
+| `engine/daypart/demo/deck/deck.css`, `deck.js` | the style, the motion and the navigation, hand-written |
+| `engine/daypart/demo/deck/fonts/`, `CREDITS.md` | the vendored Inter variable font and its licence; the ported 21st components |
 | `export_deck.py` | prints `/deck?export=1` to the PDF and renders `slide-N.png` (1600×900) for the video |
-| `clinical-human-clone-deck.pdf` | the form PDF: 10 pages at 1600×900, 1.04 MB (limit 5 MB), tagged, live links to the demo, the deck and the repo |
+| `clinical-human-clone-deck.pdf` | the form PDF: 10 pages at 1600×900, 2.03 MB (limit 5 MB), tagged, live links to the demo, the deck and the repo |
 | `screens/*.jpg` | crops of real screenshots of the hosted build (`daypart/build` 4ba3adb, 2026-11-11) |
 
 **No PPTX.** The deck is HTML and SVG now. An editable PPTX would mean redrawing every figure as shapes,
@@ -42,5 +53,6 @@ python docs/daypart/submission/deck/export_deck.py <base_url> --png <slides_dir>
 ```
 
 Tests: `engine/tests/unit/test_deck_unit.py` covers the route, the sections, the ledger rows, the absent
-caveat labels and the word budget. `engine/tests/ui/test_deck_ui.py` covers keyboard, click and hash
-navigation, axe at 1280 and 375, and the 1600×900 export.
+caveat labels, the word budget, the vendored assets and the counters' written values.
+`engine/tests/ui/test_deck_ui.py` covers keyboard, click and hash navigation, axe at 1280, 375 and 390, and the
+1600×900 export.

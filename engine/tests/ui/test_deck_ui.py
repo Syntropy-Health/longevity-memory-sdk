@@ -35,6 +35,7 @@ AXE_SHA256 = "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1"
 AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
 DESKTOP = {"width": 1280, "height": 800}
 MOBILE = {"width": 375, "height": 812}
+PHONE = {"width": 390, "height": 844}  # HAC-105 acceptance names 390
 N = 10
 
 
@@ -124,13 +125,13 @@ def test_keyboard_click_and_hash_navigation(browser: Browser, base_url: str):
     assert errors == []
 
 
-@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE], ids=["1280", "375"])
+@pytest.mark.parametrize("viewport", [DESKTOP, MOBILE, PHONE], ids=["1280", "375", "390"])
 def test_axe_clean_and_no_horizontal_scroll(browser: Browser, base_url: str, axe_source: str, viewport):
     errors: list[str] = []
     page = _page(browser, errors, viewport)
     page.goto(f"{base_url}/deck")
     expect(page.locator(".slide").first).to_be_visible()
-    if viewport is MOBILE:  # phone width: every slide is on the one page; one axe run covers them all
+    if viewport is not DESKTOP:  # phone width: every slide is on the one page; one axe run covers them all
         assert page.evaluate("document.documentElement.scrollWidth") <= viewport["width"]
         assert _axe(page, axe_source) == []
     else:  # presenting: only the current slide is rendered, so check each one
