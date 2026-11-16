@@ -120,54 +120,58 @@ Over 150 simulated episodes, the learned policy reached 0.840
 mean adherence, against 0.833 for the best script.
 
 28
-00:02:06,988 --> 00:02:14,142
+00:02:06,988 --> 00:02:14,504
 The boundary rules caught 74 of 74 labelled violations, with no
 false alarms on 128 compliant rows.
 
 29
-00:02:14,358 --> 00:02:20,748
-Seven questions recover hidden traits 76 to 91 percent of the
-time, in 58 held-out members.
+00:02:14,709 --> 00:02:16,589
+Our weakest result is lapse recovery:
 
 30
-00:02:22,108 --> 00:02:24,029
-What we expect, not yet measured:
+00:02:17,084 --> 00:02:22,144
+the trained replies pass that rubric on only 7 and 6 of 51
+check-in prompts.
 
 31
-00:02:24,403 --> 00:02:29,906
+00:02:23,342 --> 00:02:25,262
+What we expect, not yet measured:
+
+32
+00:02:25,636 --> 00:02:31,140
 members who can see, correct and act on their record, and care
 teams who see why a step was offered.
 
-32
-00:02:30,400 --> 00:02:33,851
+33
+00:02:31,633 --> 00:02:35,084
 The policy's edge over the best script is small, and simulated.
 
-33
-00:02:34,915 --> 00:02:35,508
+34
+00:02:36,149 --> 00:02:36,741
 The limits.
 
-34
-00:02:35,962 --> 00:02:39,734
+35
+00:02:37,195 --> 00:02:40,968
 No clinician has reviewed the content, and no person's health
 data was used.
 
-35
-00:02:40,108 --> 00:02:43,196
+36
+00:02:41,341 --> 00:02:44,429
 Real input stays off behind 12 open governance gates.
 
-36
-00:02:43,649 --> 00:02:44,001
+37
+00:02:44,883 --> 00:02:45,235
 Next:
 
-37
-00:02:44,173 --> 00:02:47,342
+38
+00:02:45,406 --> 00:02:48,575
 a clinical reviewer, a consented pilot, and a measured result.
 
-38
-00:02:48,415 --> 00:02:51,624
+39
+00:02:49,649 --> 00:02:52,857
 Try the prototype and read the open-source code at the links on
 screen.
 
-39
-00:02:52,198 --> 00:02:54,442
+40
+00:02:53,432 --> 00:02:55,675
 Clinical Human Clone, from Team Syntropy.

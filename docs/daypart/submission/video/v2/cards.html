@@ -38,7 +38,7 @@ h1.sm{font-size:58px}
 .bars .b{display:grid;grid-template-columns:330px 1fr 170px;align-items:center;gap:16px;margin:12px 0;font-size:24px}
 .bars .t{height:34px;background:#D9D5CA;position:relative}
 .bars .f{position:absolute;left:0;top:0;bottom:0;background:var(--ink);transform-origin:left;}
-.bars .f.teal{background:var(--teal)} .bars .f.grey{background:#8B96A1}
+.bars .f.teal{background:var(--teal)} .bars .f.amber{background:var(--amber)} .bars .f.grey{background:#8B96A1}
 .bars .v{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700}
 .bars .ch{position:absolute;top:-6px;bottom:-6px;width:4px;background:var(--amber)}
 ul.l{list-style:none;margin-top:8px} ul.l li{font-size:25px;line-height:1.3;padding:11px 0 11px 40px;position:relative;border-bottom:1.5px solid #CFCBBF}
@@ -140,20 +140,19 @@ results1: () => `
   <div class="src" style="margin-top:16px">Simulator, not people. CPU only. Ledger L66 · L79.</div></div>
  </div>`,
 results2: () => `
- <div class="kick a">Evidence // safety and learning</div><span class="chip amber a" style="--d:.1;margin-left:18px;vertical-align:middle">Synthetic / simulated · not a patient outcome</span>
+ <div class="kick a">Evidence // safety and lapse recovery</div><span class="chip amber a" style="--d:.1;margin-left:18px;vertical-align:middle">Synthetic / simulated · not a patient outcome</span>
  <div class="row" style="gap:40px;margin-top:30px">
  <div class="box a" style="--d:.2;flex:0 0 640px;margin-top:0;background:var(--paper)" data-ledger="L65"><div class="lab">Boundary rules · sealed corpus</div>
   <div class="row" style="gap:30px;margin-top:14px"><div><div class="big">74/74</div><div style="font-size:22px">labelled violations caught</div></div>
   <div><div class="big">0/128</div><div style="font-size:22px">false alarms on compliant rows</div></div></div>
   <div class="src" style="margin-top:18px">202-row sealed corpus, 8 rules. A measurement on that corpus, not a proof (L65).</div></div>
- <div class="box a" style="--d:.5;flex:1;margin-top:0;background:var(--paper)" data-ledger="L74 L75 L78"><div class="lab">7 questions → hidden traits</div>
-  <div style="font-size:22px;color:var(--muted);margin:6px 0 4px">n = 58 held-out simulated members · amber tick = chance</div>
+<div class="box a" style="--d:.5;flex:1;margin-top:0;background:var(--paper)" data-ledger="L62"><div class="lab">Lapse-recovery rubric · weakest result</div>
+  <div style="font-size:22px;color:var(--muted);margin:6px 0 4px">trained replies · held-out: 51 check-in, 90 probe prompts · seed 0</div>
   <div class="bars">
-   ${[['Health-info confidence',.914,.333],['Main barrier',.845,.167],['Weekly rhythm',.793,.2],['What prompts reaching out',.793,.2],['How much it matters',.759,.333]]
-     .map((r,i)=>`<div class="b" style="grid-template-columns:330px 1fr 90px;margin:9px 0;font-size:22px"><span>${r[0]}</span><div class="t" style="height:28px"><div class="f grow teal" style="width:${r[1]*100}%;--d:${.9+i*.22}"></div><div class="ch" style="left:${r[2]*100}%"></div></div><span class="v">${Math.round(r[1]*100)}%</span></div>`).join('')}
-   <div class="b" style="grid-template-columns:330px 1fr 90px;margin:14px 0 0;font-size:22px"><span>Reward model: top message type</span><div class="t" style="height:28px"><div class="f grow" style="width:82.8%;--d:2.1"></div><div class="ch" style="left:16.7%"></div></div><span class="v">83%</span></div>
+   ${[['SFT · check-in',7,51,'amber'],['DPO · check-in',6,51,'amber'],['SFT · probe',81,90,'teal'],['DPO · probe',85,90,'teal']]
+     .map((r,i)=>`<div class="b" style="grid-template-columns:190px 1fr 100px;margin:12px 0;font-size:22px"><span>${r[0]}</span><div class="t" style="height:28px"><div class="f grow ${r[3]}" style="width:${r[1]/r[2]*100}%;--d:${.9+i*.22}"></div></div><span class="v">${r[1]}/${r[2]}</span></div>`).join('')}
   </div>
-  <div class="src" style="margin-top:12px">Ledger L74 · L75 · L78.</div></div>
+  <div class="src" style="margin-top:12px">Replies to a check-in rarely pass the recovery rubric. Ledger L62.</div></div>
  </div>`,
 outcome: () => `
  <div class="kick a">Expected outcome // impact</div>

@@ -158,9 +158,10 @@
    "register": "evidence",
    "ledger": [
     "L65",
-    "L75"
+    "L62"
    ],
-   "text": "The boundary rules caught 74 of 74 labelled violations, with no false alarms on 128 compliant rows. Seven questions recover hidden traits 76 to 91 percent of the time, in 58 held-out members."
+   "text": "The boundary rules caught 74 of 74 labelled violations, with no false alarms on 128 compliant rows. Our weakest result is lapse recovery: the trained replies pass that rubric on only 7 and 6 of 51 check-in prompts.",
+   "say": "The boundary rules caught seventy-four of seventy-four labelled violations, with no false alarms on one hundred twenty-eight compliant rows. Our weakest result is lapse recovery: the trained replies pass that rubric on only seven and six of fifty-one check-in prompts."
   },
   {
    "id": "s13",

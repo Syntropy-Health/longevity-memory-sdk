@@ -17,7 +17,7 @@ not submitted.
 | [`captions.srt`](captions.srt) | captions (also burned in) |
 | [`transcript.md`](transcript.md) | full narration with times, sources and ledger rows |
 | [`segments.md`](segments.md) | **segment table**: real footage vs HeyGen vs local render, with time ranges |
-| [`coverage.md`](coverage.md) | **rubric coverage**: criterion → time range → evidence rows |
+| [`coverage.md`](coverage.md) | **rubric coverage**, mapped to HAC-91 `video-rubric` (landed 2026-11-16): its 8 inferred criteria with weights and published/inferred tag → time range → evidence rows; the §3e beat budget against the cut's seconds; and where the cut covers lapse → recovery and sustained change, with the gaps |
 | [`clips-1280.json`](clips-1280.json) | the footage take: URL, deployed commit, clip offsets, every API status |
 | [`cards.html`](cards.html) | the cards. Each number names its ledger row in `data-ledger` |
 | `tts.py`, `render_cards.js`, `make_video_v2.py` | the build |
@@ -65,3 +65,8 @@ against its `clips-1280.json`. A changed presenter line means a new presenter re
 | narration TTS | n/a | `heygen-voice-1-turbo-free` | no charge |
 
 Render cost **USD 7.09**. Card charged: **USD 10.00** (one auto-reload). Total is within the USD 30 cap. Nothing was shared publicly.
+
+**Round 2 (CTO change request, 2026-11-16):** s12 now states the lapse-recovery result (L62) in place of the
+trait-recovery line (L75). Its narration was re-voiced with the free TTS and its card re-rendered locally. No
+presenter line changed: `presenter.wav` is byte-identical, so the same render is reused. **No new HeyGen spend.**
+The cut is 2:56.1. The issue attachment is encoded at CRF 31, to fit the 10 MB limit.

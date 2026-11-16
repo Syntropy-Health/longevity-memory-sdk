@@ -15,10 +15,10 @@ What each second of the cut is made of. *Real footage* is the unedited take of t
 | 9 | 1:31.9–1:38.3 | 6.4 s | s4b-safety (59.00–64.94 s), `6627f98`, https://supermomo668--daypart-demo-playground.us-east.modal.run/#today | voice | frame + captions |
 | 10 | 1:38.3–1:45.4 | 7.1 s | s5b-results (83.50–90.56 s), `6627f98`, https://supermomo668--daypart-demo-playground.us-east.modal.run/admin#lab | voice | frame + captions |
 | 11 | 1:45.4–2:06.4 | 21.0 s |  | voice | card `s11` + captions |
-| 12 | 2:06.4–2:21.6 | 15.2 s |  | voice | card `s12` + captions |
-| 13 | 2:21.6–2:34.3 | 12.8 s |  | presenter 25.93–38.70 s of the render + voice | card `s13` + captions |
-| 14 | 2:34.3–2:47.8 | 13.5 s |  | presenter 38.70–52.20 s of the render + voice | card `s14` + captions |
-| 15 | 2:47.8–2:54.9 | 7.0 s |  | presenter 52.20–59.23 s of the render + voice | card `s15` + captions |
+| 12 | 2:06.4–2:22.8 | 16.4 s |  | voice | card `s12` + captions |
+| 13 | 2:22.8–2:35.6 | 12.8 s |  | presenter 25.93–38.70 s of the render + voice | card `s13` + captions |
+| 14 | 2:35.6–2:49.1 | 13.5 s |  | presenter 38.70–52.20 s of the render + voice | card `s14` + captions |
+| 15 | 2:49.1–2:56.1 | 7.0 s |  | presenter 52.20–59.23 s of the render + voice | card `s15` + captions |
 
-Totals: real footage 50.5 s, presenter on screen 59.2 s, full-frame cards 65.2 s, of 174.9 s.
+Totals: real footage 50.5 s, presenter on screen 59.2 s, full-frame cards 66.4 s, of 176.1 s.
 

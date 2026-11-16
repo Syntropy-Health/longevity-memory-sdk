@@ -280,17 +280,56 @@ def compose(a: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------- docs (transcript, segment and coverage tables)
-# Draft rubric, inferred until HAC-91's `video-rubric` lands (no FHDIC criteria are published, ledger
-# L41). Each criterion lists the segments that carry it.
+# HAC-91 `video-rubric` §3d: the inferred FHDIC rubric (FHDIC publishes no criteria or weights, L41;
+# the weights are HAC-91's assumptions). Each criterion: number, name, weight, published/inferred tag,
+# the segments that carry it, and how the cut covers it.
 RUBRIC = [
-    ("R1", "Problem and relevance", ["s01"]),
-    ("R2", "Product and who it is for", ["s02"]),
-    ("R3", "Method and technical approach (incl. how it validates itself)", ["s03", "s04"]),
-    ("R4", "Working prototype (live demo)", ["s05", "s06", "s07", "s08", "s09", "s10"]),
-    ("R5", "Evidence and results (units, n, synthetic tag)", ["s11", "s12"]),
-    ("R6", "Expected outcome and impact", ["s13"]),
-    ("R7", "Responsible AI, limits and next steps", ["s04", "s09", "s14"]),
-    ("R8", "Clarity and access (demo URL, repo)", ["s15"]),
+    (1, "Problem relevance to the challenge statement (lapse/recovery, sustained change)", 15,
+     "published theme; weight assumed", ["s01", "s02", "s12"],
+     "s01 frames the lapse (routines break when the week changes) with the no-support baseline over 14-day "
+     "episodes; s02 names who keeps a routine going; s12 names lapse recovery as the weakest result. "
+     "See the lapse table below."),
+    (2, "Technical implementation: working prototype, method soundness", 20,
+     "published requirement; weight assumed", ["s03", "s04", "s05", "s06", "s07", "s08", "s09", "s10"],
+     "hypothesis and method (s03), self-checks (s04), then the hosted build recorded live (s05–s10)."),
+    (3, "Demonstrable value / evidence: sustained outcomes, recovery after lapses, equity", 20,
+     "published outcome list; weight assumed", ["s10", "s11", "s12"],
+     "results with run, split and n (s10); boundary pass rate and 14-day simulated adherence (s11); "
+     "boundary-rule accuracy and the lapse-recovery rubric (s12). All synthetic or simulated. "
+     "Equity is a gap (no ledger row)."),
+    (4, "Usefulness / impact potential", 15, "inferred", ["s02", "s13"],
+     "who it is for (s02); expected outcome, labelled concept and not yet measured (s13)."),
+    (5, "Innovation", 10, "inferred", ["s03", "s06", "s07"],
+     "a confirmed record plus a step matched to what drives the person (s03); evidence thread (s06); "
+     "Inclinations tie each step to an answer (s07)."),
+    (6, "Completeness / feasibility / readiness", 10, "inferred", ["s05", "s10", "s14", "s15"],
+     "a hosted, working build recorded live, from check-in (s05) to results (s10); the path to real use: "
+     "governance gates, clinical reviewer, consented pilot (s14); demo URL and repo (s15)."),
+    (7, "Safety, autonomy, inclusion, stated limits and assumptions", 5,
+     "published requirement; weight assumed", ["s04", "s05", "s08", "s09", "s14"],
+     "nothing saved until the person reviews (s04, s05); hand-off to a person (s08); crisis refusal (s09); "
+     "limits (s14). Inclusion (languages, accessibility) is not spoken: gap."),
+    (8, "Presentation and demo quality (clarity, fits cap)", 5, "assumption", None,
+     "the whole cut: captions burned in, every number names its ledger row, under the 3:00 cap."),
+]
+# HAC-91 §3e beat budget (seconds) and the segments that make up each beat in this cut.
+BEATS = [("Problem", 15, ["s01"]), ("Product", 15, ["s02"]), ("Solution / method", 30, ["s03", "s04"]),
+         ("Demo", 55, ["s05", "s06", "s07", "s08", "s09", "s10"]), ("Evidence / results", 35, ["s11", "s12"]),
+         ("Expected outcome / impact", 15, ["s13"]), ("Limits", 10, ["s14"]), ("Close", 5, ["s15"])]
+# Criteria 1 and 3 turn on lapse -> recovery and sustained change: where the cut covers each, or not.
+LAPSE = [
+    ("Lapse framed as the problem", ["s01"], "covered", ["L66"],
+     "\"Healthy routines break when the week changes\"; no-support baseline 63.7% of days, 150 episodes of 14 days."),
+    ("Recovery after a lapse, measured", ["s12"], "covered (weak result, stated as weak)", ["L62"],
+     "lapse-recovery rubric passes on 7 (SFT) and 6 (DPO) of 51 check-in prompts, against 81 and 85 of 90 probes."),
+    ("Sustained change over time", ["s01", "s11"], "covered, simulated only", ["L66", "L79"],
+     "mean adherence over 150 simulated 14-day episodes: 0.840 learned policy, 0.833 best script, 0.637 no support."),
+    ("A lapse then a no-blame re-engagement reply, on screen", [], "gap", [],
+     "the take shows no lapse check-in and no re-engagement reply. Not fixed this round: it needs a new capture "
+     "(and the reply would sit on the weak L62 result)."),
+    ("Real-world persistence, retention, equitable benefit", ["s13", "s14"], "gap, stated", ["L73"],
+     "nothing is measured on people; s13 says \"not yet measured\", s14 names a consented pilot and a measured "
+     "result as next. No ledger row for equity."),
 ]
 SOURCE = {"presenter": "HeyGen presenter (Sable) + card", "card": "card (local render)", "footage": "**real footage**"}
 
@@ -335,16 +374,41 @@ def docs(a: argparse.Namespace) -> None:
     g.append(f"\nTotals: real footage {tot['footage']:.1f} s, presenter on screen {tot['presenter']:.1f} s, "
              f"full-frame cards {tot['card']:.1f} s, of {tl['total']:.1f} s.\n")
     (out / "segments.md").write_text("\n".join(g) + "\n")
+    def rng(ids: list[str]) -> str:
+        return ", ".join(f"{mmss(segs[i]['start'])}–{mmss(segs[i]['end'])}" for i in ids)
+
+    def rows(ids: list[str]) -> str:
+        return " · ".join(sorted({r for i in ids for r in segs[i]["ledger"]}, key=lambda x: int(x[1:]))) or "–"
+
+    allids = [s["id"] for s in tl["segments"]]
     c = ["# FHDIC demo video v2: rubric coverage (HAC-92)\n",
-         "**Draft rubric.** HAC-91's `video-rubric` had not landed when this cut was made, so the criteria are the "
-         "HAC-92 draft structure (problem, product, method, live demo, results, outcome, limits, close). "
-         "Re-map when HAC-91 lands. No FHDIC criteria are published (L41).\n",
-         "| criterion | time range | segments | evidence rows |", "|---|---|---|---|"]
-    for rid, name, ids in RUBRIC:
-        rng = ", ".join(f"{mmss(segs[i]['start'])}–{mmss(segs[i]['end'])}" for i in ids)
-        rows = sorted({r for i in ids for r in segs[i]["ledger"]}, key=lambda x: int(x[1:]))
-        secs = sum(segs[i]["dur"] for i in ids)
-        c.append(f"| {rid} {name} | {rng} ({secs:.0f} s) | {', '.join(ids)} | {' · '.join(rows)} |")
+         "Mapped to the inferred rubric in HAC-91 `video-rubric` (§3d criteria and weights, §3e time budget), "
+         "which landed 2026-11-16. FHDIC publishes no rubric, weights or video rule (L41); the weights are HAC-91's "
+         "assumptions, and the tag column says which criteria rest on published text.\n",
+         "## Criteria (HAC-91 §3d)\n",
+         "| # | criterion | wt | tag | time range | segments | how the cut covers it | evidence rows |",
+         "|---|---|---|---|---|---|---|---|"]
+    for n, name, wt, tag, ids, how in RUBRIC:
+        r = rng(ids) + f" ({sum(segs[i]['dur'] for i in ids):.0f} s)" if ids else f"0:00.0–{mmss(tl['total'])} (whole cut)"
+        c.append(f"| {n} | {name} | {wt} | {tag} | {r} | {', '.join(ids) if ids else 'all'} | {how} | "
+                 f"{rows(ids) if ids else 'all'} |")
+    c += ["\n## Time budget (HAC-91 §3e) vs this cut\n",
+          "| beat | budget | actual | Δ | segments | time range |", "|---|---|---|---|---|---|"]
+    for name, sec, ids in BEATS:
+        act = sum(segs[i]["dur"] for i in ids)
+        c.append(f"| {name} | {sec} s | {act:.1f} s | {act - sec:+.1f} s | {', '.join(ids)} | "
+                 f"{mmss(segs[ids[0]]['start'])}–{mmss(segs[ids[-1]]['end'])} |")
+    c.append(f"| **total** | 180 s (target 175 s) | {tl['total']:.1f} s | {tl['total'] - 180:+.1f} s | | |")
+    c += ["\nEvery beat is within about 5 s of its budget. The CTO accepted the residual differences "
+          "(HAC-92, 2026-11-16): no re-time and no new render for timing alone.\n",
+          "## Lapse → recovery and sustained change (criteria 1 and 3)\n",
+          "| what the criterion asks | where | status | what is said or shown | evidence rows |",
+          "|---|---|---|---|---|"]
+    for what, ids, status, ev, said in LAPSE:
+        c.append(f"| {what} | {rng(ids) if ids else '–'} | {status} | {said} | {' · '.join(ev) or '–'} |")
+    c.append("\nThe lapse-recovery result (s12, L62) was added in this round, in a card segment (free TTS, local "
+             "render); it replaced the trait-recovery line (L75), so the cut stays at about 176 s. "
+             "No presenter line changed and there was no new HeyGen spend.")
     (out / "coverage.md").write_text("\n".join(c) + "\n")
     print("wrote transcript.md, segments.md, coverage.md")
 
