@@ -1,6 +1,6 @@
 {
  "title": "Clinical Human Clone: FHDIC demo video v2 (HAC-92)",
- "note": "Editable script. Every spoken number names its evidence-ledger row (docs/daypart/submission/evidence-ledger.md). 'kind' is the visual source: presenter = HeyGen presenter (Sable, avatar_v) with a card; card = a full-frame graphic card; footage = real recording of the hosted build (capture/clips-1280.json id). The register is hypothesis -> method -> evidence -> limit. Section budget is the HAC-92 draft until the HAC-91 rubric lands. 'say' is the spoken form where the voice needs numbers spelled out; captions show 'text'.",
+ "note": "Editable script. Every spoken number names its evidence-ledger row (docs/daypart/submission/evidence-ledger.md). 'kind' is the visual source: presenter = HeyGen presenter (Sable, avatar_v) with a card; card = a full-frame graphic card; footage = real recording of the hosted build (capture/clips-1280.json id). The register is hypothesis -> method -> evidence -> limit. Section budget is HAC-91 `video-rubric` §3e (3:00 cap, 175 s target); coverage.md compares each beat with it. 'say' is the spoken form where the voice needs numbers spelled out; captions show 'text'.",
  "voice": {
   "provider": "heygen",
   "model": "heygen-voice-1-turbo-free",
@@ -108,7 +108,8 @@
    "register": "demo",
    "ledger": [
     "L24",
-    "L53"
+    "L53",
+    "L82"
    ],
    "text": "After a pain report, the next step routes to a person."
   },

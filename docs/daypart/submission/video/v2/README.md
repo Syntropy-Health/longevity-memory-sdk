@@ -56,6 +56,10 @@ cp <w>/captions.srt .
 A new capture is a new take. Re-check the `FOOTAGE` windows and `TAKE_LAG` in `make_video_v2.py`
 against its `clips-1280.json`. A changed presenter line means a new presenter render, and a new spend.
 
+`presenter` polls for at most `--poll-timeout` seconds (default 3600); re-running it keeps polling the
+same video, with no new spend. If `<w>/presenter.json` records a failed render, `presenter` stops: read
+the failure, then delete that file to submit a new, paid render.
+
 ## HeyGen spend (HAC-92, cap USD 30)
 
 | step | video id | result | wallet |
